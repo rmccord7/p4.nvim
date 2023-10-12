@@ -28,3 +28,13 @@ vim.api.nvim_create_user_command(
         desc = "Reverts a file"
     }
 )
+
+vim.api.nvim_create_user_command(
+    "P4test",
+    function()
+        require("p4").test()
+    end,
+    {
+        desc = "Test function"
+    }
+)

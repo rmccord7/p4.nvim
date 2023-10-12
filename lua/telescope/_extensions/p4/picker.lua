@@ -10,6 +10,7 @@ local actions_state = require("telescope.actions.state")
 local telescope_p4_config = require("telescope._extensions.p4.config")
 -- local telescope_p4_actions = require("telescope._extensions.p4.actions")
 
+local p4 = require("p4").p4
 local p4_config = require("p4.config")
 local p4_commands = require("p4.commands")
 local p4_util = require("p4.util")
@@ -18,14 +19,32 @@ local function warn_no_selection_action()
   p4_util.warn("Please make a valid selection before performing the action.")
 end
 
+-- Performs checks to prevent picker from launching.
+local function verify_p4_picker()
+
+  -- Verify there is P4CONFIG at root of workspace.
+  if p4.verify_workspace() then
+
+    -- Verify the user is logged into configured perforce server for the P4 workspace.
+    local result = p4_util.run_command(p4_commands.check_login())
+
+    if result.code ~= 0 then
+      p4_util.error("Not logged in")
+      return false
+    end
+  else
+    return false
+  end
+
+  return true
+end
+
 local M = {}
 
 function M.clients_picker(opts)
   opts = opts or {}
 
-  local result = util.run_command(p4_commands.check_login())
-
-  if result.code ~= 0 then
+  if not verify_p4_picker() then
     return
   end
 
@@ -40,7 +59,7 @@ function M.clients_picker(opts)
     -- Filter clients for the current host.
     if telescope_p4_config.opts.clients.filter_current_host then
 
-      result = util.run_command(p4_commands.read_client(client))
+      result = p4_util.run_command(p4_commands.read_client(client))
 
       if result.code == 0 then
 
@@ -119,7 +138,7 @@ function M.clients_picker(opts)
             result = vim.system(p4_commands.write_client(entry.name), { stdin = content }):wait()
 
             if result.code > 0 then
-              util.error(result.stderr)
+              p4_util.error(result.stderr)
               return
             end
 
@@ -165,9 +184,7 @@ end
 function M.change_lists_picker(opts, client)
   opts = opts or {}
 
-  local result = util.run_command(p4_commands.check_login())
-
-  if result.code ~= 0 then
+  if not verify_p4_picker() then
     return
   end
 
@@ -205,6 +222,8 @@ function M.change_lists_picker(opts, client)
   end
 
   local function finder()
+    client = client or p4.client
+
     return finders.new_oneshot_job(p4_commands.read_change_lists(client), {
       entry_maker = entry_maker,
     })
@@ -232,7 +251,7 @@ function M.change_lists_picker(opts, client)
 
     local entry = actions_state.get_selected_entry(prompt_bufnr)
 
-    result = util.run_command(p4_commands.read_change_list_files(entry.name))
+    result = p4_util.run_command(p4_commands.read_change_list_files(entry.name))
 
     if result.code == 0 then
       local files = {}
@@ -241,7 +260,7 @@ function M.change_lists_picker(opts, client)
         if line:find("#", 1, true) then
           local depot_file = line:sub(1, line:find("#", 1, true) - 1)
 
-          result = util.run_command(p4_commands.where_file(depot_file))
+          result = p4_util.run_command(p4_commands.where_file(depot_file))
 
           if result.code == 0 then
             local path = {}
@@ -290,7 +309,7 @@ function M.change_lists_picker(opts, client)
               result = vim.system(p4_commands.write_change_list(entry.name), { stdin = content }):wait()
 
               if result.code > 0 then
-                util.error(result.stderr)
+                p4_util.error(result.stderr)
                 return
               end
 
@@ -307,7 +326,7 @@ function M.change_lists_picker(opts, client)
     map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.delete, display_change_list_files)
     map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.revert, display_change_list_files)
     map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.shelve, display_change_list_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.unshelved, display_change_list_files)
+    map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.unshelve, display_change_list_files)
     return true
   end
 
@@ -326,9 +345,7 @@ end
 function M.change_list_files_picker(files, opts)
   opts = opts or {}
 
-  local result = util.run_command(p4_commands.check_login())
-
-  if result.code ~= 0 then
+  if not verify_p4_picker() then
     return
   end
 

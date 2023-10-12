@@ -42,6 +42,16 @@ M.edit_file = function(file_path, opts)
   }
 end
 
+M.revert_file = function(file_path, opts)
+  opts = opts or {}
+
+  return {
+    "p4",
+    "revert",
+    file_path,
+  }
+end
+
 M.read_client = function(client, opts)
   opts = opts or {}
 
