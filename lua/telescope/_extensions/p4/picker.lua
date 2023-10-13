@@ -10,7 +10,7 @@ local actions_state = require("telescope.actions.state")
 local telescope_p4_config = require("telescope._extensions.p4.config")
 -- local telescope_p4_actions = require("telescope._extensions.p4.actions")
 
-local p4 = require("p4").p4
+local p4 = require("p4")
 local p4_config = require("p4.config")
 local p4_commands = require("p4.commands")
 local p4_util = require("p4.util")
@@ -222,7 +222,7 @@ function M.change_lists_picker(opts, client)
   end
 
   local function finder()
-    client = client or p4.client
+    client = client or p4.p4.client
 
     return finders.new_oneshot_job(p4_commands.read_change_lists(client), {
       entry_maker = entry_maker,

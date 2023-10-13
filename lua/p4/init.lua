@@ -14,10 +14,10 @@ local M = {
 }
 
 local function display_workspace_info()
-    util.debug("P4USER: " .. M.p4.user['P4USER'])
-    util.debug("P4HOST: " .. M.p4.host['P4HOST'])
-    util.debug("P4PORT: " .. M.p4.port['P4PORT'])
-    util.debug("P4CLIENT: " .. M.p4.client['P4CLIENT'])
+    util.debug("P4USER: " .. M.p4.user)
+    util.debug("P4HOST: " .. M.p4.host)
+    util.debug("P4PORT: " .. M.p4.port)
+    util.debug("P4CLIENT: " .. M.p4.client)
 end
 
 local function clear_p4_config()
@@ -35,6 +35,8 @@ local function update_p4_config()
 
     clear_p4_config()
 
+    util.debug("P4CONFIG: " .. config.opts.p4.config)
+
     -- Try to get the workspace information from environment (direnv, etc)
     M.p4.user = os.getenv('P4USER')
     M.p4.host = os.getenv('P4HOST')
@@ -48,7 +50,7 @@ local function update_p4_config()
     end
 
     -- Find the P4 config at workspace root to get workspace information.
-    local path util.find_p4_ancestor(uv.cwd())
+    local path = util.find_p4_ancestor(uv.cwd())
 
     if path then
 
@@ -61,7 +63,7 @@ local function update_p4_config()
       if input then
 
         t = {}
-        for k, v in string.gmatch(input, "(%w+)=(%w+)") do
+        for k, v in string.gmatch(input, "([%w._]+)=([%w._]+)") do
           t[k] = v
         end
 

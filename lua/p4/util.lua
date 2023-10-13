@@ -3,6 +3,7 @@
 local api = vim.api
 -- local lsp = vim.lsp
 local uv = vim.loop
+local config = require('p4.config')
 
 local is_windows = uv.os_uname().version:match 'Windows'
 
@@ -231,7 +232,8 @@ end
 
 function M.find_p4_ancestor(startpath)
   return M.search_ancestors(startpath, function(path)
-    if M.path.is_file(M.path.join(path, '.p4config')) then
+    M.debug("Path" .. M.path.sanitize(M.path.join(path, config.opts.p4.config)))
+    if M.path.is_file(M.path.join(path, config.opts.p4.config)) then
       return path
     end
   end)
