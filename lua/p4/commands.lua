@@ -42,13 +42,20 @@ M.edit_file = function(file_path, opts)
   }
 end
 
-M.revert_file = function(file_path, opts)
+M.revert_file = function(file_paths, opts)
   opts = opts or {}
+
+  local file_paths
+
+  if type(file_paths) == 'table' then
+    file_paths = table.concat(file_paths, ' ')
+  end
 
   return {
     "p4",
     "revert",
-    file_path,
+    "-n",
+    file_paths,
   }
 end
 
