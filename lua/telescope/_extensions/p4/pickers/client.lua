@@ -108,7 +108,7 @@ function M.pending_cl_picker(opts, client)
         end
       end
 
-      require("telescope._extensions.p4.pickers.cl").files_picker(files)
+      require("telescope._extensions.p4.pickers.cl").files_picker(files, {cl = entry.name})
     end
   end
 

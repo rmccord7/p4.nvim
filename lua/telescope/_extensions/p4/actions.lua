@@ -1,13 +1,24 @@
-
-local M = {}
-
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
--- local builtin = require("telescope.builtin")
 
--- local telescope_p4_config = require("telescope._extensions.p4.config")
--- local telescope_p4_picker = require("telescope._extensions.p4.picker")
+M = {}
 
-local p4_commands = require("p4.commands")
+function M.get_selection(prompt_bufnr)
+  local selection = {}
+
+  local picker = actions_state.get_current_picker(prompt_bufnr)
+
+  if #picker:get_multi_selection() > 0 then
+    for _, item in ipairs(picker:get_multi_selection()) do
+      table.insert(selection, item[1])
+    end
+  else
+    table.insert(selection, actions_state.get_selected_entry()[1])
+  end
+
+  print(vim.inspect(selection))
+
+  return(selection)
+end
 
 return M

@@ -40,40 +40,43 @@ function M.debug(msg)
 end
 
 function M.run_command(cmd)
-    local result = vim.system(cmd,
-    {
-        text = true,
-    }):wait()
+    if cmd then
 
-    if result.code > 0 then
-        M.error(result.stderr)
+      local result = vim.system(cmd,
+      {
+          text = true,
+      }):wait()
 
-        -- If we failed because we are not logged in, then log in and re-run the command.
-        if string.find(result.stderr, "Your session has expired, please login again.", 1, true) or
-            string.find(result.stderr, "Perforce password (P4PASSWD) invalid or unset.", 1, true) then
+      if result.code > 0 then
+          M.error(result.stderr)
 
-            vim.fn.inputsave()
-            local password = vim.fn.inputsecret("Password: ")
-            vim.fn.inputrestore()
+          -- If we failed because we are not logged in, then log in and re-run the command.
+          if string.find(result.stderr, "Your session has expired, please login again.", 1, true) or
+             string.find(result.stderr, "Perforce password (P4PASSWD) invalid or unset.", 1, true) then
 
-            result = vim.system(login(), { stdin = password }):wait()
+              vim.fn.inputsave()
+              local password = vim.fn.inputsecret("Password: ")
+              vim.fn.inputrestore()
 
-            if result.code == 0 then
-                result = vim.system(cmd,
-                {
-                    text = true,
-                }):wait()
+              result = vim.system(login(), { stdin = password }):wait()
 
-                if result.code > 0 then
-                    M.error(result.stderr)
-                end
-            else
-                M.error(result.stderr)
-            end
-        end
+              if result.code == 0 then
+                  result = vim.system(cmd,
+                  {
+                      text = true,
+                  }):wait()
+
+                  if result.code > 0 then
+                      M.error(result.stderr)
+                  end
+              else
+                  M.error(result.stderr)
+              end
+          end
+      end
+
+      return result
     end
-
-    return result
 end
 
 -- https://github.com/neovim/nvim-lspconfig/blob/master/lua/lspconfig/util.lua#L209

@@ -10,6 +10,8 @@ local telescope_p4_pickers_util = require("telescope._extensions.p4.pickers.util
 local p4_commands = require("p4.commands")
 local p4_util = require("p4.util")
 
+local tp4_actions = require("telescope._extensions.p4.actions")
+
 local M = {}
 
 function M.files_picker(files, opts)
@@ -23,27 +25,25 @@ function M.files_picker(files, opts)
   end
 
   local function revert_files(prompt_bufnr)
-    local selection = {}
 
-    local picker = actions_state.get_current_picker(prompt_bufnr)
+    local selection = tp4_actions.get_selection(prompt_bufnr)
 
-    if #picker:get_multi_selection() > 0 then
-      for _, item in ipairs(picker:get_multi_selection()) do
-        table.insert(selection, item[1])
-      end
-    else
-      table.insert(selection, actions_state.get_selected_entry()[1])
+    if selection then
+      p4_util.run_command(p4_commands.revert_file(selection,{force = true, cl = opts.cl}))
     end
-
-    print(vim.inspect(selection))
-
-    p4_util.run_command(p4_commands.revert_file(selection))
   end
 
   local function shelve_files(prompt_bufnr)
+
+    local selection = tp4_actions.get_selection(prompt_bufnr)
+
+    if selection then
+      p4_util.run_command(p4_commands.shelve_file(selection,{force = true, cl = opts.cl}))
+    end
   end
 
   local function unshelve_files(prompt_bufnr)
+    return
   end
 
   local function attach_mappings(prompt_bufnr, map)
