@@ -1,7 +1,7 @@
 local M = {}
 
 local defaults = {
-  debug = true,
+  debug = false,
   p4 = {
       config = os.getenv('P4CONFIG'),
   },
