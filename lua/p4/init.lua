@@ -3,16 +3,18 @@ local config = require("p4.config")
 local util = require("p4.util")
 local p4_commands = require("p4.commands")
 
+--- P4 config.
 local M = {
-  p4 = {
-      config_path = nil,
-      user = os.getenv('P4USER'),
-      host = os.getenv('P4HOST'),
-      port = os.getenv('P4PORT'),
-      client = os.getenv('P4CLIENT'),
+  p4 = { -- perforce config
+      config_path = nil,-- path to config file
+      user = os.getenv('P4USER'), -- identifies the P4 user
+      host = os.getenv('P4HOST'), -- identifies the P4 host
+      port = os.getenv('P4PORT'), -- identifies the P4 port
+      client = os.getenv('P4CLIENT'), -- identifies the P4 client
   },
 }
 
+--- Displays P4 environment information.
 local function display_workspace_info()
     util.debug("P4USER: " .. M.p4.user)
     util.debug("P4HOST: " .. M.p4.host)
@@ -20,6 +22,7 @@ local function display_workspace_info()
     util.debug("P4CLIENT: " .. M.p4.client)
 end
 
+--- Clears the P4 environment information.
 local function clear_p4_config()
     util.debug("Clearing P4 Config")
 
@@ -30,6 +33,7 @@ local function clear_p4_config()
     M.p4.client = nil
 end
 
+--- Updates the P4 environment information.
 local function update_p4_config()
     util.debug("Updating P4 Config")
 
@@ -88,6 +92,7 @@ local function update_p4_config()
     end
 end
 
+--- Finds the P4 config file.
 local function find_p4_config()
   util.debug("Finding P4 Config")
 
@@ -106,6 +111,7 @@ local function find_p4_config()
   end
 end
 
+--- Prompts the user to open the file for add.
 local function prompt_open_for_add()
 
     if find_p4_config() then
@@ -120,6 +126,7 @@ local function prompt_open_for_add()
     end
 end
 
+--- Prompts the user to open the file for edit.
 local function promot_open_for_edit()
 
     if find_p4_config() then
@@ -134,16 +141,21 @@ local function promot_open_for_edit()
     end
 end
 
+--- Makes the current buffer writeable.
 local function set_buffer_writeable()
   vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
   vim.api.nvim_set_option_value("modifiable", true, { scope = "local" })
 end
 
+--- Makes the current buffer read only.
 local function clear_buffer_writeable()
   vim.api.nvim_set_option_value("readonly", true, { scope = "local" })
   vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
 end
 
+--- Initializes the plugin.
+---
+--- @param opts table? P4 options
 function M.setup(opts)
   if vim.fn.has("nvim-0.7.2") == 0 then
     util.error("P4 needs Neovim >= 0.7.2")
@@ -153,6 +165,10 @@ function M.setup(opts)
   config.setup(opts)
 end
 
+--- Verifies that the current workspace has a valid P4 config file.
+---
+--- @return boolean config_found # Indicates if a valid p4 config has been found.
+---
 function M.verify_workspace()
 
   local config_found = find_p4_config()
@@ -179,6 +195,10 @@ function M.verify_workspace()
   return(config_found)
 end
 
+--- Opens a file in the client workspace for addition to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
 function M.add(opts)
   opts = opts or {}
 
@@ -193,6 +213,10 @@ function M.add(opts)
   end
 end
 
+--- Checks out a file in the client workspace for changes to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
 function M.edit(opts)
   opts = opts or {}
 
@@ -207,6 +231,10 @@ function M.edit(opts)
   end
 end
 
+--- Reverts a file in the client workspace.
+---
+--- @param opts table? Optional parameters. Not used.
+---
 function M.revert(opts)
   opts = opts or {}
 
@@ -221,6 +249,10 @@ function M.revert(opts)
   end
 end
 
+--- Test function.
+---
+--- @param opts table? Optional parameters. Not used.
+---
 function M.test(opts)
   opts = opts or {}
 
@@ -248,6 +280,9 @@ end
 --  end,
 --})
 
+--- Update the P4 config file if the current working directory
+--- changes since we may have changed workspaces.
+---
 vim.api.nvim_create_autocmd({"DirChanged"}, {
   pattern = "*",
   callback = function()
@@ -259,13 +294,16 @@ vim.api.nvim_create_autocmd({"DirChanged"}, {
   end,
 })
 
+--- Reload buffer if the file changes outside neovim.
+---
 vim.api.nvim_create_autocmd("BufEnter", {
   pattern = "*",
   callback = function()
 
     if find_p4_config() then
 
-      -- Set buffer to reload for changes made outside vim such as pulling latest revisions.
+      -- Set buffer to reload for changes made outside vim such as
+      -- pulling latest revisions.
       vim.api.nvim_set_option_value("autoread", false, { scope = "local" })
 
     end
@@ -273,6 +311,9 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
+--- If the buffer is written, then prompt the user whether they want
+--- the associated file opened for add/edit in the client workspace.
+---
 vim.api.nvim_create_autocmd("BufWrite", {
   pattern = "*",
   callback = function()
@@ -294,6 +335,10 @@ vim.api.nvim_create_autocmd("BufWrite", {
   end,
 })
 
+--- If the buffer is modified and read only, then prompt the user
+--- whether they want the associated file opened for edit in the
+--- client workspace.
+---
 vim.api.nvim_create_autocmd("FileChangedRO", {
   pattern = "*",
   callback = function()

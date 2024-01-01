@@ -3,6 +3,10 @@ local actions_state = require("telescope.actions.state")
 
 M = {}
 
+  --- Action to get the current selection.
+  ---
+  --- @param prompt_bufnr integer Prompt buffer number.
+  ---
 function M.get_selection(prompt_bufnr)
   local selection = {}
 

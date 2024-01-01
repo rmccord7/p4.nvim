@@ -14,13 +14,20 @@ local p4_util = require("p4.util")
 
 local M = {}
 
+--- Telescope picker to display all of a user's P4 clients.
+---
+--- @param opts table? Optional parameters. Not used.
+---
 function M.picker(opts)
   opts = opts or {}
 
+  -- Make sure the P4 workspace is valid and we are logged into
+  -- to the P4 server.
   if not telescope_p4_pickers_util.verify_p4_picker() then
     return
   end
 
+  --- Processes results from the finder.
   local function entry_maker(entry)
     chunks = {}
     for substring in entry:gmatch("%S+") do
@@ -61,12 +68,14 @@ function M.picker(opts)
     }
   end
 
+  --- Issues shell command to read the P4 user's clients.
   local function finder()
     return finders.new_oneshot_job(p4_commands.read_clients(), {
       entry_maker = entry_maker,
     })
   end
 
+  --- Controls what is displayed for each entry's preview.
   local function previewer()
     return previewers.new_buffer_previewer({
       title = "Client Spec",
@@ -84,10 +93,11 @@ function M.picker(opts)
     })
   end
 
+  --- Action to edit the P4 client spec.
   local function edit_client_spec(prompt_bufnr)
     actions.close(prompt_bufnr)
 
-    local entry = actions_state.get_selected_entry(prompt_bufnr)
+    local entry = actions_state.get_selected_entry()
 
     if entry then
 
@@ -124,11 +134,24 @@ function M.picker(opts)
     end
   end
 
+  --- Defines mappings.
+  ---
+  --- @param prompt_bufnr integer Prompt buffer number.
+  ---
+  --- @param map function Maps keys to functions.
+  ---
   local function attach_mappings(prompt_bufnr, map)
+
     actions.select_default:replace(function()
+
+      -- Replace select default option.
       actions.close(prompt_bufnr)
+
+      -- Get the selected entry.
       local entry = actions_state.get_selected_entry()
 
+      -- In case the user didn't select one or more entries before
+      -- performing an action.
       if not entry then
         telescope_p4_pickers_util.warn_no_selection_action()
         return
@@ -136,9 +159,11 @@ function M.picker(opts)
 
       M.change_lists_picker(opts, entry.name)
     end)
+
     map({ "i", "n" }, telescope_p4_config.opts.clients.mappings.edit_spec, edit_client_spec)
     map({ "i", "n" }, telescope_p4_config.opts.clients.mappings.delete_client, edit_client_spec)
     map({ "i", "n" }, telescope_p4_config.opts.clients.mappings.change_workspace, edit_client_spec)
+
     return true
   end
 
