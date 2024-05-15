@@ -10,9 +10,11 @@ local actions_state = require("telescope.actions.state")
 local telescope_p4_config = require("telescope._extensions.p4.config")
 local telescope_p4_pickers_util = require("telescope._extensions.p4.pickers.util")
 
-local p4 = require("p4")
 local p4_commands = require("p4.commands")
 local p4_util = require("p4.util")
+
+local p4c_env = require("p4.core.env")
+local p4c_cl = require("p4.core.cl")
 
 local M = {}
 
@@ -72,7 +74,7 @@ function M.pending_cl_picker(opts, client)
 
   --- Issues shell command to read the P4 user's change lists.
   local function finder()
-    client = client or p4.p4.client
+    client = client or p4c_env.client
 
     return finders.new_oneshot_job(p4_commands.read_change_lists(client), {
       entry_maker = entry_maker,
@@ -107,27 +109,13 @@ function M.pending_cl_picker(opts, client)
 
     local entry = actions_state.get_selected_entry()
 
+    -- Read change list files to stdout
     result = p4_util.run_command(p4_commands.read_change_list_files(entry.name))
 
     if result.code == 0 then
-      local files = {}
 
-      for index, line in ipairs(vim.split(result.stdout, "\n")) do
-        if line:find("#", 1, true) then
-          local depot_file = line:sub(1, line:find("#", 1, true) - 1)
-
-          result = p4_util.run_command(p4_commands.where_file(depot_file))
-
-          if result.code == 0 then
-            local path = {}
-            for string in result.stdout:gmatch("%S+") do
-              table.insert(path, string)
-            end
-
-            table.insert(files, index, path[3])
-          end
-        end
-      end
+      -- Get the list of files from the CL spec
+      local files = p4c_cl.get_files_from_spec(result.stdout)
 
       require("telescope._extensions.p4.pickers.cl").files_picker(files, {cl = entry.name})
     end
@@ -159,31 +147,7 @@ function M.pending_cl_picker(opts, client)
         local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
         if bufnr then
-
-          vim.api.nvim_set_option_value("buftype", "acwrite", { buf = bufnr })
-          vim.api.nvim_set_option_value("filetype", "conf", { buf = bufnr })
-          vim.api.nvim_set_option_value("expandtab", false, { buf = bufnr })
-
-          vim.api.nvim_buf_set_name(bufnr, "change list: " .. entry.name)
-
-          vim.api.nvim_win_set_buf(0, bufnr)
-
-          vim.api.nvim_create_autocmd("BufWriteCmd", {
-            buffer = bufnr,
-            once = true,
-            callback = function()
-              local content = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-
-              result = vim.system(p4_commands.write_change_list(entry.name), { stdin = content }):wait()
-
-              if result.code > 0 then
-                p4_util.error(result.stderr)
-                return
-              end
-
-              vim.api.nvim_buf_delete(bufnr, { force = true })
-            end,
-          })
+          p4c_cl.edit_spec(bufnr, entry.name)
         end
 
       else

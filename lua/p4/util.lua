@@ -1,9 +1,6 @@
--- local vim = vim
--- local validate = vim.validate
-local api = vim.api
--- local lsp = vim.lsp
 local uv = vim.loop
-local config = require('p4.config')
+
+local p4_config = require('p4.config')
 
 local is_windows = uv.os_uname().version:match 'Windows'
 
@@ -32,9 +29,7 @@ function M.error(msg)
 end
 
 function M.debug(msg)
-    local config = require("p4.config")
-
-    if config.opts.debug then
+    if p4_config.opts.debug then
         vim.notify(msg, vim.log.levels.DEBUG, { title = "P4" })
     end
 end
@@ -235,8 +230,8 @@ end
 
 function M.find_p4_ancestor(startpath)
   return M.search_ancestors(startpath, function(path)
-    M.debug("Path" .. M.path.sanitize(M.path.join(path, config.opts.p4.config)))
-    if M.path.is_file(M.path.join(path, config.opts.p4.config)) then
+    M.debug("Path" .. M.path.sanitize(M.path.join(path, p4_config.opts.p4.config)))
+    if M.path.is_file(M.path.join(path, p4_config.opts.p4.config)) then
       return path
     end
   end)

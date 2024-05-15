@@ -12,6 +12,8 @@ local telescope_p4_pickers_util = require("telescope._extensions.p4.pickers.util
 local p4_commands = require("p4.commands")
 local p4_util = require("p4.util")
 
+local p4c_client = require("p4.core.client")
+
 local M = {}
 
 --- Telescope picker to display all of a user's P4 clients.
@@ -104,31 +106,9 @@ function M.picker(opts)
       local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
       if bufnr then
-        vim.api.nvim_set_option_value("buftype", "acwrite", { buf = bufnr })
-        vim.api.nvim_set_option_value("filetype", "conf", { buf = bufnr })
-        vim.api.nvim_set_option_value("expandtab", false, { buf = bufnr })
-
-        vim.api.nvim_buf_set_name(bufnr, "Client: " .. entry.name)
-
-        vim.api.nvim_win_set_buf(0, bufnr)
-
-        vim.api.nvim_create_autocmd("BufWriteCmd", {
-          buffer = bufnr,
-          once = true,
-          callback = function()
-            local content = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-
-            result = vim.system(p4_commands.write_client(entry.name), { stdin = content }):wait()
-
-            if result.code > 0 then
-              p4_util.error(result.stderr)
-              return
-            end
-
-            vim.api.nvim_buf_delete(bufnr, { force = true })
-          end,
-        })
+        p4c_client.edit_spec(bufnr, entry.name)
       end
+
     else
       telescope_p4_pickers_util.warn_no_selection_action()
     end

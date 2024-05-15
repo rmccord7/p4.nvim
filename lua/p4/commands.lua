@@ -26,6 +26,26 @@ M = {}
 ---
 --- @return table cmd Formatted P4 command
 ---
+M.login = function(opts)
+  opts = opts or {}
+
+  local cmd = {
+    "p4",
+    "login",
+  }
+
+  debug_command(cmd);
+
+  return cmd
+end
+
+--- Returns the P4 command to check if the user is logged
+--- into the P4 server.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+--- @return table cmd Formatted P4 command
+---
 M.check_login = function(opts)
   opts = opts or {}
 
@@ -264,7 +284,8 @@ M.read_clients = function(opts)
   local cmd = {
     "p4",
     "clients",
-    "--me",
+    "--me", -- Current user clients
+    "-a", -- Get all clients (not just the ones on the connected p4 server)
   }
 
   debug_command(cmd);

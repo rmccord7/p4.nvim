@@ -1,6 +1,7 @@
-local p4 = require("p4")
 local p4_commands = require("p4.commands")
 local p4_util = require("p4.util")
+
+local p4c_check = require("p4.core.check")
 
 M = {}
 
@@ -12,7 +13,7 @@ end
 function M.verify_p4_picker()
 
   -- Verify there is P4CONFIG at root of workspace.
-  if p4.verify_workspace() then
+  if p4c_check.login() then
 
     -- Verify the user is logged into configured perforce server for the P4 workspace.
     local result = p4_util.run_command(p4_commands.check_login())

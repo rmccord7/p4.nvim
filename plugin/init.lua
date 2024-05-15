@@ -1,8 +1,9 @@
+local p4c_file = require("p4.core.file")
 
 vim.api.nvim_create_user_command(
     "P4add",
     function()
-        require("p4").add()
+        p4c_file.add()
     end,
     {
         desc = "Adds a file to the default changelist"
@@ -12,7 +13,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
     "P4edit",
     function()
-        require("p4").edit()
+        p4c_file.edit()
     end,
     {
         desc = "Checks out a file to the default changelist"
@@ -22,19 +23,10 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
     "P4revert",
     function()
-        require("p4").revert()
+        p4c_file.revert()
     end,
     {
         desc = "Reverts a file"
     }
 )
 
-vim.api.nvim_create_user_command(
-    "P4test",
-    function()
-        require("p4").test()
-    end,
-    {
-        desc = "Test function"
-    }
-)
