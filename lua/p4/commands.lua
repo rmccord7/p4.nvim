@@ -163,13 +163,13 @@ M.revert_file = function(file_paths, opts)
   local cmd = {
     "p4",
     "revert",
-    "-n",
+    --"-n", -- Dry run
   }
 
   if opts.cl then
 
     local ext_cmd = {
-      "-c",
+      "-c", -- Revert files in specified CL
       opts.cl,
     }
 

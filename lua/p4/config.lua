@@ -7,7 +7,7 @@ M.namespace = vim.api.nvim_create_namespace("P4")
 ---@class P4Options
 ---@field p4? table
 local defaults = {
-  debug = true,
+  debug = false,
   p4 = { -- P4 config.
       config = os.getenv('P4CONFIG') or "", -- Workspace P4CONFIG file name
   },

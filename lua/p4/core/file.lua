@@ -61,60 +61,6 @@ local function clear_buffer_writeable()
   vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
 end
 
---- Opens a file in the client workspace for addition to the P4 depot.
----
---- @param opts table? Optional parameters. Not used.
----
-function M.add(opts)
-  opts = opts or {}
-
-  local file_path = vim.fn.expand("%:p")
-
-  local result = p4_util.run_command(p4_commands.add_file(file_path))
-
-  if result.code == 0 then
-    p4_util.print("Opened for add")
-
-    set_buffer_writeable()
-  end
-end
-
---- Checks out a file in the client workspace for changes to the P4 depot.
----
---- @param opts table? Optional parameters. Not used.
----
-function M.edit(opts)
-  opts = opts or {}
-
-  local file_path = vim.fn.expand("%:p")
-
-  local result = p4_util.run_command(p4_commands.edit_file(file_path))
-
-  if result.code == 0 then
-    set_buffer_writeable()
-
-    p4_util.print("Opened for edit")
-  end
-end
-
---- Reverts a file in the client workspace.
----
---- @param opts table? Optional parameters. Not used.
----
-function M.revert(opts)
-  opts = opts or {}
-
-  local file_path = vim.fn.expand("%:p")
-
-  local result = p4_util.run_command(p4_commands.revert_file(file_path))
-
-  if result.code == 0 then
-    clear_buffer_writeable()
-
-    p4_util.print("Reverted file")
-  end
-end
-
 --- Enables autocmds
 ---
 function M.enable_autocmds()
@@ -184,6 +130,129 @@ function M.disable_autocmds()
 
     M.ac_group = nil
   end
+end
+--- Opens a file in the client workspace for addition to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.add(opts)
+  opts = opts or {}
+
+  local file_path = vim.fn.expand("%:p")
+
+  local result = p4_util.run_command(p4_commands.add_file(file_path))
+
+  if result.code == 0 then
+    p4_util.print("Opened for add")
+
+    set_buffer_writeable()
+  end
+end
+
+--- Opens a file in the client workspace for addition to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.add_files(files, opts)
+  opts = opts or {}
+
+  local file_path = vim.fn.expand("%:p")
+
+  local result = p4_util.run_command(p4_commands.add_file(file_path))
+
+  if result.code == 0 then
+    p4_util.print("Opened for add")
+
+    set_buffer_writeable()
+  end
+end
+
+--- Checks out a file in the client workspace for changes to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.edit(opts)
+  opts = opts or {}
+
+  local file_path = vim.fn.expand("%:p")
+
+  local result = p4_util.run_command(p4_commands.edit_file(file_path))
+
+  if result.code == 0 then
+    set_buffer_writeable()
+
+    p4_util.print("Opened for edit")
+  end
+end
+
+--- Opens a file in the client workspace for addition to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.edit_files(opts)
+end
+
+--- Reverts the current file.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.revert(opts)
+  opts = opts or {}
+
+  local file_path = vim.fn.expand("%:p")
+
+  local result = p4_util.run_command(p4_commands.revert_file(file_path))
+
+  if result.code == 0 then
+
+    -- File was opened for edit so make buffer read only and not
+    -- modifiable
+    clear_buffer_writeable()
+
+    p4_util.print("Reverted file")
+  end
+end
+
+--- Opens a file in the client workspace for addition to the P4 depot.
+---
+--- @param files string|string[] One or more files.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.revert_files(files, opts)
+  opts = opts or {}
+
+  local result = p4_util.run_command(p4_commands.revert_file(files))
+
+  if result.code == 0 then
+
+    -- File was opened for edit so make buffer read only and not
+    -- modifiable
+    clear_buffer_writeable()
+
+    p4_util.print("Reverted file")
+  end
+end
+
+--- Opens a file in the client workspace for addition to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.shelve_files(opts)
+end
+
+--- Opens a file in the client workspace for addition to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.delete_shelved_files(opts)
+end
+
+--- Opens a file in the client workspace for addition to the P4 depot.
+---
+--- @param opts table? Optional parameters. Not used.
+---
+function M.delete_files(opts)
 end
 
 return M

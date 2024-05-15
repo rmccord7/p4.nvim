@@ -58,7 +58,7 @@ function M.pending_cl_picker(opts, client)
 
   --- Processes results from the finder.
   local function entry_maker(entry)
-    chunks = {}
+    local chunks = {}
     for substring in entry:gmatch("%S+") do
       table.insert(chunks, substring)
     end

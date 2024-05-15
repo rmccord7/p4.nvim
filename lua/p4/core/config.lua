@@ -29,7 +29,7 @@ function M.find()
 
       M.path = p4_util.path.sanitize(path .. "/" .. p4_config.opts.p4.config)
 
-      p4_util.print("Config Path: " .. M.path)
+      p4_util.debug("Config Path: " .. M.path)
 
     else
       p4_util.debug("Config: Not found")

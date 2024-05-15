@@ -4,7 +4,7 @@ local p4_util = require("p4.util")
 --- P4 Change List
 local M = {}
 
---- Edits the client spec
+--- Edits the CL spec
 function M.edit_spec(buf, cl)
 
   vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
@@ -33,7 +33,7 @@ function M.edit_spec(buf, cl)
   })
 end
 
---- Make sure the user is logged into the P4 server.
+--- Get files from CL spec
 function M.get_files_from_spec(spec)
 
   local result
@@ -59,13 +59,33 @@ function M.get_files_from_spec(spec)
           table.insert(path, string)
         end
 
-        -- Third element contains file path
+        -- Third element contains the file path
         table.insert(files, index, path[3])
       end
     end
   end
 
   return files
+end
+
+--- Revert files.
+function M.revert_files(cl)
+  cl = cl or {}
+end
+
+--- Shelve files.
+function M.shelve_files(cl)
+  cl = cl or {}
+end
+
+--- Delete shelved files.
+function M.delete_shelved_files(cl)
+  cl = cl or {}
+end
+
+--- Delete files.
+function M.delete_files(cl)
+  cl = cl or {}
 end
 
 return M

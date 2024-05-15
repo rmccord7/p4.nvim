@@ -106,7 +106,7 @@ function M.picker(opts)
       local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
       if bufnr then
-        p4c_client.edit_spec(bufnr, entry.name)
+        p4c_client.edit_spec(entry.name, bufnr)
       end
 
     else
