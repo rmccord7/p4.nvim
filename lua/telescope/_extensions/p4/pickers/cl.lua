@@ -1,16 +1,16 @@
-local config = require("telescope.config.values")
+local config = require("telescope.config").values
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
-local telescope_p4_config = require("telescope._extensions.p4.config")
-local telescope_p4_pickers_util = require("telescope._extensions.p4.pickers.util")
-
+local p4_config = require("p4.config")
 local p4_commands = require("p4.commands")
-local p4_util = require("p4.util")
+local p4_core = require("p4.core")
+local p4_api = require("p4.api")
 
 local tp4_actions = require("telescope._extensions.p4.actions")
+local tp4_util = require("telescope._extensions.p4.pickers.util")
 
 local M = {}
 
@@ -24,9 +24,8 @@ local M = {}
 function M.files_picker(files, opts)
   opts = opts or {}
 
-  -- Make sure the P4 workspace is valid and we are logged into
-  -- to the P4 server.
-  if not telescope_p4_pickers_util.verify_p4_picker() then
+  -- Make sure we are logged in.
+  if not p4_api.login.check() then
     return
   end
 
@@ -46,7 +45,7 @@ function M.files_picker(files, opts)
     local selection = tp4_actions.get_selection(prompt_bufnr)
 
     if selection then
-      p4_util.run_command(p4_commands.revert_file(selection,{force = true, cl = opts.cl}))
+      p4_core.shell.run(p4_commands.file.revert(selection,{force = true, cl = opts.cl}))
     end
   end
 
@@ -59,7 +58,7 @@ function M.files_picker(files, opts)
     local selection = tp4_actions.get_selection(prompt_bufnr)
 
     if selection then
-      p4_util.run_command(p4_commands.shelve_file(selection,{force = true, cl = opts.cl}))
+      p4_core.shell.run(p4_commands.file.shelve(selection,{force = true, cl = opts.cl}))
     end
   end
 
@@ -91,15 +90,15 @@ function M.files_picker(files, opts)
       -- In case the user didn't select one or more entries before
       -- performing an action.
       if not entry then
-        telescope_p4_pickers_util.warn_no_selection_action()
+        tp4_util.warn_no_selection_action()
         return
       end
     end)
 
-    map({ "i", "n" }, telescope_p4_config.opts.change_list.mappings.diff, diff_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_list.mappings.revert, revert_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_list.mappings.shelve, shelve_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_list.mappings.unshelve, unshelve_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_list.mappings.diff, diff_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_list.mappings.revert, revert_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_list.mappings.shelve, shelve_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_list.mappings.unshelve, unshelve_files)
 
     return true
   end

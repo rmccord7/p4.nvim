@@ -7,14 +7,12 @@ local putils = require("telescope.previewers.utils")
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
-local telescope_p4_config = require("telescope._extensions.p4.config")
-local telescope_p4_pickers_util = require("telescope._extensions.p4.pickers.util")
-
+local p4_config = require("p4.config")
 local p4_commands = require("p4.commands")
-local p4_util = require("p4.util")
+local p4_core = require("p4.core")
+local p4_api = require("p4.api")
 
-local p4c_env = require("p4.core.env")
-local p4c_cl = require("p4.core.cl")
+local tp4_util = require("telescope._extensions.p4.pickers.util")
 
 local M = {}
 
@@ -28,9 +26,8 @@ local M = {}
 function M.pending_cl_picker(opts, client)
   opts = opts or {}
 
-  -- Make sure the P4 workspace is valid and we are logged into
-  -- to the P4 server.
-  if not telescope_p4_pickers_util.verify_p4_picker() then
+  -- Make sure we are logged in.
+  if not p4_api.login.check() then
     return
   end
 
@@ -74,9 +71,9 @@ function M.pending_cl_picker(opts, client)
 
   --- Issues shell command to read the P4 user's change lists.
   local function finder()
-    client = client or p4c_env.client
+    client = client or p4_core.env.client
 
-    return finders.new_oneshot_job(p4_commands.read_change_lists(client), {
+    return finders.new_oneshot_job(p4_commands.cl.read(client), {
       entry_maker = entry_maker,
     })
   end
@@ -94,7 +91,7 @@ function M.pending_cl_picker(opts, client)
 
         --- Issues shell command to read an entries P4 change list spec
         --- into a buffer so it can be displayed as a preview.
-        putils.job_maker(p4_commands.read_change_list(entry.name), self.state.bufnr, {
+        putils.job_maker(p4_commands.cl.read_spec(entry.name), self.state.bufnr, {
           value = entry.value,
           bufname = self.state.bufname,
         })
@@ -110,12 +107,12 @@ function M.pending_cl_picker(opts, client)
     local entry = actions_state.get_selected_entry()
 
     -- Read change list files to stdout
-    result = p4_util.run_command(p4_commands.read_change_list_files(entry.name))
+    result = p4_core.shell.run(p4_commands.client.read_change_list_files(entry.name))
 
     if result.code == 0 then
 
       -- Get the list of files from the CL spec
-      local files = p4c_cl.get_files_from_spec(result.stdout)
+      local files = p4_api.cl.get_files_from_spec(result.stdout)
 
       require("telescope._extensions.p4.pickers.cl").files_picker(files, {cl = entry.name})
     end
@@ -147,24 +144,24 @@ function M.pending_cl_picker(opts, client)
         local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
         if bufnr then
-          p4c_cl.edit_spec(bufnr, entry.name)
+          p4_api.cl.edit_spec(bufnr, entry.name)
         end
 
       else
 
         -- In case the user didn't select one or more entries before
         -- performing an action.
-        telescope_p4_pickers_util.warn_no_selection_action()
+        tp4_util.warn_no_selection_action()
         return
       end
     end)
 
-    map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.display_files, display_change_list_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.display_shelved_files, display_change_list_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.delete, display_change_list_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.revert, display_change_list_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.shelve, display_change_list_files)
-    map({ "i", "n" }, telescope_p4_config.opts.change_lists.mappings.unshelve, display_change_list_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.display_files, display_change_list_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.display_shelved_files, display_change_list_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.delete, display_change_list_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.revert, display_change_list_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.shelve, display_change_list_files)
+    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.unshelve, display_change_list_files)
 
     return true
   end

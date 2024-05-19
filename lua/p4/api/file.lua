@@ -1,7 +1,7 @@
-local p4_commands = require("p4.commands")
-local p4_util = require("p4.util")
+local util = require("p4.util")
+local commands = require("p4.commands")
 
-local p4c_env = require("p4.core.env")
+local core = require("p4.core")
 
 --- P4 file
 local M = {
@@ -12,7 +12,7 @@ local M = {
 local function prompt_open_for_add()
 
     -- Ensure P4 environment information is valid
-    if p4c_env.update() then
+    if core.env.update() then
 
       vim.fn.inputsave()
       local result = vim.fn.input("Open for add (y/n): ")
@@ -28,7 +28,7 @@ end
 local function promot_open_for_edit()
 
     -- Ensure P4 environment information is valid
-    if p4c_env.update() then
+    if core.env.update() then
 
       -- Prevent changing read only warning
       vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
@@ -67,19 +67,30 @@ function M.enable_autocmds()
 
   M.ac_group = vim.api.nvim_create_augroup("P4_File", {})
 
-  --vim.api.nvim_create_autocmd("BufNew", {
-  --  group = group_id,
-  --  pattern = "*",
-  --  callback = function()
-  --    vim.fn.inputsave()
-  --    local result = vim.fn.input("Open for add (y/n): ")
-  --    vim.fn.inputrestore()
-  --
-  --    if result == "y" or result == "Y" then
-  --      require("p4").add()
-  --    end
-  --  end,
-  --})
+  --- Check for P4 workspace when buffer is entered.
+  ---
+  vim.api.nvim_create_autocmd("BufEnter", {
+    group = M.ac_group,
+    pattern = "*",
+    callback = function()
+
+      if core.env.update() then
+
+        -- Set buffer to reload for changes made outside vim such as
+        -- pulling latest revisions.
+        vim.api.nvim_set_option_value("autoread", false, { scope = "local" })
+
+      end
+    end,
+  })
+
+  vim.api.nvim_create_autocmd("BufNewFile", {
+    group = M.ac_group,
+    pattern = "*",
+    callback = function()
+      prompt_open_for_add()
+    end,
+  })
 
   --- If the buffer is written, then prompt the user whether they want
   --- the associated file opened for add/edit in the client workspace.
@@ -88,7 +99,7 @@ function M.enable_autocmds()
     group = M.ac_group,
     pattern = "*",
     callback = function()
-      if p4c_env.update() then
+      if core.env.update() then
         local file_path = vim.fn.expand("%:p")
         local modifiable = vim.api.nvim_get_option_value("modifiable", { scope = "local" })
 
@@ -140,10 +151,10 @@ function M.add(opts)
 
   local file_path = vim.fn.expand("%:p")
 
-  local result = p4_util.run_command(p4_commands.add_file(file_path))
+  local result = core.shell.run(commands.file.add(file_path))
 
   if result.code == 0 then
-    p4_util.print("Opened for add")
+    util.print("Opened for add")
 
     set_buffer_writeable()
   end
@@ -158,10 +169,10 @@ function M.add_files(files, opts)
 
   local file_path = vim.fn.expand("%:p")
 
-  local result = p4_util.run_command(p4_commands.add_file(file_path))
+  local result = core.shell.run(commands.file.add(file_path))
 
   if result.code == 0 then
-    p4_util.print("Opened for add")
+    util.print("Opened for add")
 
     set_buffer_writeable()
   end
@@ -176,12 +187,12 @@ function M.edit(opts)
 
   local file_path = vim.fn.expand("%:p")
 
-  local result = p4_util.run_command(p4_commands.edit_file(file_path))
+  local result = core.shell.run(commands.file.edit(file_path))
 
   if result.code == 0 then
     set_buffer_writeable()
 
-    p4_util.print("Opened for edit")
+    util.print("Opened for edit")
   end
 end
 
@@ -201,7 +212,7 @@ function M.revert(opts)
 
   local file_path = vim.fn.expand("%:p")
 
-  local result = p4_util.run_command(p4_commands.revert_file(file_path))
+  local result = core.shell.run(commands.file.revert(file_path))
 
   if result.code == 0 then
 
@@ -209,7 +220,7 @@ function M.revert(opts)
     -- modifiable
     clear_buffer_writeable()
 
-    p4_util.print("Reverted file")
+    util.print("Reverted file")
   end
 end
 
@@ -222,7 +233,7 @@ end
 function M.revert_files(files, opts)
   opts = opts or {}
 
-  local result = p4_util.run_command(p4_commands.revert_file(files))
+  local result = core.shell.run(commands.file.revert(files))
 
   if result.code == 0 then
 
@@ -230,7 +241,7 @@ function M.revert_files(files, opts)
     -- modifiable
     clear_buffer_writeable()
 
-    p4_util.print("Reverted file")
+    util.print("Reverted file")
   end
 end
 

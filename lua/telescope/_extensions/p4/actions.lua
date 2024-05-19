@@ -1,4 +1,3 @@
-local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
 M = {}

@@ -1,22 +1,26 @@
-local p4_commands = require("p4.commands")
-local p4_util = require("p4.util")
+local util = require("p4.util")
+local commands = require("p4.commands")
 
-local p4c_env = require("p4.core.env")
+local core = require("p4.core")
 
 --- P4 check
 local M = {}
 
 --- Make sure the user is logged into the P4 server.
-function M.login()
+function M.check()
 
   -- Ensure P4 environment information is valid
-  if p4c_env.update() then
+  if core.env.update() then
 
     -- Verify the user is logged into configured P4 server.
-    local result = p4_util.run_command(p4_commands.check_login())
+    local opts = {
+      check = true,
+    }
+
+    local result = core.shell.run(commands.login(opts))
 
     if result.code ~= 0 then
-      p4_util.error("Not logged in")
+      util.error("Not logged in")
       return false
     end
 

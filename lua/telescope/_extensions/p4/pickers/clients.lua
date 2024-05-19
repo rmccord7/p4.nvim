@@ -6,13 +6,12 @@ local putils = require("telescope.previewers.utils")
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
-local telescope_p4_config = require("telescope._extensions.p4.config")
-local telescope_p4_pickers_util = require("telescope._extensions.p4.pickers.util")
-
+local p4_config = require("p4.config")
 local p4_commands = require("p4.commands")
-local p4_util = require("p4.util")
+local p4_core = require("p4.core")
+local p4_api = require("p4.api")
 
-local p4c_client = require("p4.core.client")
+local tp4_util = require("telescope._extensions.p4.pickers.util")
 
 local M = {}
 
@@ -23,9 +22,8 @@ local M = {}
 function M.picker(opts)
   opts = opts or {}
 
-  -- Make sure the P4 workspace is valid and we are logged into
-  -- to the P4 server.
-  if not telescope_p4_pickers_util.verify_p4_picker() then
+  -- Make sure we are logged in.
+  if not p4_api.login.check() then
     return
   end
 
@@ -39,9 +37,9 @@ function M.picker(opts)
     local client = chunks[2]
 
     -- Filter clients for the current host.
-    if telescope_p4_config.opts.clients.filter_current_host then
+    if p4_config.opts.telescope.clients.filter_current_host then
 
-      result = p4_util.run_command(p4_commands.read_client(client))
+      result = p4_core.shell.run(p4_commands.client.read_client(client))
 
       if result.code == 0 then
 
@@ -53,7 +51,7 @@ function M.picker(opts)
               table.insert(chunks, substring)
             end
 
-            if chunks[2] ~= p4_config.opts.p4.host then
+            if chunks[2] ~= p4_core.env.host then
               return nil
             end
             break
@@ -72,7 +70,7 @@ function M.picker(opts)
 
   --- Issues shell command to read the P4 user's clients.
   local function finder()
-    return finders.new_oneshot_job(p4_commands.read_clients(), {
+    return finders.new_oneshot_job(p4_commands.client.read_clients(), {
       entry_maker = entry_maker,
     })
   end
@@ -86,7 +84,7 @@ function M.picker(opts)
       end,
 
       define_preview = function(self, entry)
-        putils.job_maker(p4_commands.read_client(entry.name), self.state.bufnr, {
+        putils.job_maker(p4_commands.file.read_client(entry.name), self.state.bufnr, {
           value = entry.value,
           bufname = self.state.bufname,
         })
@@ -106,11 +104,11 @@ function M.picker(opts)
       local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
       if bufnr then
-        p4c_client.edit_spec(entry.name, bufnr)
+        p4_api.client.edit_spec(entry.name, bufnr)
       end
 
     else
-      telescope_p4_pickers_util.warn_no_selection_action()
+      tp4_util.warn_no_selection_action()
     end
   end
 
@@ -133,16 +131,16 @@ function M.picker(opts)
       -- In case the user didn't select one or more entries before
       -- performing an action.
       if not entry then
-        telescope_p4_pickers_util.warn_no_selection_action()
+        tp4_util.warn_no_selection_action()
         return
       end
 
       M.change_lists_picker(opts, entry.name)
     end)
 
-    map({ "i", "n" }, telescope_p4_config.opts.clients.mappings.edit_spec, edit_client_spec)
-    map({ "i", "n" }, telescope_p4_config.opts.clients.mappings.delete_client, edit_client_spec)
-    map({ "i", "n" }, telescope_p4_config.opts.clients.mappings.change_workspace, edit_client_spec)
+    map({ "i", "n" }, p4_config.opts.telescope.clients.mappings.edit_spec, edit_client_spec)
+    map({ "i", "n" }, p4_config.opts.telescope.clients.mappings.delete_client, edit_client_spec)
+    map({ "i", "n" }, p4_config.opts.telescope.clients.mappings.change_workspace, edit_client_spec)
 
     return true
   end
