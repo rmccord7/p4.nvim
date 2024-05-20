@@ -148,7 +148,7 @@ end
 
 --- Returns the P4 command to shelve the specified files.
 ---
---- @param file_paths string[] One or more files.
+--- @param file_paths string|string[] One or more files.
 ---
 --- @param opts? P4_Shelve_Cmd_Options Command options
 ---

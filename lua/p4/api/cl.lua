@@ -68,25 +68,5 @@ function M.get_files_from_spec(spec)
   return files
 end
 
---- Revert files.
-function M.revert_files(cl)
-  cl = cl or {}
-end
-
---- Shelve files.
-function M.shelve_files(cl)
-  cl = cl or {}
-end
-
---- Delete shelved files.
-function M.delete_shelved_files(cl)
-  cl = cl or {}
-end
-
---- Delete files.
-function M.delete_files(cl)
-  cl = cl or {}
-end
-
 return M
 

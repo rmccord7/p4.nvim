@@ -9,7 +9,7 @@ local M = {
 }
 
 --- Prompts the user to open the file for add.
-local function prompt_open_for_add()
+local function prompt_open_for_add(file_path)
 
     -- Ensure P4 environment information is valid
     if core.env.update() then
@@ -19,13 +19,13 @@ local function prompt_open_for_add()
       vim.fn.inputrestore()
 
       if result == "y" or result == "Y" then
-        M.add()
+        M.add(file_path)
       end
     end
 end
 
 --- Prompts the user to open the file for edit.
-local function promot_open_for_edit()
+local function promot_open_for_edit(file_path)
 
     -- Ensure P4 environment information is valid
     if core.env.update() then
@@ -39,7 +39,7 @@ local function promot_open_for_edit()
       vim.fn.inputrestore()
 
       if result == "y" or result == "Y" then
-        M.edit()
+        M.edit(file_path)
       else
         vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
 
@@ -107,10 +107,10 @@ function M.enable_autocmds()
 
           if vim.fn.filereadable(file_path) then
 
-            promot_open_for_edit()
+            promot_open_for_edit(file_path)
 
           else
-            prompt_open_for_add()
+            prompt_open_for_add(file_path)
           end
         end
       end
@@ -142,16 +142,17 @@ function M.disable_autocmds()
     M.ac_group = nil
   end
 end
---- Opens a file in the client workspace for addition to the P4 depot.
+
+--- Adds one or more files to the client workspace.
 ---
---- @param opts table? Optional parameters. Not used.
+--- @param file_paths string|string[] One or more files.
 ---
-function M.add(opts)
+--- @param opts? table Optional parameters. Not used.
+---
+function M.add(file_paths, opts)
   opts = opts or {}
 
-  local file_path = vim.fn.expand("%:p")
-
-  local result = core.shell.run(commands.file.add(file_path))
+  local result = core.shell.run(commands.file.add(file_paths))
 
   if result.code == 0 then
     util.print("Opened for add")
@@ -160,34 +161,16 @@ function M.add(opts)
   end
 end
 
---- Opens a file in the client workspace for addition to the P4 depot.
+--- Checks out one or more files in the client workspace.
 ---
---- @param opts table? Optional parameters. Not used.
+--- @param file_paths string|string[] One or more files.
 ---
-function M.add_files(files, opts)
+--- @param opts? table Optional parameters. Not used.
+---
+function M.edit(file_paths, opts)
   opts = opts or {}
 
-  local file_path = vim.fn.expand("%:p")
-
-  local result = core.shell.run(commands.file.add(file_path))
-
-  if result.code == 0 then
-    util.print("Opened for add")
-
-    set_buffer_writeable()
-  end
-end
-
---- Checks out a file in the client workspace for changes to the P4 depot.
----
---- @param opts table? Optional parameters. Not used.
----
-function M.edit(opts)
-  opts = opts or {}
-
-  local file_path = vim.fn.expand("%:p")
-
-  local result = core.shell.run(commands.file.edit(file_path))
+  local result = core.shell.run(commands.file.edit(file_paths))
 
   if result.code == 0 then
     set_buffer_writeable()
@@ -196,23 +179,16 @@ function M.edit(opts)
   end
 end
 
---- Opens a file in the client workspace for addition to the P4 depot.
+--- Reverts one or more files in the client workspace.
 ---
---- @param opts table? Optional parameters. Not used.
+--- @param file_paths string|string[] One or more files.
 ---
-function M.edit_files(opts)
-end
-
---- Reverts the current file.
+--- @param opts? table Optional parameters. Not used.
 ---
---- @param opts table? Optional parameters. Not used.
----
-function M.revert(opts)
+function M.revert(file_paths, opts)
   opts = opts or {}
 
-  local file_path = vim.fn.expand("%:p")
-
-  local result = core.shell.run(commands.file.revert(file_path))
+  local result = core.shell.run(commands.file.revert(file_paths, opts))
 
   if result.code == 0 then
 
@@ -220,50 +196,25 @@ function M.revert(opts)
     -- modifiable
     clear_buffer_writeable()
 
-    util.print("Reverted file")
+    util.print("Reverted files")
   end
 end
 
---- Opens a file in the client workspace for addition to the P4 depot.
+--- Shelves one or more files in the client workspace.
 ---
---- @param files string|string[] One or more files.
+--- @param file_paths string|string[] One or more files.
 ---
---- @param opts table? Optional parameters. Not used.
+--- @param opts? table Optional parameters. Not used.
 ---
-function M.revert_files(files, opts)
+function M.shelve(file_paths, opts)
   opts = opts or {}
 
-  local result = core.shell.run(commands.file.revert(files))
+  local result = core.shell.run(commands.file.shelve(file_paths, opts))
 
   if result.code == 0 then
 
-    -- File was opened for edit so make buffer read only and not
-    -- modifiable
-    clear_buffer_writeable()
-
-    util.print("Reverted file")
+    util.print("Shelved files")
   end
-end
-
---- Opens a file in the client workspace for addition to the P4 depot.
----
---- @param opts table? Optional parameters. Not used.
----
-function M.shelve_files(opts)
-end
-
---- Opens a file in the client workspace for addition to the P4 depot.
----
---- @param opts table? Optional parameters. Not used.
----
-function M.delete_shelved_files(opts)
-end
-
---- Opens a file in the client workspace for addition to the P4 depot.
----
---- @param opts table? Optional parameters. Not used.
----
-function M.delete_files(opts)
 end
 
 return M

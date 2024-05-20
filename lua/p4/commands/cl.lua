@@ -69,5 +69,4 @@ M.read = function(client, opts)
   return cmd
 end
 
-
 return M
