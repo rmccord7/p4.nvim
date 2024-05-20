@@ -44,6 +44,9 @@ function M.setup(opts)
       core.env.update()
     end,
   })
+
+  -- Updated the environement to kick things off.
+  core.env.update()
 end
 
 return M
