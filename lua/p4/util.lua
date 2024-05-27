@@ -23,6 +23,6 @@ function M.split_str(str, sep)
   return t
 end
 
-M.debug = require("p4.debug")
+M.debug = require("p4.debug").debug
 
 return M

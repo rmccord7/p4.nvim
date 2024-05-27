@@ -1,3 +1,4 @@
+local debug = require("p4.debug")
 local util = require("p4.util")
 local commands = require("p4.commands")
 
@@ -155,7 +156,6 @@ function M.add(file_paths, opts)
   local result = core.shell.run(commands.file.add(file_paths))
 
   if result.code == 0 then
-    util.print("Opened for add")
 
     set_buffer_writeable()
   end
@@ -173,9 +173,8 @@ function M.edit(file_paths, opts)
   local result = core.shell.run(commands.file.edit(file_paths))
 
   if result.code == 0 then
-    set_buffer_writeable()
 
-    util.print("Opened for edit")
+    set_buffer_writeable()
   end
 end
 
@@ -195,8 +194,6 @@ function M.revert(file_paths, opts)
     -- File was opened for edit so make buffer read only and not
     -- modifiable
     clear_buffer_writeable()
-
-    util.print("Reverted files")
   end
 end
 
@@ -209,12 +206,7 @@ end
 function M.shelve(file_paths, opts)
   opts = opts or {}
 
-  local result = core.shell.run(commands.file.shelve(file_paths, opts))
-
-  if result.code == 0 then
-
-    util.print("Shelved files")
-  end
+  core.shell.run(commands.file.shelve(file_paths, opts))
 end
 
 --- Gets information for one or more files in the client workspace.
@@ -237,9 +229,17 @@ function M.get_info(file_paths, opts)
       local t = util.split_str(line, "%s")
 
       if t[1] == "..." then
-        info[t[2]] = t[3]
+
+        -- Only store level one values for now.
+        if t[2] ~= "..." then
+          info[t[2]] = t[3]
+        end
       end
     end
+  end
+
+  if debug.enabled then
+    util.print(vim.inspect(info))
   end
 
   return info
