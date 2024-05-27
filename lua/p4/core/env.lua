@@ -1,3 +1,4 @@
+local debug = require("p4.debug")
 local util = require("p4.util")
 
 local core_config = require("p4.core.config")
@@ -15,10 +16,10 @@ local M = {
 
 --- Displays P4 environment information.
 local function display_env()
-    util.debug("P4USER: " .. M.user)
-    util.debug("P4HOST: " .. M.host)
-    util.debug("P4PORT: " .. M.port)
-    util.debug("P4CLIENT: " .. M.client)
+    debug.print("P4USER: " .. M.user)
+    debug.print("P4HOST: " .. M.host)
+    debug.print("P4PORT: " .. M.port)
+    debug.print("P4CLIENT: " .. M.client)
 end
 
 --- Updates the P4 environment innformation from the shell's
@@ -60,7 +61,7 @@ end
 --- Clears the P4 environment information
 function M.clear()
 
-    util.debug("Clearing P4 Environment")
+    debug.print("Clearing P4 Environment")
 
     -- NOTE: This does not clear the P4CONFIG path if it has been cached.
 
@@ -82,7 +83,7 @@ function M.update()
     -- information, then there is nothing to do.
     if M.valid == false then
 
-      util.debug("Updating P4 Environment")
+      debug.print("Updating P4 Environment")
 
       -- Clear the current p4 environment information
       M.clear()
@@ -106,7 +107,7 @@ function M.update()
       -- Handle invalid configuration
       if M.valid then
 
-        util.debug("ENV: Valid")
+        debug.print("ENV: Valid")
 
         display_env()
 
@@ -115,7 +116,7 @@ function M.update()
 
       else
 
-        util.debug("ENV: Invalid")
+        debug.print("ENV: Invalid")
 
         -- Disable autocmds
         require("p4.api.file").disable_autocmds()
