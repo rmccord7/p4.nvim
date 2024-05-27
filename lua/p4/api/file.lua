@@ -217,5 +217,33 @@ function M.shelve(file_paths, opts)
   end
 end
 
+--- Gets information for one or more files in the client workspace.
+---
+--- @param file_paths string|string[] One or more files.
+---
+--- @param opts? table Optional parameters. Not used.
+---
+function M.get_info(file_paths, opts)
+  opts = opts or {}
+
+  local info = {}
+
+  local result = core.shell.run(commands.file.fstat(file_paths, opts))
+
+  if result.code == 0 then
+
+    for _, line in ipairs(vim.split(result.stdout, "\n")) do
+
+      local t = util.split_str(line, "%s")
+
+      if t[1] == "..." then
+        info[t[2]] = t[3]
+      end
+    end
+  end
+
+  return info
+end
+
 return M
 

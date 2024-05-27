@@ -5,21 +5,24 @@ local M = {}
 --- Returns the P4 command to get information for the specified
 --- file spec.
 ---
---- @param file_spec string
+--- @param file_paths string|string[] One or more files.
 ---
 --- @param opts? table
 ---
 --- @return table cmd Formatted P4 command
-M.stat = function(file_spec, opts)
+M.fstat = function(file_paths, opts)
   opts = opts or {}
-
-  -- file(s) not in client view.
 
   local cmd = {
     "p4",
     "fstat",
-    file_spec,
   }
+
+  if type(file_paths) == 'table' then
+    vim.list_extend(cmd, file_paths)
+  else
+    table.insert(cmd, file_paths)
+  end
 
   debug.command(cmd)
 
@@ -180,6 +183,52 @@ M.shelve = function(file_paths, opts)
   else
     table.insert(cmd, file_paths)
   end
+
+  debug.command(cmd)
+
+  return cmd
+end
+
+---@class P4_Filelog_Cmd_Options : table
+---@field cl? integer Display only files submitted at the
+---                   specific changelist number.
+---@field follow? boolean Follow a file's hisory across branches.
+
+--- Returns the P4 command to print information about a file's history.
+---
+--- @param files_paths string File path
+---
+--- @param opts? P4_Filelog_Cmd_Options Command options
+---
+--- @return table cmd Formatted P4 command
+M.filelog = function(files_paths, opts)
+  opts = opts or {}
+
+  local cmd = {
+    "p4",
+    "filelog",
+  }
+
+  if opts.cl then
+
+    local ext_cmd = {
+      "-c",
+      opts.cl,
+    }
+
+    vim.list_extend(cmd, ext_cmd)
+  end
+
+  if opts.follow then
+
+    local ext_cmd = {
+      "-i",
+    }
+
+    vim.list_extend(cmd, ext_cmd)
+  end
+
+  table.insert(cmd, files_paths)
 
   debug.command(cmd)
 
