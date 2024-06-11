@@ -104,3 +104,43 @@ vim.keymap.set("n", "<leader>pe", function() require("p4.nvim").P4edit() end)
 vim.keymap.set("n", "<leader>pr", function() require("p4.nvim").P4revert() end)
 ```
 
+### Telescope
+
+You can easily open any search results in **P4**, by defining a custom action:
+
+```lua
+local actions = require("telescope.actions")
+
+-- Open all or selected files for add.
+local p4_add = require("p4.telescope").add
+
+-- Open all or selected files for edit.
+local p4_edit = require("p4.telescope").edit
+
+-- Revert all or selected files that are opened for add/edit.
+local p4_revert = require("p4.telescope").revert
+
+-- Get file information.
+local p4_fstat = require("p4.telescope").fstat
+
+local telescope = require("telescope")
+
+telescope.setup({
+  defaults = {
+    mappings = {
+      i = {
+          ["<c-a>"] = p4_add,
+          ["<c-e>"] = p4_edit,
+          ["<c-r>"] = p4_revert,
+          ["<c-g>"] = p4_fstat,
+      },
+      n = {
+          ["<c-a>"] = p4_add,
+          ["<c-e>"] = p4_edit,
+          ["<c-r>"] = p4_revert,
+          ["<c-g>"] = p4_fstat,
+      },
+    },
+  },
+})
+```

@@ -39,7 +39,7 @@ function M.picker(opts)
     -- Filter clients for the current host.
     if p4_config.opts.telescope.clients.filter_current_host then
 
-      result = p4_core.shell.run(p4_commands.client.read_client(client))
+      result = p4_core.shell.run(p4_commands.client.read_spec(client))
 
       if result.code == 0 then
 
@@ -70,7 +70,7 @@ function M.picker(opts)
 
   --- Issues shell command to read the P4 user's clients.
   local function finder()
-    return finders.new_oneshot_job(p4_commands.client.read_clients(), {
+    return finders.new_oneshot_job(p4_commands.client.read(), {
       entry_maker = entry_maker,
     })
   end
@@ -84,7 +84,7 @@ function M.picker(opts)
       end,
 
       define_preview = function(self, entry)
-        putils.job_maker(p4_commands.file.read_client(entry.name), self.state.bufnr, {
+        putils.job_maker(p4_commands.client.read_spec(entry.name), self.state.bufnr, {
           value = entry.value,
           bufname = self.state.bufname,
         })

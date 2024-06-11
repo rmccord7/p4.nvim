@@ -153,11 +153,21 @@ end
 function M.add(file_paths, opts)
   opts = opts or {}
 
-  local result = core.shell.run(commands.file.add(file_paths))
+  -- Get all file information from the P4 server.
+  local file_info_list = M.get_info(file_paths)
 
-  if result.code == 0 then
+  if file_info_list then
 
-    set_buffer_writeable()
+    -- TODO: Remove file path if file is already opened for add. P4 command
+    -- to add a file will catch it, but we can just silently reduce messages.
+
+    -- Add the file to the client workspace.
+    result = core.shell.run(commands.file.add(file_paths))
+
+    if result.code == 0 then
+
+      set_buffer_writeable()
+    end
   end
 end
 
@@ -170,12 +180,21 @@ end
 function M.edit(file_paths, opts)
   opts = opts or {}
 
-  local result = core.shell.run(commands.file.edit(file_paths))
+  -- Get all file information from the P4 server.
+  local file_info_list = M.get_info(file_paths)
 
-  if result.code == 0 then
+  if file_info_list then
 
-    set_buffer_writeable()
-  end
+    -- TODO: Remove file path if file is already opened for edit. P4 command
+    -- to edit a file will catch it, but we can just silently reduce messages.
+
+   local result = core.shell.run(commands.file.edit(file_paths))
+
+   if result.code == 0 then
+
+     set_buffer_writeable()
+   end
+ end
 end
 
 --- Reverts one or more files in the client workspace.
@@ -215,9 +234,11 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
+--- @return P4_Fstat_Table? fstat File information
 function M.get_info(file_paths, opts)
   opts = opts or {}
 
+  local files = {}
   local info = {}
 
   local result = core.shell.run(commands.file.fstat(file_paths, opts))
@@ -226,23 +247,63 @@ function M.get_info(file_paths, opts)
 
     for _, line in ipairs(vim.split(result.stdout, "\n")) do
 
-      local t = util.split_str(line, "%s")
+      if line ~= "" then
 
-      if t[1] == "..." then
+        -- File is not in workspace.
+        if string.find(line, "no such file(s).", 1, true) then
 
-        -- Only store level one values for now.
-        if t[2] ~= "..." then
-          info[t[2]] = t[3]
+          -- NOTE: Possible file does not exist, but if
+          -- this is for a new file that exists then the
+          -- p4 command to do the subsequent add will fail.
+
+          -- Just add an empty entry so the caller can continue.
+          info = {}
+
+        -- File is not in root or client view.
+        elseif string.find(line, "file(s) not in client view.", 1, true) or
+               string.find(line, "is not under client's root", 1, true) then
+
+          -- Fail.
+          files = nil
+          break
+
+        -- Valid file info has been returned.
+        else
+
+          local t = util.split_str(line, "%s")
+
+          if t[1] == "..." then
+
+            -- Only store level one values for now.
+            if t[2] ~= "..." then
+              info[t[2]] = t[3]
+            end
+          end
+
+          -- P4 fstat key isMapped doesn't have value so just set it to true.
+          info.isMapped = true
+
+        end
+      else
+        -- Don't include last line as empty table
+        if not vim.tbl_isempty(info) then
+          table.insert(files, info)
+          info = {}
         end
       end
     end
+
+  else
+     -- Fail.
+    files = nil
   end
 
+  util.print(vim.inspect(files))
   if debug.enabled then
-    util.print(vim.inspect(info))
+    util.print(vim.inspect(files))
   end
 
-  return info
+  return files
 end
 
 return M

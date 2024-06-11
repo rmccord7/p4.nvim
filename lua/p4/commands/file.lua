@@ -2,6 +2,21 @@ local debug = require("p4.commands.debug") -- Debugging for commands
 
 local M = {}
 
+---@class P4_Fstat_Cmd_Options : table
+---@field cl? integer Only files in the specified changelist.
+
+---@class P4_Fstat_Table : table
+---@field clientFile string Local path to the file in local syntax
+---@field DepotFile string Depot path to the file
+---@field path string Local path to the file
+---@field isMapped boolean Indicates if file is mapped to the current client workspace
+---@field shelved boolean Indicates if file is shelved
+---@field change integer Open change list number if file is opened in client workspace
+---@field headRev integer Head revision number if in depot
+---@field haveRev integer Revision last synced to workpace
+---@field workRev integer Revision if file is opened
+---@field action string Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive)
+
 --- Returns the P4 command to get information for the specified
 --- file spec.
 ---
@@ -9,7 +24,7 @@ local M = {}
 ---
 --- @param opts? table
 ---
---- @return table cmd Formatted P4 command
+--- @return P4_Fstat_Table fstat File information
 M.fstat = function(file_paths, opts)
   opts = opts or {}
 
