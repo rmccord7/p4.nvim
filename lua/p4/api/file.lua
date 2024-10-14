@@ -210,6 +210,8 @@ function M.revert(file_paths, opts)
 
   if result.code == 0 then
 
+    vim.cmd("edit")
+
     -- File was opened for edit so make buffer read only and not
     -- modifiable
     clear_buffer_writeable()
