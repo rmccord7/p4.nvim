@@ -39,6 +39,7 @@ local function find_p4_ancestor(startpath)
     end
   end)
 end
+
 --- Clears the P4CONFIG path
 function M.clear()
   M.path = nil
