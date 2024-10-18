@@ -1,9 +1,9 @@
-local util = require("p4.util")
+local log = require("p4.core.log")
 
 M = {}
 
 function M.warn_no_selection_action()
-  util.warn("Please make a valid selection before performing the action.")
+  log.warn("Please make a valid selection before performing the action.")
 end
 
 return M

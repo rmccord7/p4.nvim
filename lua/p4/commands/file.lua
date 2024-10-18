@@ -1,5 +1,3 @@
-local debug = require("p4.commands.debug") -- Debugging for commands
-
 local M = {}
 
 ---@class P4_Fstat_Cmd_Options : table
@@ -39,8 +37,6 @@ M.fstat = function(file_paths, opts)
     table.insert(cmd, file_paths)
   end
 
-  debug.command(cmd)
-
   return cmd
 end
 
@@ -60,8 +56,6 @@ M.where = function(file_path, opts)
     "where",
     file_path,
   }
-
-  debug.command(cmd)
 
   return cmd
 end
@@ -87,8 +81,6 @@ M.add = function(file_paths, opts)
     table.insert(cmd, file_paths)
   end
 
-  debug.command(cmd)
-
   return cmd
 end
 
@@ -112,8 +104,6 @@ M.edit = function(file_paths, opts)
   else
     table.insert(cmd, file_paths)
   end
-
-  debug.command(cmd)
 
   return cmd
 end
@@ -153,8 +143,6 @@ M.revert = function(file_paths, opts)
   else
     table.insert(cmd, file_paths)
   end
-
-  debug.command(cmd)
 
   return cmd
 end
@@ -199,8 +187,6 @@ M.shelve = function(file_paths, opts)
     table.insert(cmd, file_paths)
   end
 
-  debug.command(cmd)
-
   return cmd
 end
 
@@ -244,8 +230,6 @@ M.filelog = function(files_paths, opts)
   end
 
   table.insert(cmd, files_paths)
-
-  debug.command(cmd)
 
   return cmd
 end

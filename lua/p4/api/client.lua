@@ -1,7 +1,7 @@
-local util = require("p4.util")
 local commands = require("p4.commands")
 
 local core = require("p4.core")
+local log = require("p4.core.log")
 
 --- P4 clients.
 local M = {}
@@ -27,7 +27,7 @@ function M.edit_spec(client_name, buf)
       result = vim.system(commands.client.write_spec(client_name), { stdin = content }):wait()
 
       if result.code > 0 then
-        util.error(result.stderr)
+        log.error(result.stderr)
         return
       end
 

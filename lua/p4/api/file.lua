@@ -1,7 +1,6 @@
-local debug = require("p4.debug")
-local util = require("p4.util")
 local commands = require("p4.commands")
 
+local util = require("p4.util")
 local core = require("p4.core")
 
 --- P4 file
@@ -298,11 +297,6 @@ function M.get_info(file_paths, opts)
   else
      -- Fail.
     files = nil
-  end
-
-  util.print(vim.inspect(files))
-  if debug.enabled then
-    util.print(vim.inspect(files))
   end
 
   return files

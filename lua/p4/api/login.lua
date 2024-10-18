@@ -1,7 +1,7 @@
-local util = require("p4.util")
 local commands = require("p4.commands")
 
 local core = require("p4.core")
+local log = require("p4.core.log")
 
 --- P4 check
 local M = {}
@@ -20,7 +20,7 @@ function M.check()
     local result = core.shell.run(commands.login(opts))
 
     if result.code ~= 0 then
-      util.error("Not logged in")
+      log.error("Not logged in")
       return false
     end
 

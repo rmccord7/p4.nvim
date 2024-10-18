@@ -1,5 +1,3 @@
-local debug = require("p4.commands.debug") -- Debugging for commands
-
 M = {}
 
 --- Returns the P4 command to read the specified client spec from
@@ -20,8 +18,6 @@ M.read_spec = function(client, opts)
     client,
   }
 
-  debug.command(cmd)
-
   return cmd
 end
 
@@ -39,8 +35,6 @@ M.write_spec = function(opts)
     "client",
     "-i", -- To STDIN
   }
-
-  debug.command(cmd)
 
   return cmd
 end
@@ -60,8 +54,6 @@ M.read = function(opts)
     "--me", -- Current user
     "-a", -- Get all clients (not just the ones on the connected p4 server)
   }
-
-  debug.command(cmd)
 
   return cmd
 end
@@ -83,8 +75,6 @@ M.read_change_list_files = function(changelist, opts)
     "-c", -- Specify CL
     changelist,
   }
-
-  debug.command(cmd)
 
   return cmd
 end

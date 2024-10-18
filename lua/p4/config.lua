@@ -7,6 +7,7 @@ M.namespace = vim.api.nvim_create_namespace("P4")
 ---@class P4Options
 ---@field p4? table
 local defaults = {
+  log_level = vim.log.levels.DEBUG, -- Default log level for plugin
   p4 = { -- P4 config.
       config = os.getenv('P4CONFIG') or "", -- Workspace P4CONFIG file name
   },

@@ -1,5 +1,6 @@
-local util = require("p4.util")
 local commands = require("p4.commands")
+
+local log = require("p4.core.log")
 
 --- P4 Change List
 local M = {}
@@ -24,7 +25,7 @@ function M.edit_spec(buf, cl)
       result = vim.system(commands.cl.write(cl), { stdin = content }):wait()
 
       if result.code > 0 then
-        util.error(result.stderr)
+        log.error(result.stderr)
         return
       end
 
@@ -47,7 +48,7 @@ function M.get_files_from_spec(spec)
       -- CL spec lists files in depot path
       local depot_path = line:sub(1, line:find("#", 1, true) - 1)
 
-      result = util.run_command(commands.file.where(depot_path))
+      result = log.run_command(commands.file.where(depot_path))
 
       if result.code == 0 then
 

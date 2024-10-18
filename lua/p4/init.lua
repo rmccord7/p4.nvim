@@ -1,7 +1,7 @@
 local config = require("p4.config")
-local util = require("p4.util")
 
 local core = require("p4.core")
+local log = require("p4.core.log")
 
 --- P4 context.
 local M = {
@@ -20,7 +20,7 @@ local M = {
 --- @param opts table? P4 options
 function M.setup(opts)
   if vim.fn.has("nvim-0.7.2") == 0 then
-    util.error("P4 needs Neovim >= 0.7.2")
+    log.error("P4 needs Neovim >= 0.7.2")
     return
   end
 

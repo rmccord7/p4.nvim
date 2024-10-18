@@ -1,5 +1,3 @@
-local debug = require("p4.commands.debug") -- Debugging for commands
-
 local M = {}
 
 --- Returns the P4 command to read the specified change list
@@ -18,8 +16,6 @@ M.read_spec = function(changelist, opts)
     changelist,
   }
 
-  debug.command(cmd)
-
   return cmd
 end
 
@@ -37,8 +33,6 @@ M.write_spec = function(opts)
     "change",
     "-i", -- To STDIN
   }
-
-  debug.command(cmd)
 
   return cmd
 end
@@ -63,8 +57,6 @@ M.read = function(client, opts)
     "-s", -- Filter CL state
     "pending",
   }
-
-  debug.command(cmd)
 
   return cmd
 end

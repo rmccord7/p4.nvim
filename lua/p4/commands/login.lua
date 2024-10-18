@@ -1,5 +1,3 @@
-local debug = require("p4.commands.debug") -- Debugging for commands
-
 local M = {}
 
 ---@class P4_Login_Cmd_Options : table
@@ -33,8 +31,6 @@ M.login = function(opts, password)
   else
     vim.list_extend(cmd, {password})
   end
-
-  debug.command(cmd);
 
   return cmd
 end

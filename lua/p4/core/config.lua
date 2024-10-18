@@ -1,8 +1,8 @@
 local uv = vim.loop
 
 local config = require("p4.config")
-local debug = require("p4.debug")
 
+local log = require("p4.core.log")
 local core_path = require("p4.core.path")
 
 --- P4 config
@@ -33,7 +33,7 @@ end
 -- https://github.com/neovim/nvim-lspconfig/blob/master/lua/lspconfig/util.lua#L209
 local function find_p4_ancestor(startpath)
   return search_ancestors(startpath, function(path)
-    debug.print("Path" .. core_path.sanitize(core_path.join(path, config.opts.p4.config)))
+    log.debug("Path" .. core_path.sanitize(core_path.join(path, config.opts.p4.config)))
     if core_path.is_file(core_path.join(path, config.opts.p4.config)) then
       return path
     end
@@ -47,8 +47,8 @@ end
 
 --- Find the P4CONFIG file
 function M.find()
-  debug.print("Finding P4 Config")
-  debug.print("P4CONFIG: " .. config.opts.p4.config)
+  log.debug("Finding P4 Config")
+  log.debug("P4CONFIG: " .. config.opts.p4.config)
 
   -- Check if we cached the P4config path the last time this
   -- function was called.
@@ -61,15 +61,15 @@ function M.find()
 
       M.path = core_path.sanitize(path .. "/" .. config.opts.p4.config)
 
-      debug.print("Config Path: " .. M.path)
+      log.debug("Config Path: " .. M.path)
 
     else
-      debug.print("Config: Not found")
+      log.debug("Config: Not found")
     end
 
   else
 
-    debug.print("P4 Config: " .. M.path)
+    log.debug("P4 Config: " .. M.path)
     return true
   end
 end
