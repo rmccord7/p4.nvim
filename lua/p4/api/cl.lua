@@ -2,17 +2,45 @@ local commands = require("p4.commands")
 
 local log = require("p4.core.log")
 
---- P4 Change List
-local M = {}
+--- @class P4_CL
+--- @field default boolean Indicates if this is the default CL
+--- @field num integer CL number if this is not the default CL
+--- @field client string Name of the client that is associated with this CL
+--- @field files string[] List of files checked out for this CL
+local cl = {
+  name = 0,
+  num = 0,
+  client = '',
+  files = {},
+}
+
+cl.__index = cl
+
+--- Cleans up the CL's file list
+local function cleanup_files(self)
+  for file in pairs (self.files) do
+    self.files[file] = nil
+  end
+end
+
+--- Creates a new CL
+function cl:new(num)
+  local new_cl = {}
+  setmetatable(self, cl)
+
+  new_cl.num = num
+
+  return new_cl
+end
 
 --- Edits the CL spec
-function M.edit_spec(buf, cl)
+function cl:edit_spec(buf)
 
   vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
   vim.api.nvim_set_option_value("filetype", "conf", { buf = buf })
   vim.api.nvim_set_option_value("expandtab", false, { buf = buf })
 
-  vim.api.nvim_buf_set_name(buf, "change list: " .. cl)
+  vim.api.nvim_buf_set_name(buf, "change list: " .. self.num)
 
   vim.api.nvim_win_set_buf(0, buf)
 
@@ -22,7 +50,7 @@ function M.edit_spec(buf, cl)
     callback = function()
       local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-      result = vim.system(commands.cl.write(cl), { stdin = content }):wait()
+      result = vim.system(commands.cl.write(self.num), { stdin = content }):wait()
 
       if result.code > 0 then
         log.error(result.stderr)
@@ -35,10 +63,12 @@ function M.edit_spec(buf, cl)
 end
 
 --- Get files from CL spec
-function M.get_files_from_spec(spec)
+function cl:get_files_from_spec(spec)
 
   local result
-  local files = {}
+
+  -- Delete old files list
+  cleanup_files(self)
 
   for index, line in ipairs(vim.split(spec, "\n")) do
 
@@ -61,13 +91,8 @@ function M.get_files_from_spec(spec)
         end
 
         -- Third element contains the file path
-        table.insert(files, index, path[3])
+        table.insert(self.files, index, path[3])
       end
     end
   end
-
-  return files
 end
-
-return M
-

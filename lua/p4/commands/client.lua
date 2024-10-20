@@ -66,14 +66,16 @@ end
 --- @param opts table? Optional parameters. Not used.
 ---
 --- @return table cmd Formatted P4 command
-M.read_change_list_files = function(changelist, opts)
+M.read_cls = function(changelist, opts)
   opts = opts or {}
 
   local cmd = {
     "p4",
-    "opened",
+    "changes",
     "-c", -- Specify CL
     changelist,
+    "-s", -- CL Type
+    "pending", -- CL Type
   }
 
   return cmd

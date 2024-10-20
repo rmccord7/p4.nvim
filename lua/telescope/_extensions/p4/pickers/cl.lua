@@ -6,8 +6,8 @@ local actions_state = require("telescope.actions.state")
 
 local p4_config = require("p4.config")
 local p4_commands = require("p4.commands")
-local p4_core = require("p4.core")
-local p4_api = require("p4.api")
+
+local p4_shell = require("p4.api.shell")
 
 local tp4_actions = require("telescope._extensions.p4.actions")
 local tp4_util = require("telescope._extensions.p4.pickers.util")
@@ -17,17 +17,12 @@ local M = {}
 --- Telescope picker to display a P4 change list's files that
 --- are checked out in the client workspace.
 ---
---- @param files string[] List of files.
+--- @param cl P4_CL Change list.
 ---
 --- @param opts table? Optional parameters. Not used.
 ---
-function M.files_picker(files, opts)
+function M.files_picker(cl, opts)
   opts = opts or {}
-
-  -- Make sure we are logged in.
-  if not p4_api.login.check() then
-    return
-  end
 
   --- Diffs the P4 change list's files against the head revision.
   ---
@@ -45,7 +40,7 @@ function M.files_picker(files, opts)
     local selection = tp4_actions.get_selection(prompt_bufnr)
 
     if selection then
-      p4_core.shell.run(p4_commands.file.revert(selection,{force = true, cl = opts.cl}))
+      p4_shell.run(p4_commands.file.revert(selection, {force = true, cl = cl.num}))
     end
   end
 
@@ -58,7 +53,7 @@ function M.files_picker(files, opts)
     local selection = tp4_actions.get_selection(prompt_bufnr)
 
     if selection then
-      p4_core.shell.run(p4_commands.file.shelve(selection,{force = true, cl = opts.cl}))
+      p4_shell.run(p4_commands.file.shelve(selection,{force = true, cl = cl.num}))
     end
   end
 
@@ -108,7 +103,7 @@ function M.files_picker(files, opts)
       prompt_title = "Change List",
       results_title = "Checked Out",
       finder = finders.new_table({
-        results = files,
+        results = cl.files,
       }),
       sorter = config.generic_sorter(opts),
       previewer = config.file_previewer(opts),

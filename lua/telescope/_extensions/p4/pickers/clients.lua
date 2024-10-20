@@ -9,6 +9,7 @@ local actions_state = require("telescope.actions.state")
 local p4_config = require("p4.config")
 local p4_commands = require("p4.commands")
 local p4_core = require("p4.core")
+local p4_client = require("p4.api.client")
 local p4_api = require("p4.api")
 
 local tp4_util = require("telescope._extensions.p4.pickers.util")
@@ -103,8 +104,11 @@ function M.picker(opts)
 
       local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
+      -- Entry name is the client name
+      local client = p4_client.new(entry.name)
+
       if bufnr then
-        p4_api.client.edit_spec(entry.name, bufnr)
+        client:edit_spec(bufnr)
       end
 
     else
