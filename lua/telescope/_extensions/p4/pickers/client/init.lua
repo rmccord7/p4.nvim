@@ -8,11 +8,12 @@ local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
 local p4_config = require("p4.config")
-local p4_commands = require("p4.commands")
-local p4_core = require("p4.core")
-local p4_api = require("p4.api")
+
+local p4_env = require("p4.core.env")
+
+local p4_cl_cmds = require("p4.commands.cl")
+
 local p4_cl = require("p4.api.cl")
-local p4_log = require("p4.core.log")
 
 local tp4_util = require("telescope._extensions.p4.pickers.util")
 
@@ -27,11 +28,6 @@ local M = {}
 ---
 function M.pending_cl_picker(opts, client)
   opts = opts or {}
-
-  -- Make sure we are logged in.
-  if not p4_api.login.check() then
-    return
-  end
 
   --- Helper function to format the result before it is
   --- displayed.
@@ -73,9 +69,16 @@ function M.pending_cl_picker(opts, client)
 
   --- Issues shell command to read the P4 user's change lists.
   local function finder()
-    client = client or p4_core.env.client
+    client = client or p4_env.client
 
-    return finders.new_oneshot_job(p4_commands.cl.read(client), {
+    -- Read pending change lists for the current user's specified
+    -- P4 client.
+    local read_opts = {
+      client = client,
+      pending = true,
+    }
+
+    return finders.new_oneshot_job(p4_cl_cmds.read(read_opts), {
       entry_maker = entry_maker,
     })
   end
@@ -93,7 +96,7 @@ function M.pending_cl_picker(opts, client)
 
         --- Issues shell command to read an entries P4 change list spec
         --- into a buffer so it can be displayed as a preview.
-        putils.job_maker(p4_commands.cl.read_spec(entry.name), self.state.bufnr, {
+        putils.job_maker(p4_cl_cmds.read_spec(entry.name), self.state.bufnr, {
           value = entry.value,
           bufname = self.state.bufname,
         })
@@ -102,33 +105,9 @@ function M.pending_cl_picker(opts, client)
     })
   end
 
-  --- Action to display change list files.
-  local function display_change_list_files(prompt_bufnr)
-    actions.close(prompt_bufnr)
-
-    local entry = actions_state.get_selected_entry()
-
-    -- Read change list files to stdout
-    result = p4_core.shell.run(p4_commands.client.read_change_list_files(entry.name))
-
-    if result.code == 0 then
-
-      local cl = p4_cl.new(entry.name)
-
-      -- Get the list of files from the CL spec
-      cl:get_files_from_spec(result.stdout)
-
-      if not vim.tbl_isempty then
-        require("telescope._extensions.p4.pickers.cl").files_picker(cl)
-      else
-        p4_log.warn("CL doesn't contain any files")
-      end
-    end
-  end
-
   --- Defines mappings.
   ---
-  --- @param prompt_bufnr integer Prompt buffer number.
+  --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
   ---
   --- @param map function Maps keys to functions.
   ---
@@ -167,12 +146,15 @@ function M.pending_cl_picker(opts, client)
       end
     end)
 
-    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.display_files, display_change_list_files)
-    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.display_shelved_files, display_change_list_files)
-    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.delete, display_change_list_files)
-    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.revert, display_change_list_files)
-    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.shelve, display_change_list_files)
-    map({ "i", "n" }, p4_config.opts.telescope.change_lists.mappings.unshelve, display_change_list_files)
+    local client_mappings = p4_config.opts.telescope.change_lists.mappings
+    local client_actions  = require("telescope._extensions.p4.pickers.client.actions")
+
+    map({ "i", "n" }, client_mappings.display_files, client_actions.display_cl_files)
+    map({ "i", "n" }, client_mappings.display_shelved_files, client_actions.display_shelved_cl_files)
+    map({ "i", "n" }, client_mappings.delete, client_actions.delete_cl)
+    map({ "i", "n" }, client_mappings.revert, client_actions.revert_cl)
+    map({ "i", "n" }, client_mappings.shelve, client_actions.shelve_cl)
+    map({ "i", "n" }, client_mappings.unshelve, client_actions.unshelve_cl)
 
     return true
   end

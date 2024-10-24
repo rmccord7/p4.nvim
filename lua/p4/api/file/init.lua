@@ -1,7 +1,9 @@
-local commands = require("p4.commands")
-
 local util = require("p4.util")
-local core = require("p4.core")
+
+local env = require("p4.core.env")
+local shell = require("p4.core.shell")
+
+local file_cmds = require("p4.commands.file")
 
 --- P4 file
 local M = {
@@ -12,7 +14,7 @@ local M = {
 local function prompt_open_for_add(file_path)
 
     -- Ensure P4 environment information is valid
-    if core.env.update() then
+    if env.update() then
 
       vim.fn.inputsave()
       local result = vim.fn.input("Open for add (y/n): ")
@@ -28,7 +30,7 @@ end
 local function promot_open_for_edit(file_path)
 
     -- Ensure P4 environment information is valid
-    if core.env.update() then
+    if env.update() then
 
       -- Prevent changing read only warning
       vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
@@ -74,7 +76,7 @@ function M.enable_autocmds()
     pattern = "*",
     callback = function()
 
-      if core.env.update() then
+      if env.update() then
 
         -- Set buffer to reload for changes made outside vim such as
         -- pulling latest revisions.
@@ -99,7 +101,7 @@ function M.enable_autocmds()
     group = M.ac_group,
     pattern = "*",
     callback = function()
-      if core.env.update() then
+      if env.update() then
         local file_path = vim.fn.expand("%:p")
         local modifiable = vim.api.nvim_get_option_value("modifiable", { scope = "local" })
 
@@ -161,7 +163,7 @@ function M.add(file_paths, opts)
     -- to add a file will catch it, but we can just silently reduce messages.
 
     -- Add the file to the client workspace.
-    result = core.shell.run(commands.file.add(file_paths))
+    result = shell.run(file_cmds.add(file_paths))
 
     if result.code == 0 then
 
@@ -187,7 +189,7 @@ function M.edit(file_paths, opts)
     -- TODO: Remove file path if file is already opened for edit. P4 command
     -- to edit a file will catch it, but we can just silently reduce messages.
 
-   local result = core.shell.run(commands.file.edit(file_paths))
+   local result = shell.run(file_cmds.edit(file_paths))
 
    if result.code == 0 then
 
@@ -205,7 +207,7 @@ end
 function M.revert(file_paths, opts)
   opts = opts or {}
 
-  local result = core.shell.run(commands.file.revert(file_paths, opts))
+  local result = shell.run(file_cmds.revert(file_paths, opts))
 
   if result.code == 0 then
 
@@ -226,7 +228,7 @@ end
 function M.shelve(file_paths, opts)
   opts = opts or {}
 
-  core.shell.run(commands.file.shelve(file_paths, opts))
+  shell.run(file_cmds.shelve(file_paths, opts))
 end
 
 --- Gets information for one or more files in the client workspace.
@@ -242,7 +244,7 @@ function M.get_info(file_paths, opts)
   local files = {}
   local info = {}
 
-  local result = core.shell.run(commands.file.fstat(file_paths, opts))
+  local result = shell.run(file_cmds.fstat(file_paths, opts))
 
   if result.code == 0 then
 

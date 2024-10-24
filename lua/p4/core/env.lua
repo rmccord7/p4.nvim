@@ -1,4 +1,4 @@
-local core_config = require("p4.core.config")
+local config = require("p4.core.config")
 local log = require("p4.core.log")
 
 --- P4 env
@@ -8,16 +8,14 @@ local M = {
     host = nil, -- identifies the P4 host
     port = nil, -- identifies the P4 port
     client = nil, -- identifies the P4 client
-    file_ac_group = nil, -- File autogroup ID
-    dir_ac_group = nil, -- Dir autogroup ID
 }
 
 --- Displays P4 environment information.
 local function display_env()
-    log.debug("P4USER: " .. M.user)
-    log.debug("P4HOST: " .. M.host)
-    log.debug("P4PORT: " .. M.port)
-    log.debug("P4CLIENT: " .. M.client)
+    log.info("P4USER: " .. M.user)
+    log.info("P4HOST: " .. M.host)
+    log.info("P4PORT: " .. M.port)
+    log.info("P4CLIENT: " .. M.client)
 end
 
 --- Updates the P4 environment innformation from the shell's
@@ -29,6 +27,7 @@ local function update_from_env()
     M.client = os.getenv('P4CLIENT')
 
     if M.user and M.host and M.port and M.client then
+      log.info("P4 configured from enviroment")
       M.valid = true
     end
 end
@@ -51,6 +50,7 @@ local function update_from_file(config_path)
     M.client = t["P4CLIENT"]
 
     if M.user and M.host and M.port and M.client then
+      log.info("P4 configured from P4CONFIG")
       M.valid = true
     end
   end
@@ -59,7 +59,7 @@ end
 --- Clears the P4 environment information
 function M.clear()
 
-    log.debug("Clearing P4 Environment")
+    log.info("Clearing P4 config")
 
     -- NOTE: This does not clear the P4CONFIG path if it has been cached.
 
@@ -75,13 +75,13 @@ function M.update()
 
   -- Prevent notifications if there is not P4CONFIG file
   -- in the workspace.
-  if core_config.find() then
+  if config.find() then
 
     -- If we have already cached the P4 environment
     -- information, then there is nothing to do.
     if M.valid == false then
 
-      log.debug("Updating P4 Environment")
+      log.info("Configuring P4")
 
       -- Clear the current p4 environment information
       M.clear()
@@ -94,18 +94,16 @@ function M.update()
 
         -- Need to find the P4CONFIG file to load p4 environment
         -- information.
-        if core_config.path then
+        if config.path then
 
           -- Update the P4 environment information from the P4CONFIG
           -- file.
-          update_from_file(core_config.path)
+          update_from_file(config.path)
         end
       end
 
       -- Handle invalid configuration
       if M.valid then
-
-        log.debug("ENV: Valid")
 
         display_env()
 
@@ -114,26 +112,26 @@ function M.update()
 
       else
 
-        log.debug("ENV: Invalid")
-
         -- Disable autocmds
         require("p4.api.file").disable_autocmds()
 
         if not M.client then
-          log.error("Invalid client")
+          log.error("Invalid P4CLIENT")
         else
           if not M.port then
-            log.error("Invalid port")
+            log.error("Invalid P4PORT")
           else
             if not M.host then
-              log.error("Invalid host")
+              log.error("Invalid P4HOST")
             else
               if not M.user then
-                log.error("Invalid user")
+                log.error("Invalid P4USER")
               end
             end
           end
         end
+
+        log.error("Configuring P4 failed")
 
         -- Clear the current p4 environment information
         M.clear()

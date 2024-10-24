@@ -7,11 +7,13 @@ local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
 local p4_config = require("p4.config")
-local p4_commands = require("p4.commands")
-local p4_core = require("p4.core")
-local p4_client = require("p4.api.client")
-local p4_api = require("p4.api")
 
+local p4_env = require("p4.core.env")
+local p4_shell = require("p4.core.shell")
+
+local p4_client_cmds = require("p4.commands.client")
+
+local tp4_client = require("telescope._extensions.p4.pickers.client")
 local tp4_util = require("telescope._extensions.p4.pickers.util")
 
 local M = {}
@@ -22,11 +24,6 @@ local M = {}
 ---
 function M.picker(opts)
   opts = opts or {}
-
-  -- Make sure we are logged in.
-  if not p4_api.login.check() then
-    return
-  end
 
   --- Processes results from the finder.
   local function entry_maker(entry)
@@ -40,7 +37,7 @@ function M.picker(opts)
     -- Filter clients for the current host.
     if p4_config.opts.telescope.clients.filter_current_host then
 
-      result = p4_core.shell.run(p4_commands.client.read_spec(client))
+      result = p4_shell.run(p4_client_cmds.read_spec(client))
 
       if result.code == 0 then
 
@@ -52,7 +49,7 @@ function M.picker(opts)
               table.insert(chunks, substring)
             end
 
-            if chunks[2] ~= p4_core.env.host then
+            if chunks[2] ~= p4_env.host then
               return nil
             end
             break
@@ -71,7 +68,7 @@ function M.picker(opts)
 
   --- Issues shell command to read the P4 user's clients.
   local function finder()
-    return finders.new_oneshot_job(p4_commands.client.read(), {
+    return finders.new_oneshot_job(p4_client_cmds.read(), {
       entry_maker = entry_maker,
     })
   end
@@ -85,35 +82,13 @@ function M.picker(opts)
       end,
 
       define_preview = function(self, entry)
-        putils.job_maker(p4_commands.client.read_spec(entry.name), self.state.bufnr, {
+        putils.job_maker(p4_client_cmds.read_spec(entry.name), self.state.bufnr, {
           value = entry.value,
           bufname = self.state.bufname,
         })
       end,
       keep_last_buf = true,
     })
-  end
-
-  --- Action to edit the P4 client spec.
-  local function edit_client_spec(prompt_bufnr)
-    actions.close(prompt_bufnr)
-
-    local entry = actions_state.get_selected_entry()
-
-    if entry then
-
-      local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
-
-      -- Entry name is the client name
-      local client = p4_client.new(entry.name)
-
-      if bufnr then
-        client:edit_spec(bufnr)
-      end
-
-    else
-      tp4_util.warn_no_selection_action()
-    end
   end
 
   --- Defines mappings.
@@ -139,12 +114,15 @@ function M.picker(opts)
         return
       end
 
-      M.change_lists_picker(opts, entry.name)
+      tp4_client.pending_cl_picker(opts, entry.name)
     end)
 
-    map({ "i", "n" }, p4_config.opts.telescope.clients.mappings.edit_spec, edit_client_spec)
-    map({ "i", "n" }, p4_config.opts.telescope.clients.mappings.delete_client, edit_client_spec)
-    map({ "i", "n" }, p4_config.opts.telescope.clients.mappings.change_workspace, edit_client_spec)
+    local clients_mappings = p4_config.opts.telescope.change_lists.mappings
+    local clients_actions  = require("telescope._extensions.p4.pickers.clients.actions")
+
+    map({ "i", "n" }, clients_mappings.edit_spec, clients_actions.edit_client_spec)
+    map({ "i", "n" }, clients_mappings.delete, clients_actions.delete_client)
+    map({ "i", "n" }, clients_mappings.selectc, clients_actions.select_client)
 
     return true
   end

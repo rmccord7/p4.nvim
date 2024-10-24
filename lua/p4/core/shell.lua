@@ -1,8 +1,19 @@
+local shell_log = require("p4.core.shell_log")
+
+vim.api.nvim_create_user_command(
+  "P4CLog",
+  function()
+    vim.cmd(([[tabnew %s]]):format(shell_log.outfile))
+  end,
+  {
+    desc = "Opens the p4 command log.",
+  }
+)
+
 local M = {}
 
 function M.run(cmd)
   local log = require("p4.core.log")
-  local shell_log = require("p4.core.shell_log")
 
   if type(cmd) == 'table' then
 

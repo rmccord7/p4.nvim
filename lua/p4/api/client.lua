@@ -1,14 +1,16 @@
-local commands = require("p4.commands")
+local client_cmds = require("p4.commands.client")
 
-local core = require("p4.core")
+local env = require("p4.core.env")
+local shell = require("p4.core.shell")
 local log = require("p4.core.log")
 
 --- @class P4_Client
 --- @field name string P4 client name
---- @field pending_cl_list P4_CL[] List of pending CLs
 local client = {
   name = '',
   pending_cl_list = {},
+  workspace_root = '',
+  workspace_root_spec = '',
 }
 
 client.__index = client
@@ -22,15 +24,76 @@ end
 
 --- Creates a new client
 ---
---- @param name? string P4 client name
-function client:new(name)
-  name = name or core.env.client
+--- @param user? string P4 user
+--- @param name? string P4 client
+--- @param spec? string P4 client spec if already available
+function client:new(user, name, spec)
+  user = user or env.user or 'Unknown'
+  name = name or env.client or 'Unknown'
 
-  local new_client = {}
+  local root = nil
 
-  setmetatable(self, new_client)
+  if not spec then
 
-  new_client.name = name
+    -- Make sure the P4 client exists by reading the spec
+    local result = shell.run(client_cmds.read_spec(name))
+
+    if result.code == 0 then
+      spec = result.stdout
+    end
+  end
+
+  if spec and string.len(spec) then
+
+    -- Parse the P4 client spec
+    for _, line in ipairs(vim.split(spec, "\n")) do
+
+      -- Make sure P4 user matches this client
+      if line:find("^User") then
+
+        chunks = {}
+        for substring in line:gmatch("%S+") do
+          table.insert(chunks, substring)
+        end
+
+        -- Make sure this client is for the current user.
+        if user ~= chunks[2] then
+          log.error("P4 client is not for the current user")
+          break
+        end
+      end
+
+      -- Need to store the workspace root for this client.
+      if line:find("^Root") then
+
+        chunks = {}
+        for substring in line:gmatch("%S+") do
+          table.insert(chunks, substring)
+        end
+
+        -- TODO: Handle alt root?
+
+        root = chunks[2]
+        break
+      end
+    end
+  end
+
+  local new_client = nil
+
+  if spec and root then
+
+    new_client = {}
+
+    setmetatable(self, new_client)
+
+    new_client.name = name
+
+    new_client.get_cl_list()
+
+    new_client.workspace_root = root
+    new_client.workspace_root_spec = root .. "/..."
+  end
 
   return new_client
 end
@@ -54,7 +117,7 @@ function client:edit_spec(buf)
     callback = function()
       local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-      result = vim.system(commands.client.write_spec(), { stdin = content }):wait()
+      result = vim.system(client_cmds.write_spec(), { stdin = content }):wait()
 
       if result.code > 0 then
         log.error(result.stderr)
@@ -75,7 +138,7 @@ function client:get_cl_list()
   -- Delete old files list
   cleanup_pending_cl_list(self)
 
-  result = core.shell.run(commands.client.read_cls(self.name))
+  result = shell.run(client_cmds.read_cls(self.name))
 
   if result.code == 0 then
 
@@ -111,6 +174,4 @@ end
 --- @param pending_cl P4_CL
 function client:deleted_cl(pending_cl)
 end
-
-return M
 

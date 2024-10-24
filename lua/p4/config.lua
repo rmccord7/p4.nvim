@@ -22,8 +22,8 @@ local defaults = {
       mappings = { -- P4 client picker mappings.
         edit_spec = "<C-e>", -- Edit the selected P4 client's spec.
         display_change_lists = "<CR>", -- Displays the selected P4 client's change lists.
-        delete_client = "<C-d>",-- Deletes the selected P4 client.
-        change_workspace = "<C-w>", -- Changes the CWD to the selected P4 client's root.
+        delete = "<C-d>",-- Deletes the selected P4 client.
+        select = "<C-w>", -- Changes the CWD to the selected P4 client's root.
       },
     },
     change_lists = { -- P4 change lists picker options

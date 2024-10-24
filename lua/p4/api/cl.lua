@@ -1,4 +1,4 @@
-local commands = require("p4.commands")
+local cl_cmds = require("p4.commands.cl")
 
 local log = require("p4.core.log")
 
@@ -50,7 +50,7 @@ function cl:edit_spec(buf)
     callback = function()
       local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-      result = vim.system(commands.cl.write(self.num), { stdin = content }):wait()
+      result = vim.system(cl_cmds.write(self.num), { stdin = content }):wait()
 
       if result.code > 0 then
         log.error(result.stderr)
@@ -78,7 +78,7 @@ function cl:get_files_from_spec(spec)
       -- CL spec lists files in depot path
       local depot_path = line:sub(1, line:find("#", 1, true) - 1)
 
-      result = log.run_command(commands.file.where(depot_path))
+      result = log.run_command(cl_cmds.where(depot_path))
 
       if result.code == 0 then
 
