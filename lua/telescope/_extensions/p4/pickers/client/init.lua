@@ -11,7 +11,7 @@ local p4_config = require("p4.config")
 
 local p4_env = require("p4.core.env")
 
-local p4_cl_cmds = require("p4.commands.cl")
+local p4_cl_cmds = require("p4.core.commands.cl")
 
 local p4_cl = require("p4.api.cl")
 

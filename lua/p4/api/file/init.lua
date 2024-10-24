@@ -3,7 +3,7 @@ local util = require("p4.util")
 local env = require("p4.core.env")
 local shell = require("p4.core.shell")
 
-local file_cmds = require("p4.commands.file")
+local file_cmds = require("p4.core.commands.file")
 
 --- P4 file
 local M = {

@@ -11,7 +11,7 @@ local p4_config = require("p4.config")
 local p4_env = require("p4.core.env")
 local p4_shell = require("p4.core.shell")
 
-local p4_client_cmds = require("p4.commands.client")
+local p4_client_cmds = require("p4.core.commands.client")
 
 local tp4_client = require("telescope._extensions.p4.pickers.client")
 local tp4_util = require("telescope._extensions.p4.pickers.util")

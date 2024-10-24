@@ -1,11 +1,11 @@
 local notify = require("p4.notify")
 
-local client_cmds = require("p4.commands.client")
-local cl_cmds = require("p4.commands.cl")
-
 local env = require("p4.core.env")
 local shell = require("p4.core.shell")
 local log = require("p4.core.log")
+
+local client_cmds = require("p4.core.commands.client")
+local cl_cmds = require("p4.core.commands.cl")
 
 --- @class P4_Clients
 --- @field selected_client P4_Client Selected P4 client

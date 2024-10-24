@@ -1,6 +1,6 @@
-local cl_cmds = require("p4.commands.cl")
-
 local log = require("p4.core.log")
+
+local cl_cmds = require("p4.core.commands.cl")
 
 --- @class P4_CL
 --- @field default boolean Indicates if this is the default CL

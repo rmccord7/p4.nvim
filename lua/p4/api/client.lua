@@ -1,8 +1,8 @@
-local client_cmds = require("p4.commands.client")
-
 local env = require("p4.core.env")
 local shell = require("p4.core.shell")
 local log = require("p4.core.log")
+
+local client_cmds = require("p4.core.commands.client")
 
 --- @class P4_Client
 --- @field name string P4 client name
