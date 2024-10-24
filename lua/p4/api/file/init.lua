@@ -3,9 +3,7 @@ local shell = require("p4.core.shell")
 local file_cmds = require("p4.core.commands.file")
 
 --- P4 file
-local M = {
-  ac_group = nil, -- autocmd group ID
-}
+local api = {}
 
 --- Makes the current buffer writeable.
 local function set_buffer_writeable()
@@ -25,11 +23,11 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
-function M.add(file_paths, opts)
+function api.add(file_paths, opts)
   opts = opts or {}
 
   -- Get all file information from the P4 server.
-  local file_info_list = M.get_info(file_paths)
+  local file_info_list = api.get_info(file_paths)
 
   if file_info_list then
 
@@ -52,11 +50,11 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
-function M.edit(file_paths, opts)
+function api.edit(file_paths, opts)
   opts = opts or {}
 
   -- Get all file information from the P4 server.
-  local file_info_list = M.get_info(file_paths)
+  local file_info_list = api.get_info(file_paths)
 
   if file_info_list then
 
@@ -78,7 +76,7 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
-function M.revert(file_paths, opts)
+function api.revert(file_paths, opts)
   opts = opts or {}
 
   local result = shell.run(file_cmds.revert(file_paths, opts))
@@ -99,7 +97,7 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
-function M.shelve(file_paths, opts)
+function api.shelve(file_paths, opts)
   opts = opts or {}
 
   shell.run(file_cmds.shelve(file_paths, opts))
@@ -112,7 +110,7 @@ end
 --- @param opts? table Optional parameters. Not used.
 ---
 --- @return P4_Fstat_Table? fstat File information
-function M.get_info(file_paths, opts)
+function api.get_info(file_paths, opts)
   opts = opts or {}
 
   local files = {}
@@ -178,5 +176,5 @@ function M.get_info(file_paths, opts)
   return files
 end
 
-return M
+return api
 

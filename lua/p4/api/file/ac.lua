@@ -1,5 +1,11 @@
 local env = require("p4.core.env")
 
+local context = {
+  ac_group = nil, -- autocmd group ID
+}
+
+local api = {}
+
 --- Prompts the user to open the file for add.
 local function prompt_open_for_add(file_path)
 
@@ -11,7 +17,7 @@ local function prompt_open_for_add(file_path)
       vim.fn.inputrestore()
 
       if result == "y" or result == "Y" then
-        M.add(file_path)
+        api.add(file_path)
       end
     end
 end
@@ -31,7 +37,7 @@ local function promot_open_for_edit(file_path)
       vim.fn.inputrestore()
 
       if result == "y" or result == "Y" then
-        M.edit(file_path)
+        api.edit(file_path)
       else
         vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
 
@@ -41,18 +47,16 @@ local function promot_open_for_edit(file_path)
     end
 end
 
-local M = {}
-
 --- Enables autocmds
 ---
-function M.enable_autocmds()
+function api.enable_autocmds()
 
-  M.ac_group = vim.api.nvim_create_augroup("P4_File", {})
+  api.ac_group = vim.api.nvim_create_augroup("P4_File", {})
 
   --- Check for P4 workspace when buffer is entered.
   ---
   vim.api.nvim_create_autocmd("BufEnter", {
-    group = M.ac_group,
+    group = context.ac_group,
     pattern = "*",
     callback = function()
 
@@ -67,7 +71,7 @@ function M.enable_autocmds()
   })
 
   vim.api.nvim_create_autocmd("BufNewFile", {
-    group = M.ac_group,
+    group = context.ac_group,
     pattern = "*",
     callback = function()
       prompt_open_for_add()
@@ -78,7 +82,7 @@ function M.enable_autocmds()
   --- the associated file opened for add/edit in the client workspace.
   ---
   vim.api.nvim_create_autocmd("BufWrite", {
-    group = M.ac_group,
+    group = context.ac_group,
     pattern = "*",
     callback = function()
       if env.update() then
@@ -104,7 +108,7 @@ function M.enable_autocmds()
   --- client workspace.
   ---
   vim.api.nvim_create_autocmd("FileChangedRO", {
-    group = M.ac_group,
+    group = api.ac_group,
     pattern = "*",
     callback = function()
         promot_open_for_edit()
@@ -114,15 +118,15 @@ end
 
 --- Disables autocmds
 ---
-function M.disable_autocmds()
+function api.disable_autocmds()
 
-  if M.ac_group then
+  if context.ac_group then
 
      -- Remove file autocmds
-    vim.api.nvim_del_augroup_by_id(M.ac_group)
+    vim.api.nvim_del_augroup_by_id(context.ac_group)
 
-    M.ac_group = nil
+    context.ac_group = nil
   end
 end
 
-return M
+return api

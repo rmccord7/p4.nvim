@@ -6,10 +6,10 @@ local shell = require("p4.core.shell")
 local login_cmds = require("p4.core.commands.login")
 
 --- P4 check
-local M = {}
+local api = {}
 
 --- Make sure the user is logged into the P4 server.
-function M.check()
+function api.check()
 
   -- Ensure P4 environment information is valid
   if env.update() then
@@ -33,5 +33,5 @@ function M.check()
   return true
 end
 
-return M
+return api
 
