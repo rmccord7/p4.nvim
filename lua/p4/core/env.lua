@@ -111,6 +111,8 @@ function M.update()
         -- Enable autocmds
         require("p4.api.file.ac").enable_autocmds()
 
+        -- Set the P4 client
+        require("p4.api.clients").set_client(M.client)
       else
 
         -- Disable autocmds

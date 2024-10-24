@@ -1,5 +1,4 @@
 local log = require("p4.log")
-
 local env = require("p4.core.env")
 local shell = require("p4.core.shell")
 
@@ -28,7 +27,8 @@ end
 --- @param user? string P4 user
 --- @param name? string P4 client
 --- @param spec? string P4 client spec if already available
-function client:new(user, name, spec)
+--- @return table? client New client
+function client.new(user, name, spec)
   user = user or env.user or 'Unknown'
   name = name or env.client or 'Unknown'
 
@@ -59,7 +59,7 @@ function client:new(user, name, spec)
 
         -- Make sure this client is for the current user.
         if user ~= chunks[2] then
-          log.error("P4 client is not for the current user")
+          log.error("P4 client is not owned by the current user")
           break
         end
       end
@@ -84,13 +84,11 @@ function client:new(user, name, spec)
 
   if spec and root then
 
-    new_client = {}
-
-    setmetatable(self, new_client)
+    new_client = setmetatable({}, client)
 
     new_client.name = name
 
-    new_client.get_cl_list()
+    new_client:get_cl_list()
 
     new_client.workspace_root = root
     new_client.workspace_root_spec = root .. "/..."
@@ -176,3 +174,4 @@ end
 function client:deleted_cl(pending_cl)
 end
 
+return client

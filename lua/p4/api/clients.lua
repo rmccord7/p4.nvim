@@ -1,14 +1,14 @@
 local log = require("p4.log")
-local notify = require("p4.notify")
 
-local env = require("p4.core.env")
 local shell = require("p4.core.shell")
 
 local client_cmds = require("p4.core.commands.client")
 local cl_cmds = require("p4.core.commands.cl")
 
+local client_api = require("p4.api.client")
+
 --- @class P4_Clients
---- @field selected_client P4_Client Selected P4 client
+--- @field selected_client P4_Client? Selected P4 client
 --- @field selected_client_cl integer Selected P4 client CL
 --- @field list P4_Client[] List of P4 clients
 local M = {
@@ -19,6 +19,7 @@ local M = {
 ---
 --- @param client string P4 client
 local function add_client(client)
+  log.fmt_info("Add client: %s", client)
   table.insert(M.client_list, client)
 end
 
@@ -26,8 +27,9 @@ end
 ---
 --- @param client? string P4 client
 local function find_client(client)
-  for _, c in ipairs(t) do
+  for _, c in ipairs(M.client_list) do
     if c.name == client then
+      log.fmt_info("Found client: %s", client)
       return c
     end
   end
@@ -50,7 +52,7 @@ end
 --- @param client string P4 client name
 function M.set_client(client)
 
-  client = client or env.client
+  log.info("Set client")
 
   if not find_client(client) then
     add_client(client)
@@ -58,12 +60,15 @@ function M.set_client(client)
 
   -- Determine the workspace root.
   local root = ''
+  local spec = nil
 
   local result = shell.run(client_cmds.read_spec(client))
 
   if result.code == 0 then
 
-    for _, line in ipairs(vim.split(result.stdout, "\n")) do
+    spec = result.stdout
+
+    for _, line in ipairs(vim.split(spec, "\n")) do
       if line:find("^Root") then
 
         chunks = {}
@@ -82,13 +87,19 @@ function M.set_client(client)
   -- Update the selected client.
   if string.len(root) then
 
-    M.selected_client:new(nil, nil, nil)
+    M.selected_client = client_api.new(nil, client, spec)
 
-    notify("Updated selected client", vim.log.levels.INFO);
-    log.fmt_info("Updated selected client, %s, %s", client, root)
+    if M.selected_client then
+      log.fmt_info("Client: %s", M.selected_client.name);
+      log.fmt_info("Client root: %s", M.selected_client.workspace_root)
+    end
 
   else
     log.error("Could not find client workspace root")
+  end
+
+  if not M.selected_client then
+    log.error("Set client failed")
   end
 end
 
@@ -96,6 +107,8 @@ end
 ---
 --- @param cl integer P4 change list number
 function M.set_client_cl(cl)
+
+  log.info("Set client CL")
 
   -- Make sure client has been set previously.
   local client = find_client()
@@ -121,6 +134,9 @@ function M.set_client_cl(cl)
             if chunks[2] == client then
 
               M.selected_client_cl = cl
+
+              log.fmt_info("Client: %s", M.selected_client.name);
+              log.fmt_info("Client CL: %u", M.selected_client_cl);
 
             else
               log.error("CL does not belong to the current selected client")
