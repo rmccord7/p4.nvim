@@ -1,6 +1,7 @@
 local config = require("p4.config")
+local log = require("p4.log")
+
 local p4_config = require("p4.core.config")
-local log = require("p4.core.log")
 
 --- Starts the plugin
 local function Start()

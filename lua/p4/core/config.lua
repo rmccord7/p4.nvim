@@ -2,7 +2,7 @@ local uv = vim.loop
 
 local config = require("p4.config")
 
-local log = require("p4.core.log")
+local log = require("p4.log")
 local path = require("p4.core.path")
 
 --- P4 config

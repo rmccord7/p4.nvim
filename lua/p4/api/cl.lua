@@ -1,4 +1,4 @@
-local log = require("p4.core.log")
+local log = require("p4.log")
 
 local cl_cmds = require("p4.core.commands.cl")
 

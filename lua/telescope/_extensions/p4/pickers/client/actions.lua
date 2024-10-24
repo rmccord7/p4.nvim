@@ -1,11 +1,11 @@
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
+local p4_log = require("p4.log")
 local p4_notify = require("p4.notify")
 
 local p4_cl = require("p4.api.cl")
 
-local p4_log = require("p4.core.log")
 local p4_selected_client = require("p4.core.selected_client")
 
 local tp4_util = require("telescope._extensions.p4.pickers.util")

@@ -13,7 +13,7 @@ vim.api.nvim_create_user_command(
 local M = {}
 
 function M.run(cmd)
-  local log = require("p4.core.log")
+  local log = require("p4.log")
 
   if type(cmd) == 'table' then
 

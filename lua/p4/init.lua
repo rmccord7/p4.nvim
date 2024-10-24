@@ -1,7 +1,7 @@
 local config = require("p4.config")
+local log = require("p4.log")
 
 local env = require("p4.core.env")
-local log = require("p4.core.log")
 
 --- P4 context.
 local M = {}

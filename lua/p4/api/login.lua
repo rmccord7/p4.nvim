@@ -1,6 +1,7 @@
+local log = require("p4.log")
+
 local env = require("p4.core.env")
 local shell = require("p4.core.shell")
-local log = require("p4.core.log")
 
 local login_cmds = require("p4.core.commands.login")
 
