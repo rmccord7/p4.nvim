@@ -4,14 +4,13 @@ local shell = require("p4.core.shell")
 
 local client_cmds = require("p4.core.commands.client")
 
+local client_spec = require("p4.core.parsers.client_spec")
+
 --- @class P4_Client
 --- @field name string P4 client name
-local client = {
-  name = '',
-  pending_cl_list = {},
-  workspace_root = '',
-  workspace_root_spec = '',
-}
+--- @field spec P4_Client_Spec P4 client spec
+--- @field workspace_root_spec string P4 client name
+local client = {}
 
 client.__index = client
 
@@ -44,42 +43,6 @@ function client.new(user, name, spec)
     end
   end
 
-  if spec and string.len(spec) then
-
-    -- Parse the P4 client spec
-    for _, line in ipairs(vim.split(spec, "\n")) do
-
-      -- Make sure P4 user matches this client
-      if line:find("^User") then
-
-        chunks = {}
-        for substring in line:gmatch("%S+") do
-          table.insert(chunks, substring)
-        end
-
-        -- Make sure this client is for the current user.
-        if user ~= chunks[2] then
-          log.error("P4 client is not owned by the current user")
-          break
-        end
-      end
-
-      -- Need to store the workspace root for this client.
-      if line:find("^Root") then
-
-        chunks = {}
-        for substring in line:gmatch("%S+") do
-          table.insert(chunks, substring)
-        end
-
-        -- TODO: Handle alt root?
-
-        root = chunks[2]
-        break
-      end
-    end
-  end
-
   local new_client = nil
 
   if spec and root then
@@ -87,11 +50,22 @@ function client.new(user, name, spec)
     new_client = setmetatable({}, client)
 
     new_client.name = name
+    new_client.spec = client_spec.parse(spec)
+
+    if vim.tbl_isempty(new_client.spec) then
+      log.error("P4 spec could not be read")
+      return nil
+    end
 
     new_client:get_cl_list()
 
-    new_client.workspace_root = root
-    new_client.workspace_root_spec = root .. "/..."
+    -- Make sure this client is for the current user.
+    if user ~= client_spec.owner then
+      log.error("P4 client is not owned by the current user")
+      return nil
+    end
+
+    new_client.workspace_root_spec = new_client.spec.root .. "/..."
   end
 
   return new_client

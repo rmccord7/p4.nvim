@@ -93,7 +93,7 @@ function api.set_client(client)
 
     if context.selected_client then
       log.fmt_info("Client: %s", context.selected_client.name);
-      log.fmt_info("Client root: %s", context.selected_client.workspace_root)
+      log.fmt_info("Client root: %s", context.selected_client.spec.root)
     end
 
   else
