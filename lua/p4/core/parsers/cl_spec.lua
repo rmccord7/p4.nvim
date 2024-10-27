@@ -81,10 +81,10 @@ function cl_spec.parse(spec)
           local before = string.sub(spec_field, 1, pos - 1)
           local after = string.sub(spec_field, pos + 1)
 
-          after = string.gsub(after, "\t", "")
+          after = string.gsub(after, "\t", " ")
           after = vim.trim(after)
 
-          spec_table[before] = after
+          spec_table[string.lower(before)] = after
         end
 
         -- Account for additional lines that were processed.
@@ -121,8 +121,11 @@ function cl_spec.parse(spec)
 
     local tbl = {}
 
-    for string in string.gmatch(spec_table[key], "[^%s]+") do
-      table.insert(tbl, string)
+    for string in string.gmatch(spec_table[key], "[^%s]+ [^%s]+ [^%s]+") do
+      for string2 in string.gmatch(string, "[^%s]+") do
+        table.insert(tbl, string2)
+        break
+      end
     end
 
     spec_table[key] = tbl
