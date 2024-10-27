@@ -1,18 +1,5 @@
 log = require("p4.log")
 
---
--- Client: eds_win
--- Owner:  edk
--- Description:
---         Ed's Windows Workspace
--- Root:   null
--- Options:        nomodtime noclobber
--- SubmitOptions:  submitunchanged
--- View:
---         //depot/main/...     "//eds_win/c:/Current Release/..."
---         //depot/rel1.0/...   //eds_win/d:/old/rel1.0/...
---         //depot/rel2.0/...   //eds_win/d:/old/rel2.0/...
-
 -- Lua 5.1 compatibility
 if not table.unpack then
     table.unpack = unpack

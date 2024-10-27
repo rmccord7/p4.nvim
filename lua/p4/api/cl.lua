@@ -1,18 +1,19 @@
 local log = require("p4.log")
 
+local shell = require("p4.core.shell")
+
 local cl_cmds = require("p4.core.commands.cl")
+
+local cl_spec = require("p4.core.parsers.cl_spec")
 
 --- @class P4_CL
 --- @field default boolean Indicates if this is the default CL
 --- @field num integer CL number if this is not the default CL
 --- @field client string Name of the client that is associated with this CL
 --- @field files string[] List of files checked out for this CL
-local cl = {
-  name = 0,
-  num = 0,
-  client = '',
-  files = {},
-}
+--- @field spec P4_CL_Spec CL spec
+
+local cl = {}
 
 cl.__index = cl
 
@@ -24,11 +25,19 @@ local function cleanup_files(self)
 end
 
 --- Creates a new CL
-function cl:new(num)
+function cl.new(num)
   local new_cl = {}
-  setmetatable(self, cl)
+
+  setmetatable({}, cl)
 
   new_cl.num = num
+
+  -- Make sure the P4 client exists by reading the spec
+  local result = shell.run(cl_cmds.read_spec(num))
+
+  if result.code == 0 then
+    new_cl.spec = cl_spec.parse(result.stdout)
+  end
 
   return new_cl
 end
@@ -96,3 +105,5 @@ function cl:get_files_from_spec(spec)
     end
   end
 end
+
+return cl

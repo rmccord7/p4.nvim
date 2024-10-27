@@ -1,18 +1,5 @@
 log = require("p4.log")
 
---
--- Client: eds_win
--- Owner:  edk
--- Description:
---         Ed's Windows Workspace
--- Root:   null
--- Options:        nomodtime noclobber
--- SubmitOptions:  submitunchanged
--- View:
---         //depot/main/...     "//eds_win/c:/Current Release/..."
---         //depot/rel1.0/...   //eds_win/d:/old/rel1.0/...
---         //depot/rel2.0/...   //eds_win/d:/old/rel2.0/...
-
 -- Lua 5.1 compatibility
 if not table.unpack then
     table.unpack = unpack
@@ -101,7 +88,7 @@ function client_spec.parse(spec)
           after = string.gsub(after, "\t", "")
           after = vim.trim(after)
 
-          spec_table[before] = after
+          spec_table[string.lower(before)] = after
         end
 
         -- Account for additional lines that were processed.

@@ -2,7 +2,6 @@ local log = require("p4.log")
 
 local shell = require("p4.core.shell")
 
-local client_cmds = require("p4.core.commands.client")
 local cl_cmds = require("p4.core.commands.cl")
 
 local client_api = require("p4.api.client")
@@ -11,6 +10,7 @@ local client_api = require("p4.api.client")
 --- @field selected_client P4_Client? Selected P4 client
 --- @field selected_client_cl integer Selected P4 client CL
 --- @field list P4_Client[] List of P4 clients
+
 local context = {
   client_list = {},
 }
@@ -19,18 +19,20 @@ local api = {}
 
 --- Adds a P4 client
 ---
---- @param client string P4 client
+--- @param client P4_Client P4 client
 local function add_client(client)
-  log.fmt_info("Add client: %s", client)
+  log.fmt_info("Add client: %s", client.spec.client)
+
   table.insert(context.client_list, client)
 end
 
 --- Finds a P4 client
 ---
---- @param client? string P4 client
+--- @param client? string P4 client name
+--- @return P4_Client? client P4 client
 local function find_client(client)
   for _, c in ipairs(context.client_list) do
-    if c.name == client then
+    if c.spec.client == client then
       log.fmt_info("Found client: %s", client)
       return c
     end
@@ -43,7 +45,7 @@ end
 --- @param client string P4 client
 local function remove_client(client)
   for k,v in ipairs(context.client_list) do
-    if v.name == client then
+    if v.spec.client == client then
       table.remove(context.client_list, k)
     end
   end
@@ -51,56 +53,27 @@ end
 
 --- Sets the selected P4 client.
 ---
---- @param client string P4 client name
-function api.set_client(client)
+--- @param client_name string P4 client name
+function api.set_client(client_name)
 
   log.info("Set client")
 
-  if not find_client(client) then
-    add_client(client)
-  end
+  local client = find_client(client_name)
 
-  -- Determine the workspace root.
-  local root = ''
-  local spec = nil
-
-  local result = shell.run(client_cmds.read_spec(client))
-
-  if result.code == 0 then
-
-    spec = result.stdout
-
-    for _, line in ipairs(vim.split(spec, "\n")) do
-      if line:find("^Root") then
-
-        chunks = {}
-        for substring in line:gmatch("%S+") do
-          table.insert(chunks, substring)
-        end
-
-        -- TODO: Handle alt root?
-
-        root = chunks[2]
-        break
-      end
-    end
-  end
-
-  -- Update the selected client.
-  if string.len(root) then
-
-    context.selected_client = client_api.new(nil, client, spec)
+  if client then
+    context.selected_client = client
+  else
+    context.selected_client = client_api.new(client_name)
 
     if context.selected_client then
-      log.fmt_info("Client: %s", context.selected_client.name);
-      log.fmt_info("Client root: %s", context.selected_client.spec.root)
+      add_client(context.selected_client)
     end
-
-  else
-    log.error("Could not find client workspace root")
   end
 
-  if not context.selected_client then
+  if context.selected_client then
+    log.fmt_info("Client: %s", context.selected_client.name);
+    log.fmt_info("Client root: %s", context.selected_client.spec.root)
+  else
     log.error("Set client failed")
   end
 end

@@ -1,51 +1,47 @@
 local log = require("p4.log")
-local env = require("p4.core.env")
 local shell = require("p4.core.shell")
+local env = require("p4.core.env")
 
 local client_cmds = require("p4.core.commands.client")
 
 local client_spec = require("p4.core.parsers.client_spec")
 
+local cl_api = require("p4.api.cl")
+
 --- @class P4_Client
---- @field name string P4 client name
---- @field spec P4_Client_Spec P4 client spec
---- @field workspace_root_spec string P4 client name
-local client = {}
+--- @field spec P4_Client_Spec Client spec
+--- @field workspace_root_spec string Workspace root file spec
+--- @field cl_list P4_CL Pending CL list
+
+local client = {
+  cl_list = {},
+}
 
 client.__index = client
 
 --- Cleans up a client's CL's list
 local function cleanup_pending_cl_list(self)
-  for cl in pairs (self.pending_cl_list) do
-    self.pending_cl_list[cl] = nil
+  for i, _ in ipairs (self.cl_list) do
+    self.cl_list[i] = nil
   end
 end
 
 --- Creates a new client
 ---
---- @param user? string P4 user
---- @param name? string P4 client
---- @param spec? string P4 client spec if already available
+--- @param name string P4 client
 --- @return table? client New client
-function client.new(user, name, spec)
-  user = user or env.user or 'Unknown'
-  name = name or env.client or 'Unknown'
+function client.new(name)
 
-  local root = nil
+  -- Make sure the P4 client exists by reading the spec
+  local result = shell.run(client_cmds.read_spec(name))
 
-  if not spec then
-
-    -- Make sure the P4 client exists by reading the spec
-    local result = shell.run(client_cmds.read_spec(name))
-
-    if result.code == 0 then
-      spec = result.stdout
-    end
+  if result.code == 0 then
+    spec = result.stdout
   end
 
   local new_client = nil
 
-  if spec and root then
+  if spec then
 
     new_client = setmetatable({}, client)
 
@@ -57,13 +53,14 @@ function client.new(user, name, spec)
       return nil
     end
 
-    new_client:get_cl_list()
-
     -- Make sure this client is for the current user.
-    if user ~= client_spec.owner then
+    if env.user ~= new_client.spec.owner then
       log.error("P4 client is not owned by the current user")
       return nil
     end
+
+    new_client:get_cl_list()
+
 
     new_client.workspace_root_spec = new_client.spec.root .. "/..."
   end
@@ -127,7 +124,17 @@ function client:get_cl_list()
     end
   end
 
-  return cls
+  if not vim.tbl_isempty(cls) then
+
+    self.cl_list = {}
+
+    for _, cl in ipairs(cls) do
+      local new_cl = cl_api.new(cl)
+
+      table.insert(self.cl_list, new_cl)
+    end
+  end
+
 end
 
 --- Reverts all files for the specified client's pending CL
