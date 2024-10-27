@@ -19,6 +19,43 @@ local client = {
 
 client.__index = client
 
+--- Adds a P4 cl
+---
+--- @param cl P4_CL P4 cl
+local function add_cl(cl)
+  log.fmt_info("Add cl: %s", cl.spec.change)
+
+  table.insert(client.cl_list, cl)
+end
+
+--- Finds a P4 cl
+---
+--- @param cl_num string P4 cl name
+--- @return P4_CL? cl P4 cl
+local function find_cl(cl_num)
+  for _, c in ipairs(client.cl_list) do
+    if c.spec.cl == cl_num then
+      log.fmt_info("Found cl: %s", cl_num)
+      return c
+    end
+  end
+  return nil
+end
+
+--- Removes a P4 cl
+---
+--- @param cl_num integer P4 cl
+local function remove_cl(cl_num)
+
+  -- TODO: Remove all files
+
+  for i, cl in ipairs(client.cl_list) do
+    if cl.spec.cl == cl_num then
+      table.remove(client.cl_list, i)
+    end
+  end
+end
+
 --- Cleans up a client's CL's list
 local function cleanup_pending_cl_list(self)
   for i, _ in ipairs (self.cl_list) do
@@ -28,32 +65,28 @@ end
 
 --- Creates a new client
 ---
---- @param name string P4 client
---- @return table? client New client
-function client.new(name)
+--- @param client_name string P4 client name
+--- @return P4_Client? client New client
+function client.new(client_name)
 
-  -- Make sure the P4 client exists by reading the spec
-  local result = shell.run(client_cmds.read_spec(name))
+    -- Make sure the P4 client exists by reading the spec
+  local result = shell.run(client_cmds.read_spec(client_name))
 
   if result.code == 0 then
-    spec = result.stdout
-  end
 
-  local new_client = nil
-
-  if spec then
+    local new_client = nil
 
     new_client = setmetatable({}, client)
 
-    new_client.name = name
-    new_client.spec = client_spec.parse(spec)
+    new_client.name = client_name
+    new_client.spec = client_spec.parse(result.stdout)
 
     if vim.tbl_isempty(new_client.spec) then
-      log.error("P4 spec could not be read")
+      log.error("P4 client spec could not be read")
       return nil
     end
 
-    -- Make sure this client is for the current user.
+    -- Make sure this client belongs to the current user.
     if env.user ~= new_client.spec.owner then
       log.error("P4 client is not owned by the current user")
       return nil
@@ -61,11 +94,17 @@ function client.new(name)
 
     new_client:get_cl_list()
 
-
     new_client.workspace_root_spec = new_client.spec.root .. "/..."
-  end
 
-  return new_client
+    return new_client
+  else
+    return nil
+  end
+end
+
+--- Deletes the specified client
+function client.cleanup()
+  cleanup_pending_cl_list()
 end
 
 --- Edits the client spec
@@ -103,56 +142,62 @@ end
 function client:get_cl_list()
 
   local result
-  local cls = {}
+  local cl_num_list = {}
 
-  -- Delete old files list
-  cleanup_pending_cl_list(self)
+  -- Make sure the client spec has been read
+  if self.spec.client then
 
-  result = shell.run(client_cmds.read_cls(self.name))
+    -- Delete old files list
+    cleanup_pending_cl_list(self)
 
-  if result.code == 0 then
+    result = shell.run(client_cmds.read_cls(self.spec.client))
 
-    for index, line in ipairs(vim.split(result.stdout, "\n")) do
+    if result.code == 0 then
 
-      local chunks = {}
-      for substring in line:gmatch("%S+") do
-        table.insert(chunks, substring)
+      for index, line in ipairs(vim.split(result.stdout, "\n")) do
+
+        local chunks = {}
+        for substring in line:gmatch("%S+") do
+          table.insert(chunks, substring)
+        end
+
+        -- Second chunk contains the P4 change list number
+        table.insert(cl_num_list, index, chunks[2])
       end
-
-      -- Second chunk contains the P4 change list number
-      table.insert(cls, index, chunks[2])
+    else
+      log.error("Cannot read Cls from the P4 client")
     end
-  end
 
-  if not vim.tbl_isempty(cls) then
+    if not vim.tbl_isempty(cl_num_list) then
 
-    self.cl_list = {}
+      self.cl_list = {}
 
-    for _, cl in ipairs(cls) do
-      local new_cl = cl_api.new(cl)
+      for _, cl_num in ipairs(cl_num_list) do
+        local cl = find_cl(cl_num)
 
-      table.insert(self.cl_list, new_cl)
+        if cl then
+
+          -- TODO: Set selected CL
+
+        else
+          local new_cl = cl_api.new(cl_num)
+
+          if new_cl then
+            add_cl(new_cl)
+          end
+        end
+      end
     end
+  else
+    log.error("Invalid P4 client spec name")
   end
-
 end
 
---- Reverts all files for the specified client's pending CL
+--- Removes the specified CL from the P4 client
 ---
---- @param pending_cl P4_CL
-function client:revert_cl_files(pending_cl)
-end
-
---- Shelves all files for the specified client's pending CL
----
---- @param pending_cl P4_CL
-function client:shelve_cl_files(pending_cl)
-end
-
---- Deletes  the specified client's pending CL
----
---- @param pending_cl P4_CL
-function client:deleted_cl(pending_cl)
+--- @param cl_num integer
+function client:remove_cl(cl_num)
+  remove_cl(cl_num)
 end
 
 return client

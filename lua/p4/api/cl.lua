@@ -25,21 +25,42 @@ local function cleanup_files(self)
 end
 
 --- Creates a new CL
-function cl.new(num)
-  local new_cl = {}
+function cl.new(cl_num)
 
   setmetatable({}, cl)
 
-  new_cl.num = num
-
   -- Make sure the P4 client exists by reading the spec
-  local result = shell.run(cl_cmds.read_spec(num))
+  local result = shell.run(cl_cmds.read_spec(cl_num))
 
   if result.code == 0 then
-    new_cl.spec = cl_spec.parse(result.stdout)
-  end
+    local new_cl = {}
 
-  return new_cl
+    new_cl.num  = cl_num
+    new_cl.spec = cl_spec.parse(result.stdout)
+
+    if vim.tbl_isempty(new_cl.spec) then
+      log.error("P4 cl spec could not be read")
+      return nil
+    end
+
+    -- Make sure this CL belongs to the current user.
+    if env.user ~= new_cl.spec.user then
+      log.error("P4 CL is not owned by the current user")
+      return nil
+    end
+
+    -- Make sure this CL belongs to the current client.
+    if env.client ~= new_cl.spec.client then
+      log.error("P4 CL does not belong to the current client")
+      return nil
+    end
+
+    -- TODO: Get files
+
+    return new_cl
+  else
+    return nil
+  end
 end
 
 --- Edits the CL spec

@@ -28,7 +28,7 @@ end
 
 --- Finds a P4 client
 ---
---- @param client? string P4 client name
+--- @param client string P4 client name
 --- @return P4_Client? client P4 client
 local function find_client(client)
   for _, c in ipairs(context.client_list) do
@@ -71,7 +71,7 @@ function api.set_client(client_name)
   end
 
   if context.selected_client then
-    log.fmt_info("Client: %s", context.selected_client.name);
+    log.fmt_info("Client: %s", context.selected_client.spec.client);
     log.fmt_info("Client root: %s", context.selected_client.spec.root)
   else
     log.error("Set client failed")
@@ -84,7 +84,7 @@ end
 function api.get_client()
   local client = nil
   if context.selected_client then
-    client = context.selected_client.name
+    client = context.selected_client.spec.client
   else
     log.error("Client not set")
   end
@@ -98,21 +98,22 @@ end
 
 --- Sets the selected P4 client's CL.
 ---
---- @param cl integer P4 change list number
-function api.set_client_cl(cl)
+--- @param client_name string P4 client name
+--- @param cl_num integer P4 change list number
+function api.set_client_cl(client_name, cl_num)
 
   log.info("Set client CL")
 
-  -- api.ke sure client has been set previously.
-  local client = find_client()
+  -- Make sure client has been set previously.
+  local client = find_client(client_name)
 
   if context.selected_client then
 
     -- No need to proceed if the CL is already set.
-    if not context.selected_client_cl or context.selected_client_cl ~= cl  then
+    if not context.selected_client_cl or context.selected_client_cl ~= cl_num  then
 
       -- Read the CL spec to ensure it is valid for this client.
-      local result = shell.run(cl_cmds.read_spec(cl))
+      local result = shell.run(cl_cmds.read_spec(cl_num))
 
       if result.code == 0 then
 
@@ -126,9 +127,9 @@ function api.set_client_cl(cl)
 
             if chunks[2] == client then
 
-              context.selected_client_cl = cl
+              context.selected_client_cl = cl_num
 
-              log.fmt_info("Client: %s", context.selected_client.name);
+              log.fmt_info("Client: %s", context.selected_client.spec.client);
               log.fmt_info("Client CL: %u", context.selected_client_cl);
 
             else
@@ -171,7 +172,7 @@ end
 --- @param client string P4 client name
 function api.cleanup_client(client)
 
-  if context.selected_client and context.selected_client.name == client then
+  if context.selected_client and context.selected_client.spec.client == client then
     context.selected_client = nil
     context.selected_client_cl = nil
   end
