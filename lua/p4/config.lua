@@ -2,19 +2,14 @@ local M = {}
 
 M.namespace = vim.api.nvim_create_namespace("P4")
 
---- Export default options
----
 ---@class P4Options
 ---@field p4? table
+
+--- Default options
 local defaults = {
   log_level = vim.log.levels.DEBUG, -- Default log level for plugin
   p4 = { -- P4 config.
       config = os.getenv('P4CONFIG') or "", -- Workspace P4CONFIG file name
-  },
-  clients = {
-    cache = true, -- Cache P4USER clients
-    frequency = 60000, -- Time to cache P4USER clients (ms)
-    notify = true, -- Notify user once P4USER clients cached
   },
   telescope = { -- Telescope options
     clients = { -- P4 client picker options.
@@ -50,11 +45,13 @@ local defaults = {
 }
 
 ---@type P4Options
----
 M.opts = {}
----@return P4Options
 
---- Initializes the plugin.
+if vim.g.p4 and vim.g.p4.opts then
+  M.opts = vim.tbl_deep_extend("force", {}, defaults, vim.g.p4.opts or {})
+end
+
+--- Lets user update default options
 ---
 --- @param opts table? Optional parameters. Not used.
 ---
