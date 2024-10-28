@@ -32,7 +32,7 @@ local function Start()
       log.debug("Directory Changed")
 
       -- Load user commands.
-      require("p4.api.file.user")
+      require("p4.api.commands.file.user")
 
       -- Clear the current P4CONFIG path if it exists.
       p4_config.clear()

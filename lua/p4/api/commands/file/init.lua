@@ -1,9 +1,8 @@
 local shell = require("p4.core.shell")
 
-local file_cmds = require("p4.core.commands.file")
+local p4_file_cmds = require("p4.core.commands.file")
 
---- P4 file
-local api = {}
+local file = {}
 
 --- Makes the current buffer writeable.
 local function set_buffer_writeable()
@@ -23,11 +22,11 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
-function api.add(file_paths, opts)
+function file.add(file_paths, opts)
   opts = opts or {}
 
   -- Get all file information from the P4 server.
-  local file_info_list = api.get_info(file_paths)
+  local file_info_list = file.get_info(file_paths)
 
   if file_info_list then
 
@@ -35,7 +34,7 @@ function api.add(file_paths, opts)
     -- to add a file will catch it, but we can just silently reduce messages.
 
     -- Add the file to the client workspace.
-    result = shell.run(file_cmds.add(file_paths))
+    result = shell.run(p4_file_cmds.add(file_paths))
 
     if result.code == 0 then
 
@@ -50,18 +49,18 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
-function api.edit(file_paths, opts)
+function file.edit(file_paths, opts)
   opts = opts or {}
 
   -- Get all file information from the P4 server.
-  local file_info_list = api.get_info(file_paths)
+  local file_info_list = file.get_info(file_paths)
 
   if file_info_list then
 
     -- TODO: Remove file path if file is already opened for edit. P4 command
     -- to edit a file will catch it, but we can just silently reduce messages.
 
-   local result = shell.run(file_cmds.edit(file_paths))
+   local result = shell.run(p4_file_cmds.edit(file_paths))
 
    if result.code == 0 then
 
@@ -76,10 +75,10 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
-function api.revert(file_paths, opts)
+function file.revert(file_paths, opts)
   opts = opts or {}
 
-  local result = shell.run(file_cmds.revert(file_paths, opts))
+  local result = shell.run(p4_file_cmds.revert(file_paths, opts))
 
   if result.code == 0 then
 
@@ -97,10 +96,10 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
-function api.shelve(file_paths, opts)
+function file.shelve(file_paths, opts)
   opts = opts or {}
 
-  shell.run(file_cmds.shelve(file_paths, opts))
+  shell.run(p4_file_cmds.shelve(file_paths, opts))
 end
 
 --- Gets information for one or more files in the client workspace.
@@ -109,14 +108,14 @@ end
 ---
 --- @param opts? table Optional parameters. Not used.
 ---
---- @return P4_Fstat_Table? fstat File information
-function api.get_info(file_paths, opts)
+--- @return P4_Fstat? fstat File information
+function file.get_info(file_paths, opts)
   opts = opts or {}
 
   local files = {}
   local info = {}
 
-  local result = shell.run(file_cmds.fstat(file_paths, opts))
+  local result = shell.run(p4_file_cmds.fstat(file_paths, opts))
 
   if result.code == 0 then
 
@@ -175,6 +174,4 @@ function api.get_info(file_paths, opts)
 
   return files
 end
-
-return api
-
+return file

@@ -109,14 +109,14 @@ function M.update()
         display_env()
 
         -- Enable autocmds
-        require("p4.api.file.ac").enable_autocmds()
+        require("p4.api.commands.file.ac").enable_autocmds()
 
         -- Set the P4 client
         require("p4.api.clients").set_client(M.client)
       else
 
         -- Disable autocmds
-        require("p4.api.file.ac").disable_autocmds()
+        require("p4.api.commands.file.ac").disable_autocmds()
 
         if not M.client then
           log.error("Invalid P4CLIENT")

@@ -23,7 +23,7 @@ function M.add(prompt_bufnr)
   vim.schedule(function()
     require("telescope.actions").close(prompt_bufnr)
 
-    require("p4.api.file").add(file_paths)
+    require("p4.api.commands.file").add(file_paths)
   end)
 end
 
@@ -49,7 +49,7 @@ function M.edit(prompt_bufnr)
   vim.schedule(function()
     require("telescope.actions").close(prompt_bufnr)
 
-    require("p4.api.file").edit(file_paths)
+    require("p4.api.commands.file").edit(file_paths)
   end)
 end
 
@@ -75,7 +75,7 @@ function M.revert(prompt_bufnr)
   vim.schedule(function()
     require("telescope.actions").close(prompt_bufnr)
 
-    require("p4.api.file").revert(file_paths)
+    require("p4.api.commands.file").revert(file_paths)
   end)
 end
 
@@ -101,7 +101,7 @@ function M.fstat(prompt_bufnr)
   vim.schedule(function()
     require("telescope.actions").close(prompt_bufnr)
 
-    local files = require("p4.api.file").get_info(file_paths)
+    local files = require("p4.api.commands.file").get_info(file_paths)
 
     if files and not vim.tbl_isempty(files) then
       vim.inspect(files)

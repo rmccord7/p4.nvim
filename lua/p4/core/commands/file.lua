@@ -3,7 +3,7 @@ local M = {}
 ---@class P4_Fstat_Cmd_Options : table
 ---@field cl? integer Only files in the specified changelist.
 
----@class P4_Fstat_Table : table
+---@class P4_Fstat : table
 ---@field clientFile string Local path to the file in local syntax
 ---@field DepotFile string Depot path to the file
 ---@field path string Local path to the file
@@ -22,7 +22,7 @@ local M = {}
 ---
 --- @param opts? table
 ---
---- @return P4_Fstat_Table fstat File information
+--- @return P4_Fstat fstat File information
 M.fstat = function(file_paths, opts)
   opts = opts or {}
 
