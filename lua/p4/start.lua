@@ -4,7 +4,7 @@ local log = require("p4.log")
 local p4_config = require("p4.core.config")
 
 --- Starts the plugin
-local function Start()
+local function start()
 
   -- Initialize plugin defaults
   config.setup()
@@ -28,21 +28,20 @@ local function Start()
     group = group,
     pattern = "*",
     callback = function()
+        log.debug("Directory Changed")
 
-      log.debug("Directory Changed")
+        -- Load user commands.
+        require("p4.api.commands.file.user")
 
-      -- Load user commands.
-      require("p4.api.commands.file.user")
+        -- Clear the current P4CONFIG path if it exists.
+        p4_config.clear()
 
-      -- Clear the current P4CONFIG path if it exists.
-      p4_config.clear()
-
-      -- Force the P4 environment information update
-      env.clear()
-      env.update()
-    end,
+        -- Force the P4 environment information update
+        env.clear()
+        env.update()
+    end
   })
 end
 
 --- Start the plugin
-Start()
+start()
