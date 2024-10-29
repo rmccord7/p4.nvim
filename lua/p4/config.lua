@@ -2,10 +2,51 @@ local M = {}
 
 M.namespace = vim.api.nvim_create_namespace("P4")
 
----@class P4Options
----@field p4? table
+---@class P4_Config_Options : table
+---@field config string Indicates the name of the P4CONFIG file
+
+---@class P4_Telescope_Options : table
+---@field config string Indicates the name of the P4CONFIG file
+
+---@class P4_Telescope_Client_Options : table
+---@field file_current_host boolean Indicates whether P4 clients are filtered for the current host when queried
+---@field mappings P4_Telescope_Client_Mapping_Options Key mappings for telescope client picker
+
+---@class P4_Telescope_Client_Mapping_Options : table
+---@field edit_spec string Key mapping to edit the selected client's spec
+---@field display_cls string Key mapping to query and display the selected client's CLs
+---@field delete string Key mapping to delete the selected client
+---@field select string Key mapping to set the selected client as the plugin's selected client
+
+---@class P4_Telescope_CLS_Options : table
+---@field mappings P4_Telescope_CLS_Mapping_Options Key mappings for telescope CL picker
+
+---@class P4_Telescope_CLS_Mapping_Options : table
+---@field edit_spec string Key mapping to edit the selected CL's spec
+---@field display_files string Key mapping to query and display the selected CL's files
+---@field display_shelved_files string Key mapping to query and display the selected CL's shelved files
+---@field delete string Key mapping to delete the selected CL
+---@field revert string Key mapping to revert the selected CL's files
+---@field shelve string Key mapping to shelve the selected CL's files
+---@field unshelve string Key mapping to unshelve the selected CL's files
+
+---@class P4_Telescope_CL_Options : table
+---@field mappings P4_Telescope_CL_Mapping_Options Key mappings for telescope file picker
+
+---@class P4_Telescope_CL_Mapping_Options : table
+---@field open string Key mapping to open the selected files in their own buffer
+---@field diff string Key mapping to diff the selected files against their head revisions
+---@field revert string Key mapping to revert the selected files from their CL
+---@field shelve string Key mapping to shelve the selected files from their CL
+---@field unshelve string Key mapping to unshelve the selected files from their CL
+
+---@class P4_Options : table
+---@field log_level integer Indicates the level of logging
+---@field p4 P4_Config_Options P4 config options
+---@field telescope table P4 telescope options
 
 --- Default options
+---@type P4_Options
 local defaults = {
   log_level = vim.log.levels.DEBUG, -- Default log level for plugin
   p4 = { -- P4 config.
@@ -16,7 +57,7 @@ local defaults = {
       filter_current_host = true, -- Filters P4 clients for the current host.
       mappings = { -- P4 client picker mappings.
         edit_spec = "<C-e>", -- Edit the selected P4 client's spec.
-        display_change_lists = "<CR>", -- Displays the selected P4 client's change lists.
+        display_cls = "<CR>", -- Displays the selected P4 client's change lists.
         delete = "<C-d>",-- Deletes the selected P4 client.
         select = "<C-w>", -- Changes the CWD to the selected P4 client's root.
       },
@@ -43,9 +84,6 @@ local defaults = {
     },
   }
 }
-
----@type P4Options
-M.opts = {}
 
 if vim.g.p4 and vim.g.p4.opts then
   M.opts = vim.tbl_deep_extend("force", {}, defaults, vim.g.p4.opts or {})
