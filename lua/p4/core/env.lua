@@ -102,16 +102,7 @@ function M.update()
     -- Plugin config for P4 config has highest precedence
     update_from_config()
 
-    -- Enviroment for P4 config has next highest precedence
-    if M.valid == false then
-
-      -- Try to get P4 information from the shell enviroment
-      -- (user using something like direnv).
-      update_from_env()
-
-    end
-
-    -- P4CONFIG for P4 config has lowest precendence
+    -- P4CONFIG for P4 config has the next highest precendence
     if M.valid == false then
 
       -- Find P4 config file so we can try to use it.
@@ -119,11 +110,20 @@ function M.update()
 
         -- Need to find the P4CONFIG file to load p4 environment
         -- information.
-        if config.path then
+        if config.config_path then
 
-          update_from_file(config.path)
+          update_from_file(config.config_path)
         end
       end
+    end
+
+    -- Enviroment for P4 config has next highest precedence
+    if M.valid == false then
+
+      -- Try to get P4 information from the shell enviroment
+      -- (user using something like direnv).
+      update_from_env()
+
     end
 
     -- Handle invalid configuration

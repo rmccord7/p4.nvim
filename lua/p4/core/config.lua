@@ -36,7 +36,7 @@ end
 -- https://github.com/neovim/nvim-lspconfig/blob/master/lua/lspconfig/util.lua#L209
 local function find_p4_ancestor(startpath)
   return search_ancestors(startpath, function(p)
-    log.debug("Path" .. path.sanitize(path.join(p, config.opts.p4.config)))
+    log.debug("Path: " .. path.sanitize(path.join(p, config.opts.p4.config)))
     if path.is_file(path.join(p, config.opts.p4.config)) then
       return p
     end
@@ -45,7 +45,7 @@ end
 
 --- Clears the P4CONFIG path
 function M.clear()
-  M.path = nil
+  M.config_path = nil
 end
 
 --- Find the P4CONFIG file
