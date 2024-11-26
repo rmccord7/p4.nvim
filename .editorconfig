@@ -1,18 +1,12 @@
+root = true
 
 [*.lua]
-
-# optional space/tab
 indent_style = space
-# if indent_style is space, this is valid
 indent_size = 2
-# if indent_style is tab, this is valid
 tab_width = 2
-# none/single/double
-quote_style = single
-
-continuation_indent = 4
-
-# this mean utf8 length , if this is 'unset' then the line width is no longer checked
-# this option decides when to chopdown the code
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace=true
 max_line_length = 120
-
+charset = utf-8
+quote_style = double
