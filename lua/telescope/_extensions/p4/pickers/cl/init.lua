@@ -1,71 +1,142 @@
 local config = require("telescope.config").values
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
+local previewers = require("telescope.previewers")
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
+local entry_display = require("telescope.pickers.entry_display")
 
-local tp4_util = require("telescope._extensions.p4.pickers.util")
+local notify = require("p4.notify")
 
-local M = {}
+--- @class P4_Telescope_CL_Picker
+local P4_Telescope_CL_Picker = {}
 
---- Telescope picker to display a P4 change list's files that
---- are checked out in the client workspace.
+--- Telescope picker to display the list of P4 CLs.
 ---
---- @param cl P4_CL Change list.
----
---- @param opts table? Optional parameters. Not used.
----
-function M.files_picker(cl, opts)
+--- @param prompt_title string Telescope prompt title.
+--- @param p4_cl_list P4_CL[] File list.
+--- @param opts table? Telescope picker options.
+function P4_Telescope_CL_Picker.picker(prompt_title, p4_cl_list, opts)
   opts = opts or {}
+
+  log.trace("Telescope CL Picker")
+
+  --- Processes results from the finder.
+  ---
+  --- @param entry P4_CL P4 CL.
+  local function entry_maker(entry)
+
+    local displayer = entry_display.create({
+      separator = ': ',
+      items = {
+        { width = 8 },
+        { remaining = true },
+      },
+    })
+
+    --- @diagnostic disable-next-line Ignore redefined entry.
+    local make_display = function(entry)
+
+      --- @type P4_CL
+      local p4_cl = entry.value
+
+      return displayer {
+        p4_cl.name,
+        p4_cl:get_formatted_description(),
+      }
+    end
+
+    return {
+      value = entry,
+      ordinal = entry.name,
+      display = make_display,
+    }
+  end
+
+  --- Controls what is displayed for each entry's preview.
+  local function previewer()
+
+    return previewers.new_buffer_previewer({
+      title = "Change List Spec",
+      get_buffer_by_name = function(_, entry)
+        return entry.name
+      end,
+
+      define_preview = function(self, entry)
+
+        -- If we already have the spec, then load it into the
+        -- buffer. Otherwise we need to query it.
+        if entry.value.spec then
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(entry.value.spec, '\n'))
+        else
+          local utils = require("telescope.previewers.utils")
+
+          utils.job_maker({"p4", "change", "-o", entry.value.name}, self.state.bufnr, {
+            value = entry.value.name,
+            bufname = self.state.bufname,
+          })
+        end
+      end,
+      keep_last_buf = true,
+    })
+  end
 
   --- Defines mappings.
   ---
-  --- @param prompt_bufnr integer Prompt buffer number.
+  --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
   ---
   --- @param map function Maps keys to functions.
   ---
   local function attach_mappings(prompt_bufnr, map)
 
-    -- Replace select default option.
     actions.select_default:replace(function()
 
-      -- Close the prompt.
       actions.close(prompt_bufnr)
 
-      -- Get the selected entry.
       local entry = actions_state.get_selected_entry()
 
-      -- In case the user didn't select one or more entries before
-      -- performing an action.
-      if not entry then
-        tp4_util.warn_no_selection_action()
-        return
+      if entry then
+
+        -- Use the last preview buffer since it displayed the P4 change
+        -- list spec.
+        local state = require("telescope.state")
+
+        local bufnr = state.get_global_key("last_preview_bufnr")
+
+        if bufnr then
+          --- @type P4_CL
+          local p4_cl = entry.value
+
+          p4_cl:write_spec(bufnr)
+        end
+      else
+        notify("Please make a valid selection before performing the action.", vim.log.levels.WARN)
       end
     end)
 
-    local cl_mappings = require("p4_config.opts.telescope.change_lists.mappings")
-    local cl_actions = require("telescope._extensions.p4.pickers.cl.actions")
+    local p4_config = require("p4.config")
 
-    map({ "i", "n" }, cl_mappings.diff, cl_actions.diff_files)
-    map({ "i", "n" }, cl_mappings.revert, cl_actions.revert_files)
-    map({ "i", "n" }, cl_mappings.shelve, cl_actions.shelve_files)
-    map({ "i", "n" }, cl_mappings.unshelve, cl_actions.unshelve_files)
+    local cl_mappings = p4_config.opts.telescope.cl.mappings
+    local cl_actions  = require("telescope._extensions.p4.pickers.cl.actions")
+
+    map({ "n" }, cl_mappings.display_files, cl_actions.display_cl_files)
 
     return true
   end
 
   pickers
     .new(opts, {
-      prompt_title = "Change List",
-      results_title = "Checked Out",
+      prompt_title = "P4 " .. prompt_title .. " CLs",
+      results_title = "CLs",
       finder = finders.new_table({
-        results = cl.files,
+        results = p4_cl_list,
+        entry_maker = entry_maker,
       }),
       sorter = config.generic_sorter(opts),
-      previewer = config.file_previewer(opts),
+      previewer = previewer(),
       attach_mappings = attach_mappings,
     })
     :find()
 end
 
-return M
+return P4_Telescope_CL_Picker

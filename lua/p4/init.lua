@@ -3,13 +3,24 @@ local log = require("p4.log")
 
 local env = require("p4.core.env")
 
---- P4 context.
-local M = {}
+--- @class P4_Context
+--- @field current_client P4_Current_Client? Current client
+local context = {}
+
+-- Check if telescope is supported
+ has_telescope, _ = pcall(require, "telescope")
+
+ if has_telescope then
+
+   context.telescope = true
+ else
+   context.telescope = false
+ end
 
 --- Initializes the plugin.
 ---
 --- @param opts table? P4 options
-function M.setup(opts)
+function context.setup(opts)
   if vim.fn.has("nvim-0.7.2") == 0 then
     log.error("P4 needs Neovim >= 0.7.2")
     return
@@ -21,4 +32,4 @@ function M.setup(opts)
   env.update()
 end
 
-return M
+return context

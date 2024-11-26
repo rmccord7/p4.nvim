@@ -1,65 +1,77 @@
-local p4_notify = require("p4.notify")
+local actions = require("telescope.actions")
+local actions_state = require("telescope.actions.state")
 
-local tp4_actions = require("telescope._extensions.p4.actions")
+local log = require("p4.log")
+local notify = require("p4.notify")
 
-local M = {}
+--- @class P4_Telescope_CL_Actions
+local P4_Telescope_CL_Actions = {}
 
---- Diffs the P4 change list's files against the head revision.
+--- Gets the selected cls for a cl related action.
 ---
---- @param prompt_bufnr integer Prompt buffer number.
+--- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+local function get_selected_cls(prompt_bufnr)
+
+  ---@type Picker
+  local picker = actions_state.get_current_picker(prompt_bufnr)
+
+  -- Generate the list of cls from the prompt buffer's picker.
+  local p4_cl_list = {}
+
+  if #picker:get_multi_selection() > 0 then
+    for _, entry in ipairs(picker:get_multi_selection()) do
+      table.insert(p4_cl_list, entry.value)
+    end
+  else
+    local entry = actions_state.get_selected_entry()
+    if entry then
+      table.insert(p4_cl_list, entry.value)
+    else
+      log.debug("No CL selected")
+
+      notify("Please make a valid selection before performing the action.", vim.log.levels.WARN)
+    end
+  end
+
+  -- Close the previous prompt buffer.
+  actions.close(prompt_bufnr)
+
+  return p4_cl_list
+end
+
+--- Action to open a telescope picker for the CL's files.
 ---
-function M.diff_files(prompt_bufnr)
-  local selection = tp4_actions.get_selection(prompt_bufnr)
+--- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+function P4_Telescope_CL_Actions.display_cl_files(prompt_bufnr)
 
-  if selection then
+  log.debug("Telescope CL Action: Display CL files")
 
-    -- TODO: Implement
-    p4_notify("Not supported", vim.log.level.ERROR);
+  --- @type P4_CL[]
+  local p4_cl_list = get_selected_cls(prompt_bufnr)
+
+  if not vim.tbl_isempty(p4_cl_list) then
+
+    if #p4_cl_list == 1 then
+
+      --- @type P4_CL
+      local p4_cl = p4_cl_list[1]
+
+      p4_cl:update_file_list_from_spec(function(success)
+        if success then
+
+          vim.schedule(function()
+
+            -- Run the telescope file picker.
+            local picker = require("telescope._extensions.p4.pickers.file")
+
+            picker.file_picker("CL: " .. p4_cl.name, p4_cl:get_file_list())
+          end)
+        end
+      end)
+    else
+      notify("Only 1 CL may be selected for this action.", vim.log.levels.WARN)
+    end
   end
 end
 
---- Reverts the P4 change list's files.
----
---- @param prompt_bufnr integer Prompt buffer number.
----
-function M.revert_files(prompt_bufnr)
-
-  local selection = tp4_actions.get_selection(prompt_bufnr)
-
-  if selection then
-
-    -- TODO: Implement
-    p4_notify("Not supported", vim.log.level.ERROR);
-  end
-end
-
---- Shelves the P4 change list's files.
----
---- @param prompt_bufnr integer Prompt buffer number.
----
-function M.shelve_files(prompt_bufnr)
-
-  local selection = tp4_actions.get_selection(prompt_bufnr)
-
-  if selection then
-
-    -- TODO: Implement
-    p4_notify("Not supported", vim.log.level.ERROR);
-  end
-end
-
---- Un-shelves the P4 change list's files.
----
---- @param prompt_bufnr integer Prompt buffer number.
----
-function M.unshelve_files(prompt_bufnr)
-  local selection = tp4_actions.get_selection(prompt_bufnr)
-
-  if selection then
-
-    -- TODO: Implement
-    p4_notify("Not supported", vim.log.level.ERROR);
-  end
-end
-
-return M
+return P4_Telescope_CL_Actions

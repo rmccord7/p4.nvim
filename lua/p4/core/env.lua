@@ -1,51 +1,64 @@
+local nio = require("nio")
+
 local log = require("p4.log")
+local notify = require("p4.notify")
 
 local config = require("p4.core.config")
 
---- P4 env
-local M = {
-  valid = false, -- indicates if p4 enviroment information is valid
-  user = nil, -- identifies the P4 user
-  host = nil, -- identifies the P4 host
-  port = nil, -- identifies the P4 port
-  client = nil, -- identifies the P4 client
+---@class P4_Env : table
+---@field user? string Identifies the P4 user
+---@field host? string Identifies the P4 host
+---@field port? string Identifies the P4 port
+---@field client? string Identifies the P4 client
+local P4_Env = {
+  user = nil,
+  host = nil,
+  port = nil,
+  client = nil,
 }
+
+--- Checks to make sure the P4 enviroment is configured.
+local function check_env()
+  if P4_Env.user and P4_Env.host and P4_Env.port and P4_Env.client then
+    return true
+  else
+    return false
+  end
+end
 
 --- Displays P4 environment information.
 local function display_env()
-  log.info("P4USER: " .. M.user)
-  log.info("P4HOST: " .. M.host)
-  log.info("P4PORT: " .. M.port)
-  log.info("P4CLIENT: " .. M.client)
+  log.info("P4USER: " .. P4_Env.user)
+  log.info("P4HOST: " .. P4_Env.host)
+  log.info("P4PORT: " .. P4_Env.port)
+  log.info("P4CLIENT: " .. P4_Env.client)
 end
 
 --- Updates the P4 environment innformation from the shell's
 --- environment.
 local function update_from_config()
   if vim.g.p4 and vim.g.p4.config then
-    M.user = vim.g.p4.config.user
-    M.host = vim.g.p4.config.host
-    M.port = vim.g.p4.config.port
-    M.client = vim.g.p4.config.client
+    P4_Env.user = vim.g.p4.config.user
+    P4_Env.host = vim.g.p4.config.host
+    P4_Env.port = vim.g.p4.config.port
+    P4_Env.client = vim.g.p4.config.client
   end
 
-  if M.user and M.host and M.port and M.cient then
+  if check_env() then
     log.info("P4 configured from plugin config")
-    M.valid = true
   end
 end
 
 --- Updates the P4 environment innformation from the shell's
 --- environment.
 local function update_from_env()
-  M.user = os.getenv('P4USER')
-  M.host = os.getenv('P4HOST')
-  M.port = os.getenv('P4PORT')
-  M.client = os.getenv('P4CLIENT')
+  P4_Env.user = os.getenv('P4USER')
+  P4_Env.host = os.getenv('P4HOST')
+  P4_Env.port = os.getenv('P4PORT')
+  P4_Env.client = os.getenv('P4CLIENT')
 
-  if M.user and M.host and M.port and M.client then
+  if check_env() then
     log.info("P4 configured from enviroment")
-    M.valid = true
   end
 end
 
@@ -61,49 +74,49 @@ local function update_from_file(config_path)
       t[k] = v
     end
 
-    M.user = t["P4USER"]
-    M.host = t["P4HOST"]
-    M.port = t["P4PORT"]
-    M.client = t["P4CLIENT"]
+    P4_Env.user = t["P4USER"]
+    P4_Env.host = t["P4HOST"]
+    P4_Env.port = t["P4PORT"]
+    P4_Env.client = t["P4CLIENT"]
 
-    if M.user and M.host and M.port and M.client then
+    if check_env() then
       log.info("P4 configured from P4CONFIG")
-      M.valid = true
     end
   end
 end
 
 --- Clears the P4 environment information
-function M.clear()
+function P4_Env.clear()
 
-  log.info("Clearing P4 config")
+  log.debug("Clearing P4 config")
 
   -- NOTE: This does not clear the P4CONFIG path if it has been cached.
 
-  M.valid = false
-  M.user = nil
-  M.host = nil
-  M.port = nil
-  M.client = nil
+  P4_Env.user = nil
+  P4_Env.host = nil
+  P4_Env.port = nil
+  P4_Env.client = nil
 end
 
 --- Updates the P4 environment information
-function M.update()
+function P4_Env.update()
+
+  log.debug("Updating P4 config")
 
   -- If we have already cached the P4 environment
   -- information, then there is nothing to do.
-  if M.valid == false then
+  if not check_env() then
 
     log.info("Configuring P4")
 
     -- Clear the current p4 environment information
-    M.clear()
+    P4_Env.clear()
 
     -- Plugin config for P4 config has highest precedence
     update_from_config()
 
     -- P4CONFIG for P4 config has the next highest precendence
-    if M.valid == false then
+    if not check_env() then
 
       -- Find P4 config file so we can try to use it.
       if config.find() then
@@ -118,7 +131,7 @@ function M.update()
     end
 
     -- Enviroment for P4 config has next highest precedence
-    if M.valid == false then
+    if not check_env() then
 
       -- Try to get P4 information from the shell enviroment
       -- (user using something like direnv).
@@ -126,32 +139,59 @@ function M.update()
 
     end
 
+    local p4 = require("p4")
+
     -- Handle invalid configuration
-    if M.valid then
+    if check_env() then
 
       display_env()
 
-      -- Enable autocmds
-      require("p4.api.commands.file.ac").enable_autocmds()
+      log.debug("P4 configured")
 
-      -- Set the P4 client
-      require("p4.api.clients").set_client(M.client)
+      -- Enable autocmds
+      require("p4.api.file.auto").enable_autocmds()
+
+      local P4_Current_Client = require("p4.core.lib.current_client")
+
+      -- Update the current client.
+      if not p4.current_client or p4.current_client.name ~= P4_Env.client then
+        p4.current_client = P4_Current_Client:new(P4_Env.client)
+      end
     else
 
       -- Disable autocmds
-      require("p4.api.commands.file.ac").disable_autocmds()
+      require("p4.api.file.auto").disable_autocmds()
 
-      if not M.host then
-        log.error("Invalid P4HOST")
-      else
-        if not M.port then
-          log.error("Invalid P4PORT")
+      -- Update the current client.
+      if not p4.current_client or p4.current_client.name ~= P4_Env.client then
+        p4.current_client = nil
+      end
+
+      -- If nothing is configured, then we will assume this is
+      -- not a P4 workspace.
+      if P4_Env.user or P4_Env.host or P4_Env.port or P4_Env.cient then
+
+        -- Inform the user what has not been set.
+        if not P4_Env.host then
+          notify("Invalid P4Host", vim.log.levels.ERROR)
+
+          log.error("Invalid P4HOST")
         else
-          if not M.client then
-            log.error("Invalid P4CLIENT")
+          if not P4_Env.port then
+            notify("Invalid P4PORT", vim.log.levels.ERROR)
+
+            log.error("Invalid P4PORT")
           else
-            if not M.user then
-              log.error("Invalid P4USER")
+            if not P4_Env.client then
+              notify("Invalid P4CLIENT", vim.log.levels.ERROR)
+
+              log.error("Invalid P4CLIENT")
+            else
+              if not P4_Env.user then
+                notify("Invalid P4USER", vim.log.levels.ERROR)
+
+                log.error("Invalid P4USER")
+              end
             end
           end
         end
@@ -160,13 +200,27 @@ function M.update()
       log.error("Configuring P4 failed")
 
       -- Clear the current p4 environment information
-      M.clear()
+      P4_Env.clear()
 
     end
   end
 
-  return M.valid
+  return P4_Env.valid
 end
 
-return M
+--- Clears the P4 environment information
+function P4_Env.check()
+
+  if check_env() then
+    return true
+  else
+    notify("Env not configured", vim.log.levels.ERROR)
+
+    log.debug("Env not configured")
+
+    return false
+  end
+end
+
+return P4_Env
 

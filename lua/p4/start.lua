@@ -1,5 +1,9 @@
+local p4 = require("p4")
+
 local config = require("p4.config")
 local log = require("p4.log")
+
+local p4_env = require("p4.core.env")
 
 local p4_config = require("p4.core.config")
 
@@ -8,16 +12,6 @@ local function start()
 
   -- Initialize plugin defaults
   config.setup()
-
-  vim.api.nvim_create_user_command(
-    "P4Log",
-    function()
-      vim.cmd(([[tabnew %s]]):format(log.outfile))
-    end,
-    {
-      desc = "Opens the p4.nvim log.",
-    }
-  )
 
   log.debug("Plugin start")
 
@@ -28,17 +22,17 @@ local function start()
     group = group,
     pattern = "*",
     callback = function()
-        log.debug("Directory Changed")
+      log.debug("Directory Changed")
 
-        -- Load user commands.
-        require("p4.api.commands.file.user")
+      -- Set up the Rocks user command
+      require("p4.commands").create_commands()
 
-        -- Clear the current P4CONFIG path if it exists.
-        p4_config.clear()
+      -- Clear the current P4CONFIG path if it exists.
+      p4_config.clear()
 
-        -- Force the P4 environment information update
-        env.clear()
-        env.update()
+      -- Force the P4 environment information update
+      p4_env.clear()
+      p4_env.update()
     end
   })
 end
