@@ -72,14 +72,18 @@ function P4_Command:run()
 
             cmd.sys_opts["stdin"] = password
 
-            local success, _ = pcall(cmd:run():wait())
+            local success, _ = pcall(cmd:run().wait)
 
             -- Re-run the previous command.
             if success then
 
               log.debug("Re-try previous command")
 
-              self:run()
+              success, sc = pcall(self:run().wait)
+
+              if success then
+                future.set(sc)
+              end
             end
           end)
         end
