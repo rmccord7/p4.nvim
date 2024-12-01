@@ -18,6 +18,8 @@ local P4_Command_Shelve = {}
 function P4_Command_Shelve:new(file_paths, opts)
   opts = opts or {}
 
+  log.trace("P4_Command_Shelve: new")
+
   P4_Command_Shelve.__index = P4_Command_Shelve
 
   local P4_Command = require("p4.core.lib.command")
@@ -55,6 +57,7 @@ end
 
 --- Parses the output of the P4 command.
 function P4_Command_Shelve:process_response()
+  log.trace("P4_Command_Shelve: process_response")
 end
 
 return P4_Command_Shelve

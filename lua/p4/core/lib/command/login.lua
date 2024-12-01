@@ -1,7 +1,8 @@
 local log = require("p4.log")
 
 --- @class P4_Command_Login_Options : table
---- @field check? boolean Just checks if a user is logged in.
+--- @field check? boolean Checks if a user is logged in.
+--- @field password? string Password for login. Required if check is nil or false.
 
 --- @class P4_Command_Login_Result : table
 --- @field result boolean Path of the file in the depot.
@@ -17,6 +18,8 @@ local P4_Command_Login = {}
 --- @return P4_Command_Login P4_Command_Opened A new current P4 client
 function P4_Command_Login:new(opts)
   opts = opts or {}
+
+  log.trace("P4_Command_Login: new")
 
   P4_Command_Login.__index = P4_Command_Login
 
@@ -36,6 +39,10 @@ function P4_Command_Login:new(opts)
     }
 
     vim.list_extend(command, ext_cmd)
+  else
+    assert(opts.password, "Password is required for P4 login command")
+
+    self.sys_opts["stdin"] = opts.password
   end
 
   --- @type P4_Command_Login

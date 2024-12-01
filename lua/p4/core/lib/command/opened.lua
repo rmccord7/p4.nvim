@@ -18,6 +18,8 @@ local P4_Command_Opened = {}
 function P4_Command_Opened:new(opts)
   opts = opts or {}
 
+  log.trace("P4_Command_Opened: new")
+
   P4_Command_Opened.__index = P4_Command_Opened
 
   local P4_Command = require("p4.core.lib.command")
@@ -52,6 +54,9 @@ end
 --- @param output string
 --- @return P4_Command_Opened_Result[] result Hold's the parsed result from the command output.
 function P4_Command_Opened:process_response(output)
+
+  log.trace("P4_Command_Opened: process_response")
+
   --- @type P4_Command_Opened_Result[]
   local result = {}
 

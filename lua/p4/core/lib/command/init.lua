@@ -14,6 +14,8 @@ local P4_Command = {}
 --- @return P4_Command P4_Command A new P4 command
 function P4_Command:new(command)
 
+  log.trace("P4_Command: new")
+
   P4_Command.__index = P4_Command
 
   local new = setmetatable({}, P4_Command)
@@ -34,6 +36,8 @@ end
 --- @see vim.system
 --- @async
 function P4_Command:run()
+
+  log.trace("P4_Command: run")
 
   local nio = require("nio")
   local future = nio.control.future()
@@ -65,12 +69,13 @@ function P4_Command:run()
             local password = nio.fn.inputsecret("Password: ")
             nio.fn.inputrestore()
 
-            require("p4.core.lib.command.login")
+            --- @type P4_Command_Login_Options
+            local cmd_opts = {
+              password = password,
+            }
 
             -- Login to the P4 server.
-            local cmd = P4_Command_Login:new()
-
-            cmd.sys_opts["stdin"] = password
+            local cmd = P4_Command_Login:new(cmd_opts)
 
             local success, _ = pcall(cmd:run().wait)
 
@@ -121,6 +126,9 @@ end
 --- @return vim.SystemCompleted Vim system complete object.
 --- @see vim.system
 function P4_Command:wait()
+
+  log.trace("P4_Command: wait")
+
   p4_log.command(self.command)
 
   local sc = vim.system(self.command, self.sys_opts):wait()

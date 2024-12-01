@@ -17,10 +17,9 @@ local P4_Command_Where = {}
 --- @param opts? P4_Command_Where_Options P4 command options.
 --- @return P4_Command_Where P4_Command_Where P4 command.
 function P4_Command_Where:new(file_paths, opts)
-
-  log.trace("P4 Command Where: new")
-
   opts = opts or {}
+
+  log.trace("P4_Command_Where: new")
 
   P4_Command_Where.__index = P4_Command_Where
 
@@ -53,7 +52,7 @@ end
 --- @return P4_Command_Where_Result[] result Hold's the parsed result from the command output.
 function P4_Command_Where:process_response(output)
 
-  log.trace("P4 Command Where: process_response")
+  log.trace("P4_Command_Where: process_response")
 
   --- @type P4_Command_Where_Result[]
   local result_list = {}

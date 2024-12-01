@@ -16,6 +16,8 @@ local P4_Command_Edit = {}
 function P4_Command_Edit:new(file_paths, opts)
   opts = opts or {}
 
+  log.trace("P4_Command_Edit: new")
+
   P4_Command_Edit.__index = P4_Command_Edit
 
   local P4_Command = require("p4.core.lib.command")
@@ -43,6 +45,7 @@ end
 
 --- Parses the output of the P4 command.
 function P4_Command_Edit:process_response()
+  log.trace("P4_Command_Edit: process_response")
 end
 
 return P4_Command_Edit

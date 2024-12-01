@@ -21,7 +21,7 @@ local P4_Command_Changes = {}
 function P4_Command_Changes:new(opts)
   opts = opts or {}
 
-  log.trace("P4_Command_Changes: New")
+  log.trace("P4_Command_Changes: new")
 
   P4_Command_Changes.__index = P4_Command_Changes
 
@@ -62,7 +62,7 @@ end
 --- @return P4_Command_Changes_Result[] result Hold's the parsed result from the command output.
 function P4_Command_Changes:process_response(output)
 
-  log.trace("P4_Command_Changes: Process Response")
+  log.trace("P4_Command_Changes: process_response")
 
   --- @type P4_Command_Changes_Result[]
   local result_list = {}

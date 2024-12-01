@@ -59,6 +59,8 @@ P4_Command_Client.opts_type = {
 function P4_Command_Client:new(client, opts)
   opts = opts or {}
 
+  log.trace("P4_Command_Client: new")
+
   P4_Command_Client.__index = P4_Command_Client
 
   local P4_Command = require("p4.core.lib.command")
@@ -123,6 +125,8 @@ end
 --- @param output string
 --- @return P4_Command_Client_Result result Hold's the parsed result from the command output.
 function P4_Command_Client:process_response(output)
+
+  log.trace("P4_Command_Client: process_response")
 
   --- @type P4_Command_Client_Result
   local spec_table = {}

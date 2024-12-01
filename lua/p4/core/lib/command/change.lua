@@ -53,7 +53,7 @@ P4_Command_Change.opts_type = {
 function P4_Command_Change:new(opts)
   opts = opts or {}
 
-  log.trace("P4_Command_Change: New")
+  log.trace("P4_Command_Change: new")
 
   P4_Command_Change.__index = P4_Command_Change
 
@@ -110,7 +110,7 @@ end
 --- @return P4_Command_Change_Result result Hold's the parsed result from the command output.
 function P4_Command_Change:process_response(output)
 
-  log.trace("P4_Command_Change: Process Response")
+  log.trace("P4_Command_Change: process_response")
 
   --- @type P4_Command_Change_Result
   local spec_table = {}

@@ -16,7 +16,7 @@ local P4_Command_Add = {}
 function P4_Command_Add:new(file_paths, opts)
   opts = opts or {}
 
-  log.trace("P4_Command_Add: New")
+  log.trace("P4_Command_Add: new")
 
   P4_Command_Add.__index = P4_Command_Add
 
@@ -47,7 +47,7 @@ end
 ---
 --- @param output string Command output.
 function P4_Command_Add:process_response(output)
-  log.trace("P4_Command_Add: Process Response")
+  log.trace("P4_Command_Add: process_response")
 
   return output
 end

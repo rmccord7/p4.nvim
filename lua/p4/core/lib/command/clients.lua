@@ -17,6 +17,8 @@ local P4_Command_Clients = {}
 function P4_Command_Clients:new(opts)
   opts = opts or {}
 
+  log.trace("P4_Command_Clients: new")
+
   P4_Command_Clients.__index = P4_Command_Clients
 
   local P4_Command = require("p4.core.lib.command")
@@ -43,6 +45,9 @@ end
 --- @param output string
 --- @return P4_Command_Clients_Result[] result Hold's the parsed result from the command output.
 function P4_Command_Clients:process_response(output)
+
+  log.trace("P4_Command_Clients: process_response")
+
   --- @type P4_Command_Clients_Result[]
   local result = {}
 

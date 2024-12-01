@@ -28,6 +28,8 @@ local P4_Command_FStat = {}
 function P4_Command_FStat:new(file_paths, opts)
   opts = opts or {}
 
+  log.trace("P4_Command_FStat: new")
+
   P4_Command_FStat.__index = P4_Command_FStat
 
   local P4_Command = require("p4.core.lib.command")
@@ -58,6 +60,8 @@ end
 --- @param output string Command output.
 --- @return P4_Command_FStat_Result[] result Hold's the parsed result from the command output.
 function P4_Command_FStat:process_response(output)
+
+  log.trace("P4_Command_FStat: process_response")
 
   --- @type P4_Command_FStat_Result[]
   local result = {}

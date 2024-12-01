@@ -17,6 +17,8 @@ local P4_Command_Delete = {}
 function P4_Command_Delete:new(file_paths, opts)
   opts = opts or {}
 
+  log.trace("P4_Command_Delete: new")
+
   P4_Command_Delete.__index = P4_Command_Delete
 
   local P4_Command = require("p4.core.lib.command")
@@ -55,6 +57,7 @@ end
 
 --- Parses the output of the P4 command.
 function P4_Command_Delete:process_response()
+  log.trace("P4_Command_Delete: process_response")
 end
 
 return P4_Command_Delete
