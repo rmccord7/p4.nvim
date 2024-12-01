@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 --- @class P4_Where : table
 --- @field clientFile string Local path to the file in local syntax
 --- @field DepotFile string Depot path to the file

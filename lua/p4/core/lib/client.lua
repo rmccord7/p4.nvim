@@ -2,6 +2,7 @@ local nio = require("nio")
 
 local log = require("p4.log")
 local notify = require("p4.notify")
+local task = require("p4.task")
 
 --- @class P4_Client : table
 --- @field name string Client name
@@ -42,7 +43,7 @@ function P4_Client:read_spec(on_exit)
 
     --- @type P4_Command_Client_Options
     local cmd_opts = {
-      read = true,
+      type = P4_Command_Client.opts_type.READ,
     }
 
     local cmd = P4_Command_Client:new(self.name, cmd_opts)
@@ -66,6 +67,8 @@ function P4_Client:read_spec(on_exit)
     end
 
     on_exit(success)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 
@@ -152,7 +155,16 @@ function P4_Client:update_cl_list(on_exit)
 
           for _, result in ipairs(result_list) do
 
-            local p4_cl = P4_CL:new(result)
+            --- @type P4_New_CL_Information
+            local new_cl = {
+              name = result.name,
+              user = result.user,
+              client_name = result.client_name,
+              description = result.description,
+              status = P4_CL.set_status_from_string(result.status),
+            }
+
+            local p4_cl = P4_CL:new(new_cl)
 
             table.insert(self.p4_cl_list, p4_cl)
           end
@@ -164,10 +176,14 @@ function P4_Client:update_cl_list(on_exit)
 
           self.p4_cl_list = nil
         end
+      else
+        log.error("Failed to read the client's spec: %s", self.name)
       end
 
       on_exit(success)
     end)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 
@@ -208,20 +224,27 @@ function P4_Client:update_file_list(on_exit)
           --- @type P4_Command_Opened_Result[]
           local result = cmd:process_response(sc.stdout)
 
-          local file_utils = require("p4.core.lib.file_utils")
+          local P4_File_Path = require("p4.core.lib.file_path")
           local P4_File_List = require("p4.core.lib.file_list")
           local P4_CL = require("p4.core.lib.cl")
 
-          --- @type New_P4_File[]
+          --- @type P4_New_File_Information[]
           local new_file_list = {}
 
           for _, file_info in ipairs(result) do
 
-            --- @type New_P4_File
+            --- @type P4_New_CL_Information
+            local new_cl = {
+              name = file_info.cl,
+            }
+
+            --- @type P4_New_File_Information
             local new_file = {
-              file_path_type = P4_FILE_PATH_TYPE.depot,
-              file_path = file_info.depot_path,
-              p4_cl = P4_CL:new(file_info.cl)
+              path = {
+                type = P4_File_Path.type.DEPOT,
+                path = file_info.depot_path,
+              },
+              p4_cl = P4_CL:new(new_cl)
             }
 
             table.insert(new_file_list, new_file)
@@ -244,6 +267,8 @@ function P4_Client:update_file_list(on_exit)
         end
       end
     end)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 
@@ -258,6 +283,7 @@ end
 ---
 --- @param cl_num integer P4 CL number
 --- @return boolean result Returns true if the CL has been added to the client
+--- @async
 function P4_Client:add_cl(cl_num)
 
   -- if not self:find_cl(cl_num) then
@@ -281,6 +307,7 @@ end
 ---
 --- @param cl_num integer P4 CL number
 --- @return P4_CL? cl P4 CL
+--- @async
 function P4_Client:find_cl(cl_num)
 
   -- for _, c in ipairs(self.cl_list) do
@@ -296,6 +323,7 @@ end
 --- Removes a P4 cl
 ---
 --- @param cl_num integer P4 CL number
+--- @async
 function P4_Client:remove_cl(cl_num)
 
   -- log.tra  for i, cl in ipairs(P4_Client.cl_list) do

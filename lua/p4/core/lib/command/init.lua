@@ -5,7 +5,7 @@ local p4_log = require("p4.core.log")
 
 ---@class P4_Command : table
 ---@field protected command string[] P4 command.
----@field protected sys_opts vim.SystemOpts P4 command
+---@field protected sys_opts vim.SystemOpts Vim system options.
 local P4_Command = {}
 
 --- Creates a new P4 command.

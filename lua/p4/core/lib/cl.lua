@@ -2,20 +2,58 @@ local nio = require("nio")
 
 local log = require("p4.log")
 local notify = require("p4.notify")
+local task = require("p4.task")
 
 --- @class P4_CL : table
---- @field name string P4 CL name
---- @field user string CL user.
---- @field client_name string CL Client's name.
---- @field description string CL description.
---- @field status P4_CL_STATUS_TYPE CL status.
---- @field protected spec P4_CL_Spec CL spec
---- @field protected p4_file_list P4_File_List List of P4 files that are open for the CL.
+--- @field protected name string P4 CL name
+--- @field protected user string CL user.
+--- @field protected client_name string CL Client's name.
+--- @field protected description string CL description.
+--- @field protected status P4_CL_STATUS_TYPE CL status.
+--- @field protected spec? P4_CL_Spec CL spec
+--- @field protected p4_file_list? P4_File_List List of P4 files that are open for the CL.
 local P4_CL = {}
+
+--- @enum P4_CL_STATUS_TYPE
+P4_CL.status_type = {
+  PENDING = 0,
+  SUBMITTED = 1,
+  SHELVED = 2,
+  UNKNOWN = 3,
+}
+
+--- Takes a CL status string and converts it to the P4 CL status type.
+---
+--- @param status string
+--- @return P4_CL_STATUS_TYPE type CL status type.
+function P4_CL.set_status_from_string(status)
+
+  --- @type P4_CL_STATUS_TYPE
+  local result
+
+  if status == "pending" then
+    result = P4_CL.status_type.PENDING
+  elseif status == "submitted" then
+    result = P4_CL.status_type.SUBMITTED
+  elseif status == "shelved" then
+    result = P4_CL.status_type.SHELVED
+  else
+    result = P4_CL.status_type.UNKNOWN
+  end
+
+  return result
+end
+
+--- @class P4_New_CL_Information
+--- @field name string CL name.
+--- @field user? string CL user.
+--- @field client_name? string CL Client's name.
+--- @field description? string CL description.
+--- @field status? P4_CL_STATUS_TYPE CL status.
 
 --- Creates a new CL
 ---
---- @param cl P4_CL_Information P4 CL info
+--- @param cl P4_New_CL_Information P4 CL info
 --- @return P4_CL CL New CL
 --- @nodiscard
 function P4_CL:new(cl)
@@ -25,24 +63,58 @@ function P4_CL:new(cl)
   local new = setmetatable({}, P4_CL)
 
   new.name = cl.name
-  new.user = cl.user
-  new.client_name = cl.client_name
-  new.description = cl.description
-  new.status = cl.status
+  new.user = cl.user or ''
+  new.client_name = cl.client_name or ''
+  new.description = cl.description or ''
+  new.status = cl.status or self.status_type.UNKNOWN
+
+  new.spec = nil
+  new.p4_file_list = nil
 
   return new
 end
 
---- Returns the CLs P4 file list.
+--- @class P4_CL_Information
+--- @field name string CL name.
+--- @field user string CL user.
+--- @field client_name string CL Client's name.
+--- @field description string CL description.
+--- @field status P4_CL_STATUS_TYPE CL status.
+
+--- Returns the CL's information.
 ---
---- @return P4_File_List result P4 file list.
+--- @return P4_CL_Information result P4 file list.
+--- @nodiscard
+function P4_CL:get()
+  return {
+    name = self.name,
+    user = self.user,
+    client_name = self.client_name,
+    description = self.description,
+    status = self.status,
+  }
+end
+
+--- Returns the CL's spec.
+---
+--- @return P4_CL_Spec result? P4 CL spec.
+--- @nodiscard
+function P4_CL:get_spec()
+  return self.spec
+end
+
+--- Returns the CL's P4 file list.
+---
+--- @return P4_File_List result? P4 file list.
+--- @nodiscard
 function P4_CL:get_file_list()
   return self.p4_file_list
 end
 
---- Returns the CLs description.
+--- Returns the CL's description.
 ---
 --- @return string description.
+--- @nodiscard
 function P4_CL:get_formatted_description()
   local description = self.description
 
@@ -54,7 +126,7 @@ end
 
 --- Reads the client spec from the P4 server.
 ---
---- @param on_exit fun(success: boolean, ...) Callback function when function completes
+--- @param on_exit? fun(success: boolean, ...) Callback function when function completes
 function P4_CL:read_spec(on_exit)
 
   log.fmt_debug("Reading the CL's spec: %s", self.name)
@@ -85,7 +157,11 @@ function P4_CL:read_spec(on_exit)
       log.error("Failed to read the CL's spec: %s", self.name)
     end
 
-    on_exit(success)
+    if on_exit then
+      on_exit(success)
+    end
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 
@@ -123,14 +199,14 @@ function P4_CL:write_spec(buf)
 
         success, sc = pcall(cmd:run().wait)
 
-        --- @cast sc vim.SystemCompleted
-
         if success then
           notify(("CL %s spec written").format(self.name))
           log.fmt_debug("Successfully written CL's spec: %s", self.name)
         else
           log.fmt_error("Failed to write the CL's spec: %s", self.name)
         end
+      end, function(success, ...)
+        task.complete(nil, success, ...)
       end)
     end,
   })
@@ -152,23 +228,27 @@ function P4_CL:update_file_list_from_spec(on_exit)
 
         if not vim.tbl_isempty(self.spec.files) then
 
-          local file_utils = require("p4.core.lib.file_utils")
+          local P4_File_Path = require("p4.core.lib.file_path")
+          local P4_File_List = require("p4.core.lib.file_list")
 
-          --- @type New_P4_File[]
+          --- @type P4_New_File_Information[]
           local new_file_list = {}
+
           for _, file_path in ipairs(self.spec.files) do
 
-            --- @type New_P4_File
+            --- @type P4_New_File_Information
             local new_file = {
-              file_path_type = P4_FILE_PATH_TYPE.depot,
-              file_path = file_path,
+              path = {
+                type = P4_File_Path.type.DEPOT,
+                path = file_path,
+              },
+
               p4_cl = self
             }
 
             table.insert(new_file_list, new_file)
           end
 
-          local P4_File_List = require("p4.core.lib.file_list")
           self.p4_file_list = P4_File_List:new(new_file_list, self)
 
           log.fmt_debug("Successfully updated the CL's file list: %s", self.name)
@@ -186,6 +266,8 @@ function P4_CL:update_file_list_from_spec(on_exit)
         on_exit(false)
       end
     end)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 

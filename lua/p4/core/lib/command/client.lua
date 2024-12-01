@@ -1,4 +1,4 @@
-log = require("p4.log")
+local log = require("p4.log")
 
 -- Lua 5.1 compatibility
 if not table.unpack then
@@ -27,10 +27,16 @@ end
 --- @field line_end string Text file line endings on the client
 --- @field view P4_Client_Spec_View[] Lines to map depot files to the current workpace
 
+--- @class P4_Command_Client_Read_Options : table
+--- @field template string Copies options and view from the specified template client.
+
+--- @class P4_Command_Client_Write_Options : table
+--- @field input? string[] Write input.
+
 --- @class P4_Command_Client_Options : table
---- @field read? boolean Indicates if the change list is read or written.
---- @field new? boolean Indicates this is a new client.
---- @field template? string Copies options and view from the specified template client. Only valid if P4 client is created.
+--- @field type P4_COMMAND_CLIENT_OPTS_TYPE Indicates the available options that may be used for the command.
+--- @field read? P4_Command_Client_Read_Options Read options.
+--- @field write? P4_Command_Client_Write_Options Write options.
 
 --- @class P4_Command_Client_Result : P4_Client_Spec
 
@@ -38,6 +44,12 @@ end
 --- @field client string P4 client name.
 --- @field opts P4_Command_Client_Options Command options.
 local P4_Command_Client = {}
+
+--- @enum P4_COMMAND_CLIENT_OPTS_TYPE
+P4_Command_Client.opts_type = {
+    READ = 0,
+    WRITE = 1,
+}
 
 --- Creates the P4 command.
 ---
@@ -58,31 +70,32 @@ function P4_Command_Client:new(client, opts)
     "client",
   }
 
-  if opts.read then
+  if opts.type == P4_Command_Client.opts_type.READ then
 
     local ext_cmd = {
       "-o", -- Read client spec to STDOUT
     }
 
     vim.list_extend(command, ext_cmd)
-  else
+
+    if opts.read and opts.read.template then
+
+      ext_cmd = {
+        "-t", -- Get options and view from the specified template for the new client.
+        opts.read.template
+      }
+
+      vim.list_extend(command, ext_cmd)
+    end
+  end
+
+  if opts.type == P4_Command_Client.opts_type.WRITE then
+
     local ext_cmd = {
       "-i", -- Write client spec to STDIN
     }
 
     vim.list_extend(command, ext_cmd)
-  end
-
-  if opts.new then
-
-    if opts.template then
-      local ext_cmd = {
-        "-t", -- Get options and view from the specified template for the new client.
-        opts.template
-      }
-
-      vim.list_extend(command, ext_cmd)
-    end
   end
 
   table.insert(command, client)
@@ -94,6 +107,13 @@ function P4_Command_Client:new(client, opts)
 
   new.opts = opts
   new.client = client
+
+  if opts.type == P4_Command_Client.opts_type.WRITE then
+    assert(opts.write and opts.write.input, "Input required for P4 client command")
+
+    -- Input needs to be supplied to STDIN.
+    new.sys_opts["stdin"] = opts.write.input
+  end
 
   return new
 end

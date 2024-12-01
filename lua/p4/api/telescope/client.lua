@@ -46,6 +46,8 @@ function P4_Telescope_Client_API.display_client_cls(client)
 
             require("telescope._extensions.p4.pickers.cl").picker(p4_client.name, p4_cl_list)
           end)
+        else
+          log.fmt_debug("Failed to update the client's cl list: %s", p4_client.name)
         end
       end)
     end

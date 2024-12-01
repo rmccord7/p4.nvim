@@ -1,8 +1,6 @@
-nio = require("nio")
-
 --- @class P4_Client_List : table
 --- @field private list P4_Client[] P4 client list.
-P4_Client_List = {}
+local P4_Client_List = {}
 
 --- Creates a new P4 client list.
 ---

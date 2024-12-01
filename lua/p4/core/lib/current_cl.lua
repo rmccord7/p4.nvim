@@ -5,7 +5,7 @@ local P4_Current_CL = {}
 
 --- Creates a new current CL
 ---
---- @param cl string P4 CL.
+--- @param cl P4_New_CL_Information P4 CL info
 --- @return P4_Current_CL P4_Current_CL A new current P4 client
 --- @nodiscard
 function P4_Current_CL:new(cl)
@@ -28,6 +28,7 @@ function P4_Current_CL:read_spec()
 
   local P4_CL = require("p4.core.lib.cl")
 
+  --- TODO: handle on exit
   if P4_CL.read_spec(self) then
 
     -- Make sure this CL belongs to the current user.

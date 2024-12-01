@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 --- @class P4_Command_Opened_Options : table
 --- @field cl? string Only files in the specified changelist.
 

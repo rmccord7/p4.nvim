@@ -1,7 +1,14 @@
+local log = require("p4.log")
+
 --- @class P4_Command_Changes_Options : table
 --- @field client? string Limit CLs to the specified P4 client
 
---- @class P4_Command_Changes_Result : P4_CL_Information
+--- @class P4_Command_Changes_Result
+--- @field name string P4 CL name
+--- @field user string CL user.
+--- @field client_name string CL Client's name.
+--- @field description string CL description.
+--- @field status string CL status.
 
 --- @class P4_Command_Changes : P4_Command
 --- @field opts P4_Command_Changes_Options Command options.
@@ -80,11 +87,9 @@ function P4_Command_Changes:process_response(output)
         name = chunks[2],
         user = vim.split(chunks[6], '@')[1],
         client_name = vim.split(chunks[6], '@')[2],
+        description = '',
+        status = string.gsub(chunks[7], '%*', ''),
       }
-
-      local CL_Types = require("p4.core.lib.types.cl")
-
-      result.status = CL_Types.status(string.gsub(chunks[7], '%*', ''))
 
       -- Start index will be the next line.
       index = index + 1

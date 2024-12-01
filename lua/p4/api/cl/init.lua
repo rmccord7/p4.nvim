@@ -16,11 +16,13 @@ function P4_CL_API.new()
 
     --- @type P4_Command_Change_Options
     local cmd_opts = {
-      read = true,
+      cl = nil,
+      type = P4_Command_Change.opts_type.READ,
+      read = nil,
     }
 
     -- Create a new CL and dump to stdout.
-    local cmd = P4_Command_Change:new(nil, cmd_opts)
+    local cmd = P4_Command_Change:new(cmd_opts)
 
     local success, sc = pcall(cmd:run().wait)
 
@@ -53,9 +55,16 @@ function P4_CL_API.new()
 
             nio.run(function()
 
-              cmd = P4_Command_Change:new(nil)
+              --- @type P4_Command_Change_Options
+              cmd_opts = {
+                cl = nil,
+                type = P4_Command_Change.opts_type.WRITE,
+                write = {
+                  input = cl_spec
+                },
+              }
 
-              cmd.sys_opts["stdin"] = cl_spec
+              cmd = P4_Command_Change:new(cmd_opts)
 
               success, sc = pcall(cmd:run().wait)
 

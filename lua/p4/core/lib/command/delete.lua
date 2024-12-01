@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 --- @class P4_Command_Delete_Options : table
 --- @field cl? string Limits specified files to the specified CL
 

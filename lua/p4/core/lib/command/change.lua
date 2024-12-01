@@ -1,4 +1,4 @@
-log = require("p4.log")
+local log = require("p4.log")
 
 -- Lua 5.1 compatibility
 if not table.unpack then
@@ -23,8 +23,16 @@ end
 --- @field stream string CL description
 --- @field files table List of files checked out for this CL
 
+--- @class P4_Command_Change_Read_Options : table
+
+--- @class P4_Command_Change_Write_Options : table
+--- @field input? string[] Write input.
+
 --- @class P4_Command_Change_Options : table
---- @field read boolean Indicates if the change list is read or written.
+--- @field cl? string Optional P4 CL name.
+--- @field type P4_COMMAND_CHANGE_OPTS_TYPE Indicates the available options that may be used for the command.
+--- @field read? P4_Command_Change_Read_Options Read options.
+--- @field write? P4_Command_Change_Write_Options Write options.
 
 --- @class P4_Command_Change_Result : P4_CL_Spec
 
@@ -32,12 +40,17 @@ end
 --- @field opts P4_Command_Change_Options Command options.
 local P4_Command_Change = {}
 
+--- @enum P4_COMMAND_CHANGE_OPTS_TYPE
+P4_Command_Change.opts_type = {
+    READ = 0,
+    WRITE = 1,
+}
+
 --- Creates the P4 command.
 ---
---- @param cl? string Optional P4 CL name.
 --- @param opts? P4_Command_Change_Options P4 command options.
 --- @return P4_Command_Change P4_Command_Change P4 command.
-function P4_Command_Change:new(cl, opts)
+function P4_Command_Change:new(opts)
   opts = opts or {}
 
   log.trace("P4_Command_Change: New")
@@ -53,14 +66,16 @@ function P4_Command_Change:new(cl, opts)
     "change",
   }
 
-  if opts.read then
+  if opts.type == P4_Command_Change.opts_type.READ then
 
     local ext_cmd = {
       "-o", -- Write change list to STDOUT
     }
 
     vim.list_extend(command, ext_cmd)
-  else
+  end
+
+  if opts.type == P4_Command_Change.opts_type.WRITE then
     local ext_cmd = {
       "-i", -- Read change list to STDIN
     }
@@ -68,8 +83,8 @@ function P4_Command_Change:new(cl, opts)
     vim.list_extend(command, ext_cmd)
   end
 
-  if cl then
-    table.insert(command, cl)
+  if opts.cl then
+    table.insert(command, opts.cl)
   end
 
   --- @type P4_Command_Change
@@ -78,6 +93,13 @@ function P4_Command_Change:new(cl, opts)
   setmetatable(new, P4_Command_Change)
 
   new.opts = opts
+
+  if opts.type == P4_Command_Change.opts_type.WRITE then
+    assert(opts.write and opts.write.input, "Input required for P4 client command")
+
+    -- Input needs to be supplied to STDIN.
+    new.sys_opts["stdin"] = opts.write.input
+  end
 
   return new
 end

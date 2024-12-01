@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 --- @class P4_Command_Login_Options : table
 --- @field check? boolean Just checks if a user is logged in.
 

@@ -1,17 +1,19 @@
-nio = require("nio")
+local nio = require("nio")
+
+local task = require("p4.task")
 
 --- @class P4_File_List : table
---- @field private list P4_File[] P4 file list.
---- @field private client? P4_Client P4 Client.
-P4_File_List = {}
+--- @field protected list P4_File[] P4 file list.
+--- @field protected client? P4_Client P4 Client.
+local P4_File_List = {}
 
 --- Creates a new P4 file list.
 ---
---- @param new_files New_P4_File[] One or more new files.
+--- @param new_file_info_list P4_New_File_Information[] One or more new files.
 --- @param client P4_Client P4 client.
 --- @return P4_File_List P4_File_List A new P4 file list.
 --- @nodiscard
-function P4_File_List:new(new_files, client)
+function P4_File_List:new(new_file_info_list, client)
 
   P4_File_List.__index = P4_File_List
 
@@ -22,8 +24,8 @@ function P4_File_List:new(new_files, client)
 
   new.list = {}
 
-  for _, path in ipairs(new_files) do
-    local p4_file = P4_File:new(path)
+  for _, new_file_info in ipairs(new_file_info_list) do
+    local p4_file = P4_File:new(new_file_info)
 
     table.insert(new.list, p4_file)
   end
@@ -47,7 +49,7 @@ function P4_File_List:build_file_path_list()
   local result = {}
 
   for _, p4_file in ipairs(self.list) do
-    table.insert(result, p4_file:get_file_path())
+    table.insert(result, p4_file.path:get_file_path())
   end
 
   return result
@@ -80,6 +82,8 @@ function P4_File_List:add(on_exit)
     end
 
     on_exit(success)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 
@@ -110,6 +114,8 @@ function P4_File_List:edit(on_exit)
     end
 
     on_exit(success)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 
@@ -140,6 +146,8 @@ function P4_File_List:revert(on_exit)
     end
 
     on_exit(success)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 
@@ -170,6 +178,8 @@ function P4_File_List:delete(on_exit)
     end
 
     on_exit(success)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 
@@ -199,13 +209,15 @@ function P4_File_List:update_stats(on_exit)
       local result = cmd:process_response(sc.stdout)
 
       for index, p4_file in ipairs(self.list) do
-        p4_file.fstat = result[index]
+        p4_file:set_file_stats(result[index])
       end
     else
       log.fmt_debug("Failed to update each file's stats: %s", sc.stderr)
     end
 
     on_exit(success)
+  end, function(success, ...)
+    task.complete(on_exit, success, ...)
   end)
 end
 

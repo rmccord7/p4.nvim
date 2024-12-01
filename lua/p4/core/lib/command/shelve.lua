@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 --- @class P4_Command_Shelve_Options : table
 --- @field cl? integer Shelves only the specified files in the
 ---                    specified change list.

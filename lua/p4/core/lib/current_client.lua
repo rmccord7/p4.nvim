@@ -61,7 +61,7 @@ function P4_Current_Client:set_cl(cl)
   -- the current CL, then we need to update it.
   if not self.cl or cl ~= tonumber(self.cl.name) then
 
-    local P4_Current = require("p4.core.lib.current_cl")
+    local P4_Current_CL = require("p4.core.lib.current_cl")
 
     local p4_cl = P4_Current_CL:new(cl)
 

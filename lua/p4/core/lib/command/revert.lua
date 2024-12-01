@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 --- @class P4_Command_Revert_Options : table
 --- @field cl? integer Reverts only the specified files in the
 ---                    specified change list.

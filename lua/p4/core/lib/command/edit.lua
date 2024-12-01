@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 --- @class P4_Command_Edit_Options : table
 
 --- @class P4_Command_Edit_Result : table

@@ -23,13 +23,12 @@ function P4_Client_API.new(client_name, opts)
 
     --- @type P4_Command_Client_Options
     local cmd_opts = {
-      new = true,
-      read = true,
+      type = P4_Command_Client.opts_type.READ,
     }
 
     -- Get options and review from the specified template.
     if opts.template then
-      cmd_opts.template = opts.template
+      cmd_opts.read.template = opts.template
     end
 
     -- Create a new client and dump to stdout.
@@ -66,9 +65,15 @@ function P4_Client_API.new(client_name, opts)
 
             nio.run(function()
 
-              cmd = P4_Command_Client:new(client_name)
+              --- @type P4_Command_Client_Options
+              cmd_opts = {
+                type = P4_Command_Client.opts_type.WRITE,
+                write = {
+                  input = client_spec
+                },
+              }
 
-              cmd.sys_opts["stdin"] = client_spec
+              cmd = P4_Command_Client:new(client_name, cmd_opts)
 
               success, sc = pcall(cmd:run().wait)
 

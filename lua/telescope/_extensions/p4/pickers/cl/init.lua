@@ -41,14 +41,14 @@ function P4_Telescope_CL_Picker.picker(prompt_title, p4_cl_list, opts)
       local p4_cl = entry.value
 
       return displayer {
-        p4_cl.name,
+        p4_cl:get().name,
         p4_cl:get_formatted_description(),
       }
     end
 
     return {
       value = entry,
-      ordinal = entry.name,
+      ordinal = entry:get().name,
       display = make_display,
     }
   end
@@ -59,20 +59,31 @@ function P4_Telescope_CL_Picker.picker(prompt_title, p4_cl_list, opts)
     return previewers.new_buffer_previewer({
       title = "Change List Spec",
       get_buffer_by_name = function(_, entry)
-        return entry.name
+
+        --- @type P4_CL
+        local p4_cl = entry.value
+
+        return p4_cl:get().name
       end,
 
       define_preview = function(self, entry)
 
+        --- @type P4_CL
+        local p4_cl = entry.value
+
         -- If we already have the spec, then load it into the
         -- buffer. Otherwise we need to query it.
-        if entry.value.spec then
-          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(entry.value.spec, '\n'))
+        local spec = p4_cl:get_spec()
+
+        --FIX: Need actual change output not description
+
+        if spec then
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(spec.description, '\n'))
         else
           local utils = require("telescope.previewers.utils")
 
-          utils.job_maker({"p4", "change", "-o", entry.value.name}, self.state.bufnr, {
-            value = entry.value.name,
+          utils.job_maker({"p4", "change", "-o", p4_cl:get().name}, self.state.bufnr, {
+            value = p4_cl:get().name,
             bufname = self.state.bufname,
           })
         end
