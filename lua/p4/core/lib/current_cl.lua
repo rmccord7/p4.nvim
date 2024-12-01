@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 local env = require("p4.core.env")
 
 --- @class P4_Current_CL : P4_CL
@@ -9,6 +11,8 @@ local P4_Current_CL = {}
 --- @return P4_Current_CL P4_Current_CL A new current P4 client
 --- @nodiscard
 function P4_Current_CL:new(cl)
+
+  log.trace("P4_Current_CL: new")
 
   P4_Current_CL.__index = P4_Current_CL
 
@@ -25,6 +29,8 @@ end
 
 --- Reads the current CL spec
 function P4_Current_CL:read_spec()
+
+  log.trace("P4_Current_CL: read_spec")
 
   local P4_CL = require("p4.core.lib.cl")
 

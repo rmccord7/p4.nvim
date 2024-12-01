@@ -58,6 +58,8 @@ end
 --- @nodiscard
 function P4_CL:new(cl)
 
+  log.trace("P4_CL: new")
+
   P4_CL.__index = P4_CL
 
   local new = setmetatable({}, P4_CL)
@@ -86,6 +88,8 @@ end
 --- @return P4_CL_Information result P4 file list.
 --- @nodiscard
 function P4_CL:get()
+  log.trace("P4_CL: get")
+
   return {
     name = self.name,
     user = self.user,
@@ -100,6 +104,8 @@ end
 --- @return P4_CL_Spec result? P4 CL spec.
 --- @nodiscard
 function P4_CL:get_spec()
+  log.trace("P4_CL: get_spec")
+
   return self.spec
 end
 
@@ -108,6 +114,8 @@ end
 --- @return P4_File_List result? P4 file list.
 --- @nodiscard
 function P4_CL:get_file_list()
+  log.trace("P4_CL: get_file_list")
+
   return self.p4_file_list
 end
 
@@ -116,6 +124,8 @@ end
 --- @return string description.
 --- @nodiscard
 function P4_CL:get_formatted_description()
+  log.trace("P4_CL: get_formatted_description")
+
   local description = self.description
 
   description = description:gsub("\n", " ")
@@ -129,7 +139,7 @@ end
 --- @param on_exit? fun(success: boolean, ...) Callback function when function completes
 function P4_CL:read_spec(on_exit)
 
-  log.fmt_debug("Reading the CL's spec: %s", self.name)
+  log.trace("P4_CL: read_spec")
 
   nio.run(function()
 
@@ -170,7 +180,7 @@ end
 --- @param buf integer Identifies the buffer that will used to store the client spec
 function P4_CL:write_spec(buf)
 
-  log.fmt_debug("Write CL's spec: %s", self.name)
+  log.trace("P4_CL: write_spec")
 
   vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
   vim.api.nvim_set_option_value("filetype", "conf", { buf = buf })
@@ -217,7 +227,7 @@ end
 --- @param on_exit fun(success: boolean, ...) Callback function when function completes
 function P4_CL:update_file_list_from_spec(on_exit)
 
-  log.fmt_debug("Get files from CL spec: %s", self.name)
+  log.trace("P4_CL: update_file_list_from_spec")
 
   nio.run(function()
 

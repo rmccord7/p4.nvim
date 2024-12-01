@@ -13,7 +13,7 @@ local P4_Current_Client = {}
 --- @nodiscard
 function P4_Current_Client:new(client_name)
 
-  log.trace("New current client")
+  log.trace("P4_Current_Client: new")
 
   P4_Current_Client.__index = P4_Current_Client
 
@@ -37,7 +37,7 @@ end
 --- @async
 function P4_Current_Client:read_spec(on_exit)
 
-  log.debug("Reading current client's spec")
+  log.trace("P4_Current_Client: read_spec")
 
   local P4_Client = require("p4.core.lib.client")
 
@@ -56,6 +56,8 @@ end
 --- @param cl string P4 CL.
 --- @return boolean result Returns true if the current client's CL has been set
 function P4_Current_Client:set_cl(cl)
+
+  log.trace("P4_Current_Client: set_cl")
 
   -- If CL has never been current or CL is not
   -- the current CL, then we need to update it.

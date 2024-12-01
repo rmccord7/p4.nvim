@@ -1,5 +1,6 @@
 local nio = require("nio")
 
+local log = require("p4.log")
 local task = require("p4.task")
 
 --- @class P4_File_List : table
@@ -14,6 +15,8 @@ local P4_File_List = {}
 --- @return P4_File_List P4_File_List A new P4 file list.
 --- @nodiscard
 function P4_File_List:new(new_file_info_list, client)
+
+  log.trace("P4_File_List: new")
 
   P4_File_List.__index = P4_File_List
 
@@ -39,6 +42,8 @@ end
 ---
 --- @return P4_File[] result A list of P4 files.
 function P4_File_List:get()
+  log.trace("P4_File_List: get")
+
   return self.list
 end
 
@@ -46,6 +51,8 @@ end
 ---
 --- @return string[] file_paths A list of file paths.
 function P4_File_List:build_file_path_list()
+  log.trace("P4_File_List: build_file_path_list")
+
   local result = {}
 
   for _, p4_file in ipairs(self.list) do
@@ -61,7 +68,7 @@ end
 --- @async
 function P4_File_List:add(on_exit)
 
-  log.debug("Opening each file for add")
+  log.trace("P4_File_List: add")
 
   nio.run(function()
 
@@ -93,7 +100,7 @@ end
 --- @async
 function P4_File_List:edit(on_exit)
 
-  log.debug("Opening each file for edit")
+  log.trace("P4_File_List: edit")
 
   nio.run(function()
 
@@ -125,7 +132,7 @@ end
 --- @async
 function P4_File_List:revert(on_exit)
 
-  log.debug("Reverting each file")
+  log.trace("P4_File_List: revert")
 
   nio.run(function()
 
@@ -157,7 +164,7 @@ end
 --- @async
 function P4_File_List:delete(on_exit)
 
-  log.debug("Opening each file for delete")
+  log.trace("P4_File_List: delete")
 
   nio.run(function()
 
@@ -189,7 +196,7 @@ end
 --- @async
 function P4_File_List:update_stats(on_exit)
 
-  log.debug("Updating each file's stats")
+  log.trace("P4_File_List: update_stats")
 
   nio.run(function()
 

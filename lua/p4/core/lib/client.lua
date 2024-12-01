@@ -19,6 +19,8 @@ local P4_Client = {}
 --- @nodiscard
 function P4_Client:new(client_name)
 
+  log.trace("P4_Client: new")
+
   log.debug("New client")
 
   P4_Client.__index = P4_Client
@@ -35,7 +37,7 @@ end
 --- @param on_exit fun(success: boolean, ...) Callback function when function completes
 function P4_Client:read_spec(on_exit)
 
-  log.fmt_debug("Reading the client's spec: %s", self.name)
+  log.trace("P4_Client: read_spec")
 
   nio.run(function()
 
@@ -77,7 +79,7 @@ end
 --- @param buf integer Identifies the buffer that will used to store the client spec
 function P4_Client:write_spec(buf)
 
-  log.fmt_debug("Write client's spec: %s", self.name)
+  log.trace("P4_Client: write_spec")
 
   vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
   vim.api.nvim_set_option_value("filetype", "conf", { buf = buf })
@@ -119,7 +121,7 @@ end
 --- @async
 function P4_Client:update_cl_list(on_exit)
 
-  log.fmt_debug("Update client's cl list: %s", self.name)
+  log.trace("P4_Client: update_cl_list")
 
   nio.run(function()
 
@@ -191,6 +193,8 @@ end
 ---
 --- @return P4_CL[] p4_cl_list List of P4 CLs.
 function P4_Client:get_cl_list()
+  log.trace("P4_Client: get_cl_list")
+
   return self.p4_cl_list
 end
 
@@ -200,7 +204,7 @@ end
 --- @async
 function P4_Client:update_file_list(on_exit)
 
-  log.fmt_debug("Update client's file list: %s", self.name)
+  log.trace("P4_Client: update_file_list")
 
   nio.run(function()
 
@@ -276,6 +280,8 @@ end
 ---
 --- @return P4_File_List p4_file_list List of open P4 files.
 function P4_Client:get_file_list()
+  log.trace("P4_Client: get_file_list")
+
   return self.p4_file_list
 end
 
@@ -285,6 +291,8 @@ end
 --- @return boolean result Returns true if the CL has been added to the client
 --- @async
 function P4_Client:add_cl(cl_num)
+
+  log.trace("P4_Client: add_cl")
 
   -- if not self:find_cl(cl_num) then
   --
@@ -310,6 +318,8 @@ end
 --- @async
 function P4_Client:find_cl(cl_num)
 
+  log.trace("P4_Client: find_cl")
+
   -- for _, c in ipairs(self.cl_list) do
   --   if c.num == cl_num then
   --     log.fmt_info("Found CL: %s", cl_num)
@@ -325,6 +335,8 @@ end
 --- @param cl_num integer P4 CL number
 --- @async
 function P4_Client:remove_cl(cl_num)
+
+  log.trace("P4_Client: remove_cl")
 
   -- log.tra  for i, cl in ipairs(P4_Client.cl_list) do
   --   if cl.spec.cl == cl_num then

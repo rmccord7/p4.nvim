@@ -1,5 +1,6 @@
 local nio = require("nio")
 
+local log = require("p4.log")
 local task = require("p4.task")
 
 local P4_File_Path = require("p4.core.lib.file_path")
@@ -20,6 +21,8 @@ local P4_File = {}
 --- @return P4_File P4_File A new P4 file.
 --- @nodiscard
 function P4_File:new(new_file)
+
+  log.trace("P4_File: new")
 
   P4_File.__index = P4_File
 
@@ -43,6 +46,8 @@ end
 --- @return P4_File_Information result P4 file list.
 --- @nodiscard
 function P4_File:get()
+  log.trace("P4_File: get")
+
   return {
     self.path,
   }
@@ -52,6 +57,8 @@ end
 ---
 --- @param cl P4_CL P4 cl.
 function P4_File:set_cl(cl)
+  log.trace("P4_File: set_cl")
+
   self.cl = cl
 end
 
@@ -60,6 +67,8 @@ end
 --- @return P4_CL cl? P4 CL.
 --- @nodiscard
 function P4_File:get_cl()
+  log.trace("P4_File: get_cl")
+
   return self.cl
 end
 
@@ -67,6 +76,8 @@ end
 ---
 --- @param fstat P4_FStat P4 file stat.
 function P4_File:set_file_stats(fstat)
+  log.trace("P4_File: set_file_stats")
+
   self.fstat = fstat
 end
 
@@ -75,6 +86,8 @@ end
 --- @return P4_FStat P4 file stats.
 --- @nodiscard
 function P4_File:get_file_stats()
+  log.trace("P4_File: get_file_stats")
+
   return self.fstat
 end
 
@@ -84,7 +97,7 @@ end
 --- @async
 function P4_File:add(on_exit)
 
-  log.fmt_debug("Opening the file for add: %s", self.path:get_file_path())
+  log.trace("P4_File: add")
 
   nio.run(function()
 
@@ -116,7 +129,7 @@ end
 --- @async
 function P4_File:edit(on_exit)
 
-  log.fmt_debug("Opening the file for edit: %s", self.path:get_file_path())
+  log.trace("P4_File: edit")
 
   nio.run(function()
 
@@ -148,7 +161,7 @@ end
 --- @async
 function P4_File:revert(on_exit)
 
-  log.fmt_debug("Reverting the file: %s", self.path:get_file_path())
+  log.trace("P4_File: revert")
 
   nio.run(function()
 
@@ -180,7 +193,7 @@ end
 --- @async
 function P4_File:delete(on_exit)
 
-  log.fmt_debug("Opening the file for delete: %s", self.path:get_file_path())
+  log.trace("P4_File: delete")
 
   nio.run(function()
 
@@ -212,7 +225,7 @@ end
 --- @async
 function P4_File:update_stats(on_exit)
 
-  log.fmt_debug("Updating the file's stats: %s", self.path:get_file_path())
+  log.trace("P4_File: update_stats")
 
   nio.run(function()
 

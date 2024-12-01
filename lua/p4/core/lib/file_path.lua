@@ -1,3 +1,5 @@
+local log = require("p4.log")
+
 --- @class P4_Path : table
 --- @field type P4_PATH_TYPE P4 file path type.
 --- @field path string File path.
@@ -24,6 +26,8 @@ P4_File_Path.type = {
 --- @return P4_File_Path P4_File_Path A new P4 file path.
 --- @nodiscard
 function P4_File_Path:new(p4_path)
+
+  log.trace("P4_File_Path: new")
 
   P4_File_Path.__index = P4_File_Path
 
@@ -55,6 +59,8 @@ end
 --- Checks to make sure the P4 file path is valid.
 function P4_File_Path:check()
 
+  log.trace("P4_File_Path: check")
+
   local function check_path(path)
     return (path.depot_valid and path.depot:len() > 0  and true or false) or
            (path.client_valid and path.client:len() > 0  and true or false) or
@@ -68,6 +74,8 @@ end
 ---
 --- @return string result P4 file path.
 function P4_File_Path:get_file_path()
+
+  log.trace("P4_File_Path: get_file_path")
 
   -- Prefer local file path.
   if self.host_valid then
@@ -91,6 +99,9 @@ end
 ---
 --- @param p4_path_list P4_Path[] P4 file paths.
 function P4_File_Path:update_file_paths(p4_path_list)
+
+  log.trace("P4_File_Path: update_file_paths")
+
   for _, p4_path in ipairs(p4_path_list) do
 
     if p4_path.type == P4_File_Path.type.DEPOT then
