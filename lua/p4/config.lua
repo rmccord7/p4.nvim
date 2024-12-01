@@ -58,30 +58,31 @@ local defaults = {
     client = { -- P4 client picker options.
       filter_current_host = true, -- Filters P4 clients for the current host.
       mappings = { -- P4 client picker mappings.
-        edit_spec = "<CR>", -- Edit the selected P4 client's spec.
-        display_cls = "f", -- Displays the selected P4 client's change lists.
-        delete = "D",-- Deletes the selected P4 client.
+        edit_spec = "<c-e>", -- Edit the selected P4 client's spec.
+        display_cls = "<c-d>", -- Displays the selected P4 client's change lists.
+        delete = "<c-D",-- Deletes the selected P4 client.
       },
     },
     cl = { -- P4 change list picker options
       mappings = { -- P4 change list picker mappings.
-        edit_spec = "<CR>", -- Edit the selected P4 change list's spec.
-        display_files = "f", -- Display the selected P4 change list's files.
-        display_shelved_files = "F", -- Display the selected P4 change list's shelved files.
-        revert = "R", -- Reverts the selected files.
-        shelve = "s", -- Shelves the selected files.
-        unshelve = "u", -- Un-shelves the selected files.
+        edit_spec = "<c-e>", -- Edit the selected P4 change list's spec.
+        display_files = "<c-d>", -- Display the selected P4 change list's files.
+        display_shelved_files = "<c-S>", -- Display the selected P4 change list's shelved files.
+        revert = "<c-R>", -- Reverts the selected files.
+        shelve = "<c-s>", -- Shelves the selected files.
+        unshelve = "<c-u>", -- Un-shelves the selected files.
+        delete = "<c-D>", -- Un-shelves the selected files.
       },
     },
     file = { -- P4 file picker options
         mappings = { -- P4 change lists picker mappings.
-          open = "<CR>", -- Opens the selected files.
-          delete = "D", -- Deletes the selected P4 change list.
-          revert = "R", -- Reverts all files for the selected P4 change list.
-          shelve = "s", -- Shelves all files for the selected P4 change list.
-          unshelve = "u", -- Un-shelves all files for the selected P4 change list.
-          diff = "d", -- Diffs the selected file against the head revision.
-          move = "m", -- Move's the selected files to another P4 change list.
+          open = "<c-o>", -- Opens the selected files.
+          delete = "<c-D>", -- Deletes the selected P4 change list.
+          revert = "<c-R>", -- Reverts all files for the selected P4 change list.
+          shelve = "<c-s>", -- Shelves all files for the selected P4 change list.
+          unshelve = "<c-u>", -- Un-shelves all files for the selected P4 change list.
+          diff = "<c-d>", -- Diffs the selected file against the head revision.
+          move = "<c-m", -- Move's the selected files to another P4 change list.
         },
     },
   }
