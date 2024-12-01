@@ -4,7 +4,7 @@ local log = require("p4.log")
 local notify = require("p4.notify")
 
 --- @class P4_File_API
-local file_api = {}
+local P4_File_API = {}
 
 --- Makes the current buffer writeable.
 local function set_buffer_writeable()
@@ -24,7 +24,10 @@ end
 ---
 --- @param file_paths string|string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
-function file_api.add(file_paths, opts)
+function P4_File_API.add(file_paths, opts)
+
+  log.trace("P4_File_API: add")
+
   --- @diagnostic disable-next-line String[] not recognized as table
   vim.validate("file_paths", file_paths, {"string", "table"})
   vim.validate("opts", opts, "table", true)
@@ -68,7 +71,10 @@ end
 ---
 --- @param file_paths string|string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
-function file_api.edit(file_paths, opts)
+function P4_File_API.edit(file_paths, opts)
+
+  log.trace("P4_File_API: edit")
+
   --- @diagnostic disable-next-line String[] not recognized as table
   vim.validate("file_paths", file_paths, {"string", "table"})
   vim.validate("opts", opts, "table", true)
@@ -112,7 +118,10 @@ end
 ---
 --- @param file_paths string|string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
-function file_api.revert(file_paths, opts)
+function P4_File_API.revert(file_paths, opts)
+
+  log.trace("P4_File_API: revert")
+
   --- @diagnostic disable-next-line String[] not recognized as table
   vim.validate("file_paths", file_paths, {"string", "table"})
   vim.validate("opts", opts, "table", true)
@@ -156,7 +165,10 @@ end
 ---
 --- @param file_paths string|string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
-function file_api.shelve(file_paths, opts)
+function P4_File_API.shelve(file_paths, opts)
+
+  log.trace("P4_File_API: shelve")
+
   --- @diagnostic disable-next-line String[] not recognized as table
   vim.validate("file_paths", file_paths, {"string", "table"})
   vim.validate("opts", opts, "table", true)
@@ -192,4 +204,4 @@ function file_api.shelve(file_paths, opts)
   end)
 end
 
-return file_api
+return P4_File_API

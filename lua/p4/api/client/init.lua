@@ -16,7 +16,7 @@ local P4_Client_API = {}
 function P4_Client_API.new(client_name, opts)
   opts = opts or {}
 
-  log.trace("Client API: New Client")
+  log.trace("P4_Client_API: new")
 
   nio.run(function()
     local P4_Command_Client = require("p4.core.lib.command.client")

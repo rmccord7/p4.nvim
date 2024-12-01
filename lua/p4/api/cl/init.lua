@@ -9,7 +9,7 @@ local P4_CL_API = {}
 --- Creates a new CL in the current client workspace.
 function P4_CL_API.new()
 
-  log.trace("CL API: New CL")
+  log.trace("P4_CL_API: new")
 
   nio.run(function()
     local P4_Command_Change = require("p4.core.lib.command.change")

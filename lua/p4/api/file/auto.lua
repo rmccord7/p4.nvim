@@ -1,10 +1,12 @@
+local log = require("p4.core.log")
+
 local env = require("p4.core.env")
 
 local context = {
   ac_group = nil, -- autocmd group ID
 }
 
-local api = {}
+local P4_File_API = {}
 
 --- Prompts the user to open the file for add.
 local function prompt_open_for_add(file_path)
@@ -51,9 +53,11 @@ end
 
 --- Enables autocmds
 ---
-function api.enable_autocmds()
+function P4_File_API.enable_autocmds()
 
-  api.ac_group = vim.api.nvim_create_augroup("P4_File", {})
+  log.trace("P4_File_API: enable_autocmds")
+
+  P4_File_API.ac_group = vim.api.nvim_create_augroup("P4_File", {})
 
   --- Check for P4 workspace when buffer is entered.
   ---
@@ -110,7 +114,7 @@ function api.enable_autocmds()
   --- client workspace.
   ---
   vim.api.nvim_create_autocmd("FileChangedRO", {
-    group = api.ac_group,
+    group = P4_File_API.ac_group,
     pattern = "*",
     callback = function()
         prompt_open_for_edit(vim.fn.expand("%:p"))
@@ -120,7 +124,9 @@ end
 
 --- Disables autocmds
 ---
-function api.disable_autocmds()
+function P4_File_API.disable_autocmds()
+
+  log.trace("P4_File_API: disable_autocmds")
 
   if context.ac_group then
 
@@ -131,4 +137,4 @@ function api.disable_autocmds()
   end
 end
 
-return api
+return P4_File_API
