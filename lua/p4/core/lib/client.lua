@@ -21,8 +21,6 @@ function P4_Client:new(client_name)
 
   log.trace("P4_Client: new")
 
-  log.debug("New client")
-
   P4_Client.__index = P4_Client
 
   local new = setmetatable({}, P4_Client)

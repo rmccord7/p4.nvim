@@ -2,6 +2,8 @@ local nio = require("nio")
 
 local log = require("p4.log")
 
+local env = require("p4.core.env")
+
 --- @class P4_Current_Client : P4_Client
 --- @field semaphore nio.control.Semaphore Semaphore for the current client
 local P4_Current_Client = {}
@@ -65,7 +67,16 @@ function P4_Current_Client:set_cl(cl)
 
     local P4_Current_CL = require("p4.core.lib.current_cl")
 
-    local p4_cl = P4_Current_CL:new(cl)
+    --- @type P4_New_CL_Information
+    local new_cl = {
+      name = cl,
+      user = env.user,
+      client_name = self.name,
+      description = nil,
+      status = nil,
+    }
+
+    local p4_cl = P4_Current_CL:new(new_cl)
 
     -- Make sure it exists by reading the spec.
     if p4_cl:read_spec() then

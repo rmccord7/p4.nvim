@@ -147,10 +147,12 @@ function P4_CL:read_spec(on_exit)
 
     --- @type P4_Command_Change_Options
     local cmd_opts = {
-      read = true,
+      cl = self.name,
+      type = P4_Command_Change.opts_type.READ,
+      read = nil,
     }
 
-    local cmd = P4_Command_Change:new(self.name, cmd_opts)
+    local cmd = P4_Command_Change:new(cmd_opts)
 
     local success, sc = pcall(cmd:run().wait)
 
@@ -203,9 +205,16 @@ function P4_CL:write_spec(buf)
 
         local P4_Command_Change = require("p4.core.lib.command.change")
 
-        local cmd = P4_Command_Change:new(self.name)
+        --- @type P4_Command_Change_Options
+        local cmd_opts = {
+          cl = self.name,
+          type = P4_Command_Change.opts_type.WRITE,
+          write = {
+            input = spec
+          },
+        }
 
-        cmd.sys_opts["stdin"] = spec
+        local cmd = P4_Command_Change:new(cmd_opts)
 
         success, sc = pcall(cmd:run().wait)
 
