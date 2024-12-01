@@ -70,8 +70,8 @@ function P4_Current_Client:set_cl(cl)
     --- @type P4_New_CL_Information
     local new_cl = {
       name = cl,
+      client = self,
       user = env.user,
-      client_name = self.name,
       description = nil,
       status = nil,
     }

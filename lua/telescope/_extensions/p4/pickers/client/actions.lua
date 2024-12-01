@@ -1,16 +1,19 @@
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
-local p4_notify = require("p4.notify")
+local log = require("p4.log")
+local notify = require("p4.notify")
 
-local p4_client = require("p4.api.client")
-
-local M = {}
+--- @class P4_Telescope_Client_Actions
+local P4_Telescope_Client_Actions = {}
 
 --- Action to edit a P4 client spec.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
- function M.edit_client_spec(prompt_bufnr)
+ function P4_Telescope_Client_Actions.edit_client_spec(prompt_bufnr)
+
+  log.trace("Telescope_Client_Actions: edit_client_spec")
+
   actions.close(prompt_bufnr)
 
   local entry = actions_state.get_selected_entry()
@@ -19,13 +22,17 @@ local M = {}
 
     local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
-    -- Entry name is the client name
-    local client = p4_client.new(entry.name)
+    local P4_Client_API = require("p4.api.client")
+
+
+    --TODO: Finish implementation
+
+    --- @type P4_Client_API
+    local client = P4_Client_API.new(entry.name)
 
     if bufnr then
       client:edit_spec(bufnr)
     end
-
   else
   end
 end
@@ -33,7 +40,10 @@ end
 --- Action to delete the P4 client.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
-function M.delete_client(prompt_bufnr)
+function P4_Telescope_Client_Actions.delete_client(prompt_bufnr)
+
+  log.trace("Telescope_Client_Actions: delete_client")
+
   actions.close(prompt_bufnr)
 
   local entry = actions_state.get_selected_entry()
@@ -41,7 +51,7 @@ function M.delete_client(prompt_bufnr)
   if entry then
     -- TODO: Implement deleting the client
 
-    p4_notify("Not supported", vim.log.level.ERROR);
+    notify("Not supported", vim.log.level.ERROR);
   else
   end
 end
@@ -49,7 +59,10 @@ end
 --- Action to select P4 client.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
-function M.select_client(prompt_bufnr)
+function P4_Telescope_Client_Actions.select_client(prompt_bufnr)
+
+  log.trace("Telescope_Client_Actions: select_client")
+
   actions.close(prompt_bufnr)
 
   local entry = actions_state.get_selected_entry()
@@ -57,9 +70,9 @@ function M.select_client(prompt_bufnr)
   if entry then
     -- TODO: Implement changing workspaces
 
-    p4_notify("Not supported", vim.log.level.ERROR);
+    notify("Not supported", vim.log.level.ERROR);
   else
   end
 end
 
-return M
+return P4_Telescope_Client_Actions

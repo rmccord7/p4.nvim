@@ -6,14 +6,16 @@ local task = require("p4.task")
 local P4_File_Path = require("p4.core.lib.file_path")
 
 --- @class P4_File : table
+--- @field protected client P4_Client P4 Client.
+--- @field protected cl P4_CL P4 CL.
 --- @field protected path P4_File_Path P4 file path.
---- @field protected cl? P4_CL P4 CL.
 --- @field protected fstat? P4_FStat P4 file stats.
 local P4_File = {}
 
 --- @class P4_New_File_Information
+--- @field client P4_Client P4 Client.
+--- @field cl P4_CL P4 CL.
 --- @field path P4_Path P4 file path.
---- @field cl? P4_CL P4 CL.
 
 --- Creates a new P4 file.
 ---
@@ -28,18 +30,17 @@ function P4_File:new(new_file)
 
   local new = setmetatable({}, P4_File)
 
+  new.client = new_file.client
+  new.cl = new_file.cl
   new.path = P4_File_Path:new(new_file.path)
-
-  -- A new file may not have a CL associated with it yet until it has been
-  -- opened in the client workspace.
-  new.cl = new_file.cl or nil
 
   return new
 end
 
 --- @class P4_File_Information
+--- @field client P4_Client P4 Client.
+--- @field cl P4_CL P4 CL.
 --- @field path P4_File_Path P4 file path.
---- @field p4_cl P4_CL P4 CL.
 
 --- Returns the File's information.
 ---
@@ -49,7 +50,9 @@ function P4_File:get()
   log.trace("P4_File: get")
 
   return {
-    self.path,
+    client = self.client,
+    cl = self.cl,
+    path = self.path,
   }
 end
 
@@ -68,6 +71,16 @@ end
 --- @nodiscard
 function P4_File:get_cl()
   log.trace("P4_File: get_cl")
+
+  return self.cl
+end
+
+--- Returns the P4 Client.
+---
+--- @return P4_Client cl? P4 Client.
+--- @nodiscard
+function P4_File:get_client()
+  log.trace("P4_File: get_client")
 
   return self.cl
 end

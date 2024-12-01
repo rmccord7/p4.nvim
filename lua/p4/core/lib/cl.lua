@@ -7,7 +7,7 @@ local task = require("p4.task")
 --- @class P4_CL : table
 --- @field protected name string P4 CL name
 --- @field protected user string CL user.
---- @field protected client_name string CL Client's name.
+--- @field protected client P4_Client CL Client.
 --- @field protected description string CL description.
 --- @field protected status P4_CL_STATUS_TYPE CL status.
 --- @field protected spec? P4_CL_Spec CL spec
@@ -46,8 +46,8 @@ end
 
 --- @class P4_New_CL_Information
 --- @field name string CL name.
+--- @field client P4_Client CL Client's name.
 --- @field user? string CL user.
---- @field client_name? string CL Client's name.
 --- @field description? string CL description.
 --- @field status? P4_CL_STATUS_TYPE CL status.
 
@@ -65,8 +65,9 @@ function P4_CL:new(cl)
   local new = setmetatable({}, P4_CL)
 
   new.name = cl.name
+  new.client = cl.client
+
   new.user = cl.user or ''
-  new.client_name = cl.client_name or ''
   new.description = cl.description or ''
   new.status = cl.status or self.status_type.UNKNOWN
 
@@ -79,7 +80,7 @@ end
 --- @class P4_CL_Information
 --- @field name string CL name.
 --- @field user string CL user.
---- @field client_name string CL Client's name.
+--- @field client P4_Client CL Client.
 --- @field description string CL description.
 --- @field status P4_CL_STATUS_TYPE CL status.
 
@@ -92,8 +93,8 @@ function P4_CL:get()
 
   return {
     name = self.name,
+    client = self.client,
     user = self.user,
-    client_name = self.client_name,
     description = self.description,
     status = self.status,
   }
@@ -257,18 +258,18 @@ function P4_CL:update_file_list_from_spec(on_exit)
 
             --- @type P4_New_File_Information
             local new_file = {
+              client = self:get().client,
+              cl = self,
               path = {
                 type = P4_File_Path.type.DEPOT,
                 path = file_path,
               },
-
-              p4_cl = self
             }
 
             table.insert(new_file_list, new_file)
           end
 
-          self.p4_file_list = P4_File_List:new(new_file_list, self)
+          self.p4_file_list = P4_File_List:new(new_file_list)
 
           log.fmt_debug("Successfully updated the CL's file list: %s", self.name)
 

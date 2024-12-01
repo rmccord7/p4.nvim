@@ -158,8 +158,8 @@ function P4_Client:update_cl_list(on_exit)
             --- @type P4_New_CL_Information
             local new_cl = {
               name = result.name,
+              client = self,
               user = result.user,
-              client_name = result.client_name,
               description = result.description,
               status = P4_CL.set_status_from_string(result.status),
             }
@@ -238,21 +238,23 @@ function P4_Client:update_file_list(on_exit)
             --- @type P4_New_CL_Information
             local new_cl = {
               name = file_info.cl,
+              client = self,
             }
 
             --- @type P4_New_File_Information
             local new_file = {
+              client = self,
+              cl = P4_CL:new(new_cl),
               path = {
                 type = P4_File_Path.type.DEPOT,
                 path = file_info.depot_path,
               },
-              p4_cl = P4_CL:new(new_cl)
             }
 
             table.insert(new_file_list, new_file)
           end
 
-          self.p4_file_list = P4_File_List:new(new_file_list, self)
+          self.p4_file_list = P4_File_List:new(new_file_list)
 
           log.fmt_debug("Successfully updated the client's file list: %s", self.name)
 

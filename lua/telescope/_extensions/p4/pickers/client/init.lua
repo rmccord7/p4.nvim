@@ -20,7 +20,7 @@ local P4_Telescope_Client_Picker = {}
 function P4_Telescope_Client_Picker.picker(prompt_title, p4_client_list, opts)
   opts = opts or {}
 
-  log.trace("Telescope Clients Picker")
+  log.trace("Telescope_Client_Picker: picker")
 
   --- Processes results from the finder.
   ---

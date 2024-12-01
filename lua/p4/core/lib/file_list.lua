@@ -4,17 +4,16 @@ local log = require("p4.log")
 local task = require("p4.task")
 
 --- @class P4_File_List : table
---- @field protected list P4_File[] P4 file list.
---- @field protected client? P4_Client P4 Client.
+--- @field protected files P4_File[] P4 files.
+--- @field protected client P4_Client P4 Client.
 local P4_File_List = {}
 
 --- Creates a new P4 file list.
 ---
 --- @param new_file_info_list P4_New_File_Information[] One or more new files.
---- @param client P4_Client P4 client.
 --- @return P4_File_List P4_File_List A new P4 file list.
 --- @nodiscard
-function P4_File_List:new(new_file_info_list, client)
+function P4_File_List:new(new_file_info_list)
 
   log.trace("P4_File_List: new")
 
@@ -25,26 +24,66 @@ function P4_File_List:new(new_file_info_list, client)
 
   local P4_File = require("p4.core.lib.file")
 
-  new.list = {}
+  new.files = {}
+  new.client = new_file_info_list[1].client
 
   for _, new_file_info in ipairs(new_file_info_list) do
     local p4_file = P4_File:new(new_file_info)
 
-    table.insert(new.list, p4_file)
-  end
+    assert(p4_file.client == new.client, "Files in the file list must belong to the same client")
 
-  new.client = client
+    -- Files in the list may belong to different CLs.
+
+    table.insert(new.files, p4_file)
+  end
 
   return new
 end
 
---- Returns the list of P4 files.
+--- Builds a P4 file list from a a list of P4_Files[].
 ---
---- @return P4_File[] result A list of P4 files.
+--- @param p4_file_list P4_File[] One or more P4 files.
+--- @return P4_File_List P4_File_List A new P4 file list.
+--- @nodiscard
+function P4_File_List:build(p4_file_list)
+
+  log.trace("P4_File_List: build")
+
+  assert(#p4_file_list, "File list is empty")
+
+  P4_File_List.__index = P4_File_List
+
+  ---@class P4_File_List
+  local new = setmetatable({}, P4_File_List)
+
+  new.files = {}
+  new.client = p4_file_list[1]:get().client
+
+  for _, p4_file in ipairs(p4_file_list) do
+    assert(p4_file.client == new.client, "Files in the file list must belong to the same client")
+
+    -- Files in the list may belong to different CLs.
+  end
+
+  new.files = p4_file_list
+
+  return new
+end
+
+--- @class P4_File_List_Information
+--- @field files P4_File[] P4 files.
+--- @field client P4_Client P4 client.
+
+--- Returns the File list's information.
+---
+--- @return P4_File_List_Information result P4 file list information..
 function P4_File_List:get()
   log.trace("P4_File_List: get")
 
-  return self.list
+  return {
+    files = self.files,
+    client = self.client,
+  }
 end
 
 --- Generates a file path list.
@@ -55,7 +94,7 @@ function P4_File_List:build_file_path_list()
 
   local result = {}
 
-  for _, p4_file in ipairs(self.list) do
+  for _, p4_file in ipairs(self.files) do
     table.insert(result, p4_file.path:get_file_path())
   end
 
@@ -215,8 +254,8 @@ function P4_File_List:update_stats(on_exit)
       --- @type P4_Command_FStat_Result
       local result = cmd:process_response(sc.stdout)
 
-      for index, p4_file in ipairs(self.list) do
-        p4_file:set_file_stats(result[index])
+      for index, file in ipairs(self.files) do
+        file:set_file_stats(result[index])
       end
     else
       log.fmt_debug("Failed to update each file's stats: %s", sc.stderr)

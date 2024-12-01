@@ -6,6 +6,7 @@ local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 local entry_display = require("telescope.pickers.entry_display")
 
+local log = require("p4.log")
 local notify = require("p4.notify")
 
 --- @class P4_Telescope_CL_Picker
@@ -19,7 +20,7 @@ local P4_Telescope_CL_Picker = {}
 function P4_Telescope_CL_Picker.picker(prompt_title, p4_cl_list, opts)
   opts = opts or {}
 
-  log.trace("Telescope CL Picker")
+  log.trace("Telescope_CL_Picker: picker")
 
   --- Processes results from the finder.
   ---

@@ -17,7 +17,7 @@ local P4_Telescope_File_Picker = {}
 function P4_Telescope_File_Picker.file_picker(prompt_title, p4_file_list, opts)
   opts = opts or {}
 
-  if vim.tbl_isempty(p4_file_list:get()) then
+  if vim.tbl_isempty(p4_file_list:get().files) then
     notify("No files to display in pickker", vim.log.levels.ERROR)
     return
   end
@@ -27,11 +27,15 @@ function P4_Telescope_File_Picker.file_picker(prompt_title, p4_file_list, opts)
   --- @param entry P4_File P4 File
   local function entry_maker(entry)
 
+    local file_stats = entry:get_file_stats()
+
+    assert(file_stats, "File stats have not been read")
+
     return {
       value = entry,
-      ordinal = entry.fstat.clientFile,
-      filename = entry.fstat.clientFile,
-      display = entry.fstat.clientFile .. " (" .. entry.fstat.change .. ")",
+      ordinal = file_stats.clientFile,
+      filename = file_stats.clientFile,
+      display = file_stats.clientFile .. " (" .. file_stats.change .. ")",
     }
   end
 
@@ -43,13 +47,42 @@ function P4_Telescope_File_Picker.file_picker(prompt_title, p4_file_list, opts)
   ---
   local function attach_mappings(prompt_bufnr, map)
 
-    -- local cl_mappings = require("p4_config.opts.telescope.change_lists.mappings")
-    -- local cl_actions = require("telescope._extensions.p4.pickers.cl.actions")
-    --
-    -- map({ "i", "n" }, cl_mappings.diff, cl_actions.diff_files)
-    -- map({ "i", "n" }, cl_mappings.revert, cl_actions.revert_files)
-    -- map({ "i", "n" }, cl_mappings.shelve, cl_actions.shelve_files)
-    -- map({ "i", "n" }, cl_mappings.unshelve, cl_actions.unshelve_files)
+    actions.select_default:replace(function()
+
+      actions.close(prompt_bufnr)
+
+      local entry = actions_state.get_selected_entry()
+
+      if entry then
+
+        -- Use the last preview buffer since it displayed the P4 change
+        -- list spec.
+        local state = require("telescope.state")
+
+        local bufnr = state.get_global_key("last_preview_bufnr")
+
+        if bufnr then
+          --- @type P4_CL
+          local p4_cl = entry.value
+
+          p4_cl:write_spec(bufnr)
+        end
+      else
+        notify("Please make a valid selection before performing the action.", vim.log.levels.WARN)
+      end
+    end)
+
+    local p4_config = require("p4.config")
+    local file_mappings = p4_config.opts.telescope.file.mappings
+    local file_actions  = require("telescope._extensions.p4.pickers.file.actions")
+
+    map({ "i", "n" }, file_mappings.open, file_actions.edit)
+    map({ "i", "n" }, file_mappings.diff, file_actions.edit)
+    map({ "i", "n" }, file_mappings.history, file_actions.edit)
+    map({ "i", "n" }, file_mappings.move, file_actions.edit)
+    map({ "i", "n" }, file_mappings.revert, file_actions.revert)
+    map({ "i", "n" }, file_mappings.shelve, file_actions.edit)
+    map({ "i", "n" }, file_mappings.unshelve, file_actions.edit)
 
     return true
   end
@@ -59,7 +92,7 @@ function P4_Telescope_File_Picker.file_picker(prompt_title, p4_file_list, opts)
       prompt_title = "P4 " .. prompt_title .. " Files",
       results_title = "Files",
       finder = finders.new_table({
-        results = p4_file_list:get(),
+        results = p4_file_list:get().files,
         entry_maker = entry_maker,
       }),
       sorter = config.generic_sorter(opts),

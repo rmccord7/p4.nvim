@@ -12,6 +12,8 @@ local P4_Telescope_CL_Actions = {}
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
 local function get_selected_cls(prompt_bufnr)
 
+  log.trace("Telescope_CL_Actions: get_selected_cls")
+
   ---@type Picker
   local picker = actions_state.get_current_picker(prompt_bufnr)
 
@@ -44,7 +46,7 @@ end
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
 function P4_Telescope_CL_Actions.display_cl_files(prompt_bufnr)
 
-  log.debug("Telescope CL Action: Display CL files")
+  log.trace("Telescope_CL_Actions: display_cl_files")
 
   --- @type P4_CL[]
   local p4_cl_list = get_selected_cls(prompt_bufnr)
