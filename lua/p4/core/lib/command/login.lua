@@ -39,16 +39,18 @@ function P4_Command_Login:new(opts)
     }
 
     vim.list_extend(command, ext_cmd)
-  else
-    assert(opts.password, "Password is required for P4 login command")
-
-    self.sys_opts["stdin"] = opts.password
   end
 
   --- @type P4_Command_Login
   local new = P4_Command:new(command)
 
   setmetatable(new, P4_Command_Login)
+
+  if not opts.check then
+    assert(opts.password, "Password is required for P4 login command")
+
+    new.sys_opts["stdin"] = opts.password
+  end
 
   return new
 end

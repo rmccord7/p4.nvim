@@ -54,7 +54,7 @@ function P4_Command:run()
       local P4_Command_Login = require("p4.core.lib.command.login")
 
       -- Make sure we do not infinitely loop if user fails to enter the correct password.
-      if getmetatable(self) ~= P4_Command_Login:new() then
+      if getmetatable(self) ~= P4_Command_Login then
 
         -- If we failed because we are not logged in.
         if string.find(sc.stderr, "Your session has expired, please login again.", 1, true) or
