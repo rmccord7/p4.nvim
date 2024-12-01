@@ -9,7 +9,7 @@ local P4_Telescope_Clients_API = {}
 --- Opens the telescope clients picker.
 function P4_Telescope_Clients_API.display()
 
-  log.trace("P4 Telescope Clients API: Display")
+  log.trace("P4_Telescope_Clients_API: display")
 
   if require("p4.api.telescope").check then
 

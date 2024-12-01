@@ -8,6 +8,8 @@ local P4_Telescope_Client_API = {}
 
 local function get_current_client()
 
+  log.trace("P4_Telescope_Client_API: get_current_client")
+
   local current_client = require("p4").current_client
 
   if not current_client then
@@ -24,7 +26,7 @@ end
 --- @param client? string Optional P4 client (Current client is used if nil).
 function P4_Telescope_Client_API.display_client_cls(client)
 
-  log.trace("P4 Telescope Client API: Display client CLs")
+  log.trace("P4_Telescope_Client_API: display_client_cls")
 
   if require("p4.api.telescope").check then
 
@@ -80,7 +82,7 @@ end
 --- @param client? string Optional P4 client (Current client is used if nil).
 function P4_Telescope_Client_API.display_opened_files(client)
 
-  log.trace("P4 Telescope Client API: Display Opened Files")
+  log.trace("P4_Telescope_Client_API: display_opened_files")
 
   if require("p4.api.telescope").check then
 

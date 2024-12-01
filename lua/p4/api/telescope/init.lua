@@ -12,6 +12,8 @@ local P4_Telescope_API = {}
 --- the plugin has been configured correctly for their use.
 function P4_Telescope_API.check()
 
+  log.trace("P4_Telescope_API: check")
+
   -- Make sure the P4 environment is valid.
   if not env.check() then
     return false
