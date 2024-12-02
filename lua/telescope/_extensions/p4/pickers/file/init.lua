@@ -14,7 +14,7 @@ local P4_Telescope_File_Picker = {}
 --- @param prompt_title string Telescope prompt title.
 --- @param p4_file_list P4_File_List File list.
 --- @param opts table? Telescope picker options.
-function P4_Telescope_File_Picker.file_picker(prompt_title, p4_file_list, opts)
+function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
   opts = opts or {}
 
   if vim.tbl_isempty(p4_file_list:get().files) then

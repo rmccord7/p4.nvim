@@ -10,8 +10,8 @@ local client = require("telescope._extensions.p4.pickers.client")
 
 return telescope.register_extension({
   exports = {
-    file = file.file_picker,
-    cl = cl.cl_picker,
-    client = client.picker,
+    file = file.load,
+    cl = cl.load,
+    client = client.load,
   },
 })

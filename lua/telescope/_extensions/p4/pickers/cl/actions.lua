@@ -66,7 +66,7 @@ function P4_Telescope_CL_Actions.display_cl_files(prompt_bufnr)
             -- Run the telescope file picker.
             local picker = require("telescope._extensions.p4.pickers.file")
 
-            picker.file_picker("CL: " .. p4_cl.name, p4_cl:get_file_list())
+            picker.load("CL: " .. p4_cl.name, p4_cl:get_file_list())
           end)
         end
       end)

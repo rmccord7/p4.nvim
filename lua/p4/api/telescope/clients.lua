@@ -38,7 +38,7 @@ function P4_Telescope_Clients_API.display()
         local p4_client_list = P4_Client_List:new(client_list)
 
         vim.schedule(function()
-          require("telescope._extensions.p4.pickers.client").picker("Pending", p4_client_list:get())
+          require("telescope._extensions.p4.pickers.client").load("Pending", p4_client_list:get())
         end)
       else
         log.fmt_error("Failed to receive the clients")

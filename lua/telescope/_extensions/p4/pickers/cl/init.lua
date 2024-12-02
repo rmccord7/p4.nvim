@@ -17,7 +17,7 @@ local P4_Telescope_CL_Picker = {}
 --- @param prompt_title string Telescope prompt title.
 --- @param p4_cl_list P4_CL[] File list.
 --- @param opts table? Telescope picker options.
-function P4_Telescope_CL_Picker.picker(prompt_title, p4_cl_list, opts)
+function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
   opts = opts or {}
 
   log.trace("Telescope_CL_Picker: picker")
@@ -36,10 +36,10 @@ function P4_Telescope_CL_Picker.picker(prompt_title, p4_cl_list, opts)
     })
 
     --- @diagnostic disable-next-line Ignore redefined entry.
-    local make_display = function(entry)
+    local make_display = function(_entry)
 
       --- @type P4_CL
-      local p4_cl = entry.value
+      local p4_cl = _entry.value
 
       return displayer {
         p4_cl:get().name,

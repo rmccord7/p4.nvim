@@ -6,6 +6,9 @@ local notify = require("p4.notify")
 --- @class P4_Telescope_Client_API
 local P4_Telescope_Client_API = {}
 
+--- Gets the current client.
+---
+--- @return P4_Current_Client? P4 client.
 local function get_current_client()
 
   log.trace("P4_Telescope_Client_API: get_current_client")
@@ -46,7 +49,7 @@ function P4_Telescope_Client_API.display_client_cls(client)
             -- have it already, then it will be used, but the picker can query it as
             -- well.
 
-            require("telescope._extensions.p4.pickers.cl").picker(p4_client.name, p4_cl_list)
+            require("telescope._extensions.p4.pickers.cl").load(p4_client.name, p4_cl_list)
           end)
         else
           log.fmt_debug("Failed to update the client's cl list: %s", p4_client.name)
@@ -99,7 +102,7 @@ function P4_Telescope_Client_API.display_opened_files(client)
             -- Run the telescope file picker.
             local picker = require("telescope._extensions.p4.pickers.file")
 
-            picker.file_picker("Opened", p4_client:get_file_list())
+            picker.load("Opened", p4_client:get_file_list())
           end)
         end
       end)

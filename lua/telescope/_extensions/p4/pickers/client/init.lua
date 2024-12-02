@@ -17,7 +17,7 @@ local P4_Telescope_Client_Picker = {}
 --- @param prompt_title string Telescope prompt title.
 --- @param p4_client_list P4_Client[] Client list.
 --- @param opts table? Telescope picker options.
-function P4_Telescope_Client_Picker.picker(prompt_title, p4_client_list, opts)
+function P4_Telescope_Client_Picker.load(prompt_title, p4_client_list, opts)
   opts = opts or {}
 
   log.trace("Telescope_Client_Picker: picker")
