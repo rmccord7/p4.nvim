@@ -77,12 +77,12 @@ function P4_Telescope_File_Picker.file_picker(prompt_title, p4_file_list, opts)
     local file_actions  = require("telescope._extensions.p4.pickers.file.actions")
 
     map({ "i", "n" }, file_mappings.open, file_actions.edit)
-    map({ "i", "n" }, file_mappings.diff, file_actions.edit)
-    map({ "i", "n" }, file_mappings.history, file_actions.edit)
-    map({ "i", "n" }, file_mappings.move, file_actions.edit)
+    map({ "i", "n" }, file_mappings.diff, file_actions.diff)
+    map({ "i", "n" }, file_mappings.history, file_actions.history)
+    map({ "i", "n" }, file_mappings.move, file_actions.move)
     map({ "i", "n" }, file_mappings.revert, file_actions.revert)
-    map({ "i", "n" }, file_mappings.shelve, file_actions.edit)
-    map({ "i", "n" }, file_mappings.unshelve, file_actions.edit)
+    map({ "i", "n" }, file_mappings.shelve, file_actions.shelve)
+    map({ "i", "n" }, file_mappings.unshelve, file_actions.unshelve)
 
     return true
   end

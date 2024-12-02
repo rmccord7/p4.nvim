@@ -4,13 +4,14 @@ local actions_state = require("telescope.actions.state")
 local log = require("p4.log")
 local notify = require("p4.notify")
 
-
 --- @class P4_Telescope_File_Actions
 local P4_Telescope_File_Actions = {}
 
 --- Gets the selected files for a file related action.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @return P4_File_List? result P4 file list.
+--- @nodiscard
 local function get_selected_files(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: get_selected_files")
@@ -35,7 +36,7 @@ local function get_selected_files(prompt_bufnr)
   -- Close the previous prompt buffer.
   actions.close(prompt_bufnr)
 
-  local p4_file_list = {}
+  local p4_file_list = nil
 
   if #entry_list then
 
@@ -55,80 +56,241 @@ local function get_selected_files(prompt_bufnr)
   return p4_file_list
 end
 
---- Opens the picker's selected files for add.
+--- Opens the picker's selected file in a buffer.
+---
+--- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+function P4_Telescope_File_Actions.open(prompt_bufnr)
+
+  log.trace("Telescope_File_Actions: open")
+
+  --- @type P4_File_List?
+  local p4_file_list = get_selected_files(prompt_bufnr)
+
+  -- No valid selection.
+  if p4_file_list then
+
+    -- Only allow one selection for this action.
+    if #p4_file_list:get().files == 1 then
+      actions.file_edit(prompt_bufnr)
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
+    end
+  end
+end
+
+--- Diffs the selected file with the head revision.
+---
+--- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+function P4_Telescope_File_Actions.diff(prompt_bufnr)
+
+  log.trace("Telescope_File_Actions: diff")
+
+  --- @type P4_File_List?
+  local p4_file_list = get_selected_files(prompt_bufnr)
+
+  -- No valid selection.
+  if p4_file_list then
+
+    -- Only allow one selection for this action.
+    if #p4_file_list:get().files == 1 then
+      notify("Action not supported yet.")
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
+    end
+  end
+end
+
+--- Opens a file history picker to view the selected file's history.
+---
+--- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+function P4_Telescope_File_Actions.history(prompt_bufnr)
+
+  log.trace("Telescope_File_Actions: history")
+
+  --- @type P4_File_List?
+  local p4_file_list = get_selected_files(prompt_bufnr)
+
+  -- No valid selection.
+  if p4_file_list then
+
+    -- Only allow one selection for this action.
+    if #p4_file_list:get().files == 1 then
+      notify("Action not supported yet.")
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
+    end
+  end
+end
+
+--- Moves all selected files from one CL to another.
+---
+--- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+function P4_Telescope_File_Actions.move(prompt_bufnr)
+
+  log.trace("Telescope_File_Actions: move")
+
+  --- @type P4_File_List?
+  local p4_file_list = get_selected_files(prompt_bufnr)
+
+  -- No valid selection.
+  if p4_file_list then
+
+    -- Only allow one selection for this action.
+    if #p4_file_list:get().files == 1 then
+      notify("Action not supported yet.")
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
+    end
+  end
+end
+
+--- Opens the selected files for add.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
 function P4_Telescope_File_Actions.add(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: add")
 
+  --- @type P4_File_List?
   local p4_file_list = get_selected_files(prompt_bufnr)
 
-  p4_file_list:add(function(success)
-    if not success then
-      log.error("Telescope file action failed.")
-    end
-  end)
+  -- No valid selection.
+  if p4_file_list then
+
+    p4_file_list:add(function(success)
+      if not success then
+        log.error("Telescope file action failed.")
+      end
+    end)
+  end
 end
 
---- Opens the picker's selected files for edit.
+--- Opens the selected files for edit.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
 function P4_Telescope_File_Actions.edit(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: edit")
 
+  --- @type P4_File_List?
   local p4_file_list = get_selected_files(prompt_bufnr)
 
-  p4_file_list:edit(function(success)
-    if not success then
-      log.error("Telescope file action failed.")
-    end
-  end)
+  -- No valid selection.
+  if p4_file_list then
+
+    p4_file_list:edit(function(success)
+      if not success then
+        log.error("Telescope file action failed.")
+      end
+    end)
+  end
 end
 
---- Reverts the picker's selected files.
+--- Reverts the selected files.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
 function P4_Telescope_File_Actions.revert(prompt_bufnr)
+
+  log.trace("Telescope_File_Actions: revert")
+
+  --- @type P4_File_List?
   local p4_file_list = get_selected_files(prompt_bufnr)
 
-  p4_file_list:revert(function(success)
-    if not success then
-      log.error("Telescope file action failed.")
-    end
-  end)
+  -- No valid selection.
+  if p4_file_list then
+
+    p4_file_list:revert(function(success)
+      if not success then
+        log.error("Telescope file action failed.")
+      end
+    end)
+  end
 end
 
---- Opens the picker's selected files for delete.
+--- Opens the selected files for delete.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
 function P4_Telescope_File_Actions.delete(prompt_bufnr)
+
+  log.trace("Telescope_File_Actions: delete")
+
+  --- @type P4_File_List?
   local p4_file_list = get_selected_files(prompt_bufnr)
 
-  p4_file_list:delete(function(success)
-    if not success then
-      log.error("Telescope file action failed.")
-    end
-  end)
+  -- No valid selection.
+  if p4_file_list then
+
+    p4_file_list:delete(function(success)
+      if not success then
+        log.error("Telescope file action failed.")
+      end
+    end)
+  end
 end
 
---- Gets file stats for each of the picker's selected files.
+--- Gets file stats for each of the selected files.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
 function P4_Telescope_File_Actions.fstat(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: fstat")
 
+  --- @type P4_File_List?
   local p4_file_list = get_selected_files(prompt_bufnr)
 
-  p4_file_list:update_stats(function(success)
-    if success then
-      -- TODO: Print file stats
+  -- No valid selection.
+  if p4_file_list then
+
+    p4_file_list:update_stats(function(success)
+      if not success then
+        log.error("Telescope file action failed.")
+      end
+    end)
+  end
+end
+
+--- Shelves all selected files.
+---
+--- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+function P4_Telescope_File_Actions.shelve(prompt_bufnr)
+
+  log.trace("Telescope_File_Actions: shelve")
+
+  --- @type P4_File_List?
+  local p4_file_list = get_selected_files(prompt_bufnr)
+
+  -- No valid selection.
+  if p4_file_list then
+
+    -- Only allow one selection for this action.
+    if #p4_file_list:get().files == 1 then
+      notify("Action not supported yet.")
     else
-      log.error("Telescope file action failed.")
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
     end
-  end)
+  end
+end
+
+--- Un-shelves all selected files.
+---
+--- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+function P4_Telescope_File_Actions.unshelve(prompt_bufnr)
+
+  log.trace("Telescope_File_Actions: unshelve")
+
+  --- @type P4_File_List?
+  local p4_file_list = get_selected_files(prompt_bufnr)
+
+  -- No valid selection.
+  if p4_file_list then
+
+    -- Only allow one selection for this action.
+    if #p4_file_list:get().files == 1 then
+      notify("Action not supported yet.")
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
+    end
+  end
 end
 
 return P4_Telescope_File_Actions
