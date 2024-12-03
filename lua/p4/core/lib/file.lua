@@ -114,7 +114,7 @@ function P4_File:add(on_exit)
 
   nio.run(function()
 
-    P4_Command_Add = require("p4.core.lib.command.add")
+    local P4_Command_Add = require("p4.core.lib.command.add")
 
     local cmd = P4_Command_Add:new(self.path:get_file_path())
 
@@ -146,9 +146,9 @@ function P4_File:edit(on_exit)
 
   nio.run(function()
 
-    P4_Command_edit = require("p4.core.lib.command.edit")
+    local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-    local cmd = P4_Command_edit:new(self.path:get_file_path())
+    local cmd = P4_Command_Edit:new(self.path:get_file_path())
 
     local success, _ = pcall(cmd:run().wait)
 
@@ -178,9 +178,9 @@ function P4_File:revert(on_exit)
 
   nio.run(function()
 
-    P4_Command_revert = require("p4.core.lib.command.revert")
+    local P4_Command_Revert = require("p4.core.lib.command.revert")
 
-    local cmd = P4_Command_revert:new(self.path:get_file_path())
+    local cmd = P4_Command_Revert:new(self.path:get_file_path())
 
     local success, _ = pcall(cmd:run().wait)
 
@@ -210,9 +210,9 @@ function P4_File:delete(on_exit)
 
   nio.run(function()
 
-    P4_Command_delete = require("p4.core.lib.command.delete")
+    local P4_Command_Delete = require("p4.core.lib.command.delete")
 
-    local cmd = P4_Command_delete:new(self.path:get_file_path())
+    local cmd = P4_Command_Delete:new(self.path:get_file_path())
 
     local success, _ = pcall(cmd:run().wait)
 

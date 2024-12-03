@@ -33,26 +33,6 @@ function P4_Current_Client:new(client_name)
   return new
 end
 
---- Reads the current client's spec.
----
---- @param on_exit fun(success: boolean, ...) Will be called once the function completes.
---- @async
-function P4_Current_Client:read_spec(on_exit)
-
-  log.trace("P4_Current_Client: read_spec")
-
-  local P4_Client = require("p4.core.lib.client")
-
-  P4_Client.read_spec(self, function(success)
-
-    if success then
-      log.fmt_info("Client root: %s", self.spec.root);
-    end
-
-    on_exit(success)
-  end)
-end
-
 --- Sets the current P4 client's CL.
 ---
 --- @param cl string P4 CL.

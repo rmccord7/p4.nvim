@@ -62,6 +62,7 @@ function P4_Client:read_spec(on_exit)
       -- The workspace root may have changed.
       self.workspace_root_spec = self.spec.root .. "/..."
 
+      log.fmt_info("Client root: %s", self.spec.root);
     else
       log.debug("Failed to read the client's spec: %s", self.name)
     end
@@ -91,7 +92,7 @@ function P4_Client:write_spec(buf)
     buffer = buf,
     once = true,
     callback = nio.wrap(function()
-      spec = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      local spec = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
       vim.api.nvim_buf_delete(buf, { force = true })
 
@@ -101,7 +102,7 @@ function P4_Client:write_spec(buf)
 
       cmd.sys_opts["stdin"] = spec
 
-      success, sc = pcall(cmd:run().wait)
+      local success, _ = pcall(cmd:run().wait)
 
       if success then
         notify(("Client %s spec written").format(self.name))
@@ -206,10 +207,11 @@ function P4_Client:update_file_list(on_exit)
 
   nio.run(function()
 
-    -- Read the current client's spec so we can get the client's
-    -- workspace root.
-    self:read_spec(function(success)
+    local function update_stats_done(success)
+      on_exit(success)
+    end
 
+    local function read_spec_done(success)
       if success then
 
         local P4_Command_Opened = require("p4.core.lib.command.opened")
@@ -226,42 +228,44 @@ function P4_Client:update_file_list(on_exit)
           --- @type P4_Command_Opened_Result[]
           local result = cmd:process_response(sc.stdout)
 
-          local P4_File_Path = require("p4.core.lib.file_path")
-          local P4_File_List = require("p4.core.lib.file_list")
-          local P4_CL = require("p4.core.lib.cl")
+          if #result > 0 then
 
-          --- @type P4_New_File_Information[]
-          local new_file_list = {}
+            local P4_File_Path = require("p4.core.lib.file_path")
+            local P4_File_List = require("p4.core.lib.file_list")
+            local P4_CL = require("p4.core.lib.cl")
 
-          for _, file_info in ipairs(result) do
+            --- @type P4_New_File_Information[]
+            local new_file_list = {}
 
-            --- @type P4_New_CL_Information
-            local new_cl = {
-              name = file_info.cl,
-              client = self,
-            }
+            for _, file_info in ipairs(result) do
 
-            --- @type P4_New_File_Information
-            local new_file = {
-              client = self,
-              cl = P4_CL:new(new_cl),
-              path = {
-                type = P4_File_Path.type.DEPOT,
-                path = file_info.depot_path,
-              },
-            }
+              --- @type P4_New_CL_Information
+              local new_cl = {
+                name = file_info.cl,
+                client = self,
+              }
 
-            table.insert(new_file_list, new_file)
+              --- @type P4_New_File_Information
+              local new_file = {
+                client = self,
+                cl = P4_CL:new(new_cl),
+                path = {
+                  type = P4_File_Path.type.DEPOT,
+                  path = file_info.depot_path,
+                },
+              }
+
+              table.insert(new_file_list, new_file)
+            end
+
+            self.p4_file_list = P4_File_List:new(new_file_list)
+
+            log.fmt_debug("Successfully updated the client's file list: %s", self.name)
+
+            self.p4_file_list:update_stats(update_stats_done)
+          else
+            on_exit(success)
           end
-
-          self.p4_file_list = P4_File_List:new(new_file_list)
-
-          log.fmt_debug("Successfully updated the client's file list: %s", self.name)
-
-          self.p4_file_list:update_stats(function()
-
-          on_exit(success)
-          end)
         else
           log.fmt_debug("Failed to read the client's file list: %s", self.name)
 
@@ -270,7 +274,11 @@ function P4_Client:update_file_list(on_exit)
           on_exit(false)
         end
       end
-    end)
+    end
+
+    -- Read the current client's spec so we can get the client's
+    -- workspace root.
+    self:read_spec(read_spec_done)
   end, function(success, ...)
     task.complete(on_exit, success, ...)
   end)

@@ -1,3 +1,4 @@
+local log = require("p4.log")
 local notify = require("p4.notify")
 
 --- @class Task : table

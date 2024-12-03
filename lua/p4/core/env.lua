@@ -1,5 +1,8 @@
+local nio = require("nio")
+
 local log = require("p4.log")
 local notify = require("p4.notify")
+local task = require("p4.task")
 
 local config = require("p4.core.config")
 
@@ -69,7 +72,7 @@ local function update_from_file(config_path)
 
   if input then
 
-    t = {}
+    local t = {}
     for k, v in string.gmatch(input, "([%w._]+)=([%w._]+)") do
       t[k] = v
     end
@@ -281,6 +284,13 @@ function P4_Env.update()
       -- Update the current client.
       if not p4.current_client or p4.current_client.name ~= P4_Env.client then
         p4.current_client = P4_Current_Client:new(P4_Env.client)
+
+        nio.run(function()
+          p4.current_client:read_spec(function()
+          end)
+        end, function(success, ...)
+          task.complete(nil, success, ...)
+        end)
       end
     else
 

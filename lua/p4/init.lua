@@ -8,7 +8,7 @@ local env = require("p4.core.env")
 local context = {}
 
 -- Check if telescope is supported
- has_telescope, _ = pcall(require, "telescope")
+ local has_telescope, _ = pcall(require, "telescope")
 
  if has_telescope then
 

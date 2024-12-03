@@ -4,11 +4,30 @@ local log = require("p4.log")
 local notify = require("p4.notify")
 local task = require("p4.task")
 
+--- @class P4_CL_Spec_Date_Time : table
+--- @field date string Date
+--- @field time string Time
+
+--- @class P4_CL_Spec : table
+--- @field output string Read change spec output.
+--- @field change string CL change number
+--- @field date P4_CL_Spec_Date_Time Last modified date
+--- @field client string Name of client that owns the CL
+--- @field user string User that owns the CL
+--- @field status string Either 'pending' or 'submitted'.
+--- @field type string Either 'public' or 'restricted'.
+--- @field description string CL description
+--- @field imported_by string CL description
+--- @field identity string CL description
+--- @field jobs string CL description
+--- @field stream string CL description
+--- @field files table List of files checked out for this CL
+
 --- @class P4_CL : table
 --- @field protected name string P4 CL name
 --- @field protected user string CL user.
 --- @field protected client P4_Client CL Client.
---- @field protected description string CL description.
+--- @field protected description string CL description. --TODO: Spec description needs to update here
 --- @field protected status P4_CL_STATUS_TYPE CL status.
 --- @field protected spec? P4_CL_Spec CL spec
 --- @field protected p4_file_list? P4_File_List List of P4 files that are open for the CL.
@@ -198,7 +217,7 @@ function P4_CL:write_spec(buf)
     once = true,
     callback = function()
 
-      spec = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      local spec = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
       vim.api.nvim_buf_delete(buf, { force = true })
 
@@ -217,7 +236,7 @@ function P4_CL:write_spec(buf)
 
         local cmd = P4_Command_Change:new(cmd_opts)
 
-        success, sc = pcall(cmd:run().wait)
+        local success, _ = pcall(cmd:run().wait)
 
         if success then
           notify(("CL %s spec written").format(self.name))
@@ -241,9 +260,11 @@ function P4_CL:update_file_list_from_spec(on_exit)
 
   nio.run(function()
 
-    -- Update the CL spec in case the file list has recently changed.
-    self:read_spec(function(success)
+    local function update_stats_done(success)
+      on_exit(success)
+    end
 
+    local function read_spec_done(success)
       if success then
 
         if not vim.tbl_isempty(self.spec.files) then
@@ -273,10 +294,7 @@ function P4_CL:update_file_list_from_spec(on_exit)
 
           log.fmt_debug("Successfully updated the CL's file list: %s", self.name)
 
-          --- @diagnostic disable-next-line Ignore redefined success.
-          self.p4_file_list:update_stats(function(success)
-            on_exit(success)
-          end)
+          self.p4_file_list:update_stats(update_stats_done)
         else
           log.fmt_debug("No files list for CL: %s", self.name)
 
@@ -285,7 +303,10 @@ function P4_CL:update_file_list_from_spec(on_exit)
       else
         on_exit(false)
       end
-    end)
+    end
+
+    -- Update the CL spec in case the file list has recently changed.
+    self:read_spec(read_spec_done)
   end, function(success, ...)
     task.complete(on_exit, success, ...)
   end)
