@@ -18,14 +18,14 @@ end
 --- @field read? P4_Command_Change_Read_Options Read options.
 --- @field write? P4_Command_Change_Write_Options Write options.
 
---- @class P4_Change_Result_Date_Time : table
+--- @class P4_Command_Change_Result_Date_Time : table
 --- @field date string Date
 --- @field time string Time
 
 --- @class P4_Command_Change_Result : table
 --- @field output string Read change spec output.
 --- @field change string CL change number
---- @field date P4_Change_Result_Date_Time Last modified date
+--- @field date P4_Command_Change_Result_Date_Time Last modified date
 --- @field client string Name of client that owns the CL
 --- @field user string User that owns the CL
 --- @field status string Either 'pending' or 'submitted'.
