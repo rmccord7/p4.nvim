@@ -1,27 +1,11 @@
 local log = require("p4.log")
 
 -- Lua 5.1 compatibility
+
+-- selene: allow(incorrect_standard_library_use)
 if not table.unpack then
     table.unpack = unpack
 end
-
---- @class P4_CL_Spec_Date_Time : table
---- @field Date string Date
---- @field Time string Time
-
---- @class P4_CL_Spec : table
---- @field change integer CL change number
---- @field date P4_CL_Spec_Date_Time Last modified date
---- @field client string Name of client that owns the CL
---- @field user string User that owns the CL
---- @field status string Either 'pending' or 'submitted'.
---- @field type string Either 'public' or 'restricted'.
---- @field description string CL description
---- @field imported_by string CL description
---- @field identity string CL description
---- @field jobs string CL description
---- @field stream string CL description
---- @field files table List of files checked out for this CL
 
 --- @class P4_Command_Change_Read_Options : table
 
@@ -34,7 +18,24 @@ end
 --- @field read? P4_Command_Change_Read_Options Read options.
 --- @field write? P4_Command_Change_Write_Options Write options.
 
---- @class P4_Command_Change_Result : P4_CL_Spec
+--- @class P4_Change_Result_Date_Time : table
+--- @field date string Date
+--- @field time string Time
+
+--- @class P4_Command_Change_Result : table
+--- @field output string Read change spec output.
+--- @field change string CL change number
+--- @field date P4_Change_Result_Date_Time Last modified date
+--- @field client string Name of client that owns the CL
+--- @field user string User that owns the CL
+--- @field status string Either 'pending' or 'submitted'.
+--- @field type string Either 'public' or 'restricted'.
+--- @field description string CL description
+--- @field imported_by string CL description
+--- @field identity string CL description
+--- @field jobs string CL description
+--- @field stream string CL description
+--- @field files table List of files checked out for this CL
 
 --- @class P4_Command_Change : P4_Command
 --- @field opts P4_Command_Change_Options Command options.
@@ -113,7 +114,24 @@ function P4_Command_Change:process_response(output)
   log.trace("P4_Command_Change: process_response")
 
   --- @type P4_Command_Change_Result
-  local spec_table = {}
+  local spec_table = {
+    output = output,
+    change = '',
+    date = {
+      date = '',
+      time = '',
+    },
+    client = '',
+    user = '',
+    status = '',
+    type = '',
+    description = '',
+    imported_by = '',
+    identity = '',
+    jobs = '',
+    stream = '',
+    files = {},
+  }
 
   local spec = output
 
@@ -124,7 +142,7 @@ function P4_Command_Change:process_response(output)
 
     local index = 1
 
-    while (index < #spec_lines) do
+    while index < #spec_lines do
 
       local end_index = 1
 
@@ -134,7 +152,7 @@ function P4_Command_Change:process_response(output)
         -- If there are more lines
         if index + 1 ~= #spec_lines then
 
-          -- Start search at next line
+          -- selene: allow(incorrect_standard_library_use)
           local list = {table.unpack(spec_lines, index + 1)}
 
           end_index = index
@@ -142,7 +160,7 @@ function P4_Command_Change:process_response(output)
           local index2 = 1
 
           -- Find end of the spec field. This may be the last line.
-          while (index2 < #list) do
+          while index2 < #list do
 
             -- If we find a spec field then the previous line marks the
             -- the last line of the current spec field.
@@ -157,8 +175,6 @@ function P4_Command_Change:process_response(output)
           end
         end
 
-        vim.print(vim.inspect({table.unpack(spec_lines, index, end_index)}))
-
         -- Convert spec field to a string
         local spec_field = table.concat(spec_lines, ' ', index, end_index)
 
@@ -172,9 +188,36 @@ function P4_Command_Change:process_response(output)
           after = string.gsub(after, "\t", " ")
           after = vim.trim(after)
 
-          spec_table[string.lower(before)] = after
+          local key = string.lower(before)
 
-          print(vim.inspect(string.lower(before)))
+          if key == "date" then
+
+            local t = {}
+
+            for string in string.gmatch(after, "[^%s]+") do
+              table.insert(t, string)
+            end
+
+            spec_table[key] = {
+              date = t[1],
+              time = t[2],
+            }
+
+          elseif key == "files" then
+
+            local tbl = {}
+
+            for string in string.gmatch(after, "[^%s]+ [^%s]+ [^%s]+") do
+              for string2 in string.gmatch(string, "[^%s]+") do
+                table.insert(tbl, string2)
+                break
+              end
+            end
+
+            spec_table[key] = tbl
+          else
+            spec_table[key] = after
+          end
         end
 
         -- Account for additional lines that were processed.
@@ -185,40 +228,6 @@ function P4_Command_Change:process_response(output)
       index = index + 1
     end
 
-  end
-
-  local key
-
-  key = "date"
-
-  if spec_table[key] then
-
-    local tbl = {}
-
-    for string in string.gmatch(spec_table[key], "[^%s]+") do
-      table.insert(tbl, string)
-    end
-
-    spec_table[key] = {
-      date = tbl[1],
-      time = tbl[2],
-    }
-  end
-
-  key = "files"
-
-  if spec_table[key] then
-
-    local tbl = {}
-
-    for string in string.gmatch(spec_table[key], "[^%s]+ [^%s]+ [^%s]+") do
-      for string2 in string.gmatch(string, "[^%s]+") do
-        table.insert(tbl, string2)
-        break
-      end
-    end
-
-    spec_table[key] = tbl
   end
 
   log.fmt_debug("P4_Command_Change: Process Response result, %s", spec_table)
