@@ -30,6 +30,13 @@ function P4_Command:new(command)
   return new
 end
 
+--- Gets the command.
+---
+--- @return string[] command P4 command
+function P4_Command:get()
+  return self.command
+end
+
 --- Runs the P4 command asynchronously.
 ---
 --- @return nio.control.Future future Future to wait on.

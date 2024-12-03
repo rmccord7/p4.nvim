@@ -45,9 +45,18 @@ function P4_Telescope_Client_Picker.load(prompt_title, p4_client_list, opts)
 
       define_preview = function(self, entry)
 
+        local P4_Command_Client = require("p4.core.lib.command.client")
+
+        --- @type P4_Command_Client_Options
+        local cmd_opts = {
+          type = P4_Command_Client.opts_type.READ,
+        }
+
+        local cmd = P4_Command_Client:new(entry.value.name, cmd_opts)
+
         --- Issues shell command to read an entries P4 change list spec
         --- into a buffer so it can be displayed as a preview.
-        utils.job_maker({"p4", "client", "-o", entry.value.name}, self.state.bufnr, {
+        utils.job_maker(cmd:get(), self.state.bufnr, {
           value = entry.value.name,
           bufname = self.state.bufname,
         })

@@ -76,14 +76,23 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
         -- buffer. Otherwise we need to query it.
         local spec = p4_cl:get_spec()
 
-        --FIX: Need actual change output not description
-
-        if spec then
-          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(spec.description, '\n'))
+        if spec and spec.output then
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(spec.output, '\n'))
         else
           local utils = require("telescope.previewers.utils")
 
-          utils.job_maker({"p4", "change", "-o", p4_cl:get().name}, self.state.bufnr, {
+          local P4_Command_Change = require("p4.core.lib.command.change")
+
+          --- @type P4_Command_Change_Options
+          local cmd_opts = {
+            cl = p4_cl:get().name,
+            type = P4_Command_Change.opts_type.READ,
+            read = nil,
+          }
+
+          local cmd = P4_Command_Change:new(cmd_opts)
+
+          utils.job_maker(cmd:get(), self.state.bufnr, {
             value = p4_cl:get().name,
             bufname = self.state.bufname,
           })

@@ -99,10 +99,17 @@ function P4_Telescope_Client_API.display_opened_files(client)
 
           vim.schedule(function()
 
-            -- Run the telescope file picker.
-            local picker = require("telescope._extensions.p4.pickers.file")
+            local p4_file_list = p4_client:get_file_list()
 
-            picker.load("Opened", p4_client:get_file_list())
+            if  p4_file_list then
+
+              -- Run the telescope file picker.
+              local picker = require("telescope._extensions.p4.pickers.file")
+
+              picker.load("Opened", p4_file_list)
+            else
+              notify("No files are open in the client workspace.")
+            end
           end)
         end
       end)
