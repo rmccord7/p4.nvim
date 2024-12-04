@@ -26,8 +26,6 @@ local function get_selected_files(prompt_bufnr)
       table.insert(entry_list, entry[1])
     end
   elseif actions_state.get_selected_entry() ~= nil then
-    print(vim.inspect(actions_state.get_selected_entry()))
-
     table.insert(entry_list, actions_state.get_selected_entry())
   else
     notify("Please make a valid selection before performing the action.", vim.log.levels.WARN)
