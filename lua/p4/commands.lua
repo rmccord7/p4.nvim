@@ -11,7 +11,7 @@ local p4_command_tbl = {
     impl = function(_, _)
       local file_api = require("p4.api.file")
 
-      file_api.add(vim.fn.expand("%:p"))
+      file_api.add({vim.fn.expand("%:p")})
     end,
   },
 
@@ -20,7 +20,7 @@ local p4_command_tbl = {
     impl = function(_, _)
       local file_api = require("p4.api.file")
 
-      file_api.edit(vim.fn.expand("%:p"))
+      file_api.edit({vim.fn.expand("%:p")})
     end,
   },
 
@@ -29,7 +29,7 @@ local p4_command_tbl = {
     impl = function(_, _)
       local file_api = require("p4.api.file")
 
-      file_api.revert(vim.fn.expand("%:p"))
+      file_api.revert({vim.fn.expand("%:p")})
     end,
   },
 
@@ -81,7 +81,7 @@ local p4_command_tbl = {
   -- Opens the P4 command log.
   Command_Log = {
     impl = function(_, _)
-      p4_log = require("p4.core.log")
+      local p4_log = require("p4.core.log")
 
       vim.cmd(([[tabnew %s]]):format(p4_log.outfile))
     end,

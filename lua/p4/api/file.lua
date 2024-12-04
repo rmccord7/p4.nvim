@@ -22,32 +22,25 @@ end
 
 --- Adds one or more files to the client workspace.
 ---
---- @param file_paths string|string[] One or more files.
+--- @param file_path_list string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
-function P4_File_API.add(file_paths, opts)
+function P4_File_API.add(file_path_list, opts)
 
   log.trace("P4_File_API: add")
 
-  --- @diagnostic disable-next-line String[] not recognized as table
-  vim.validate("file_paths", file_paths, {"string", "table"})
   vim.validate("opts", opts, "table", true)
 
   opts = opts or {}
 
-  if type(file_paths) == "string" and file_paths == "" then
-    log.error("No files specified to add")
-    return
-  end
-
-  if type(file_paths) == "table" and vim.tbl_isempty(file_paths) then
+  if type(file_path_list) == "table" and vim.tbl_isempty(file_path_list) then
     log.error("No files specified to add")
     return
   end
 
   nio.run(function()
-    P4_Command_Add = require("p4.core.lib.command.add")
+    local P4_Command_Add = require("p4.core.lib.command.add")
 
-    local cmd = P4_Command_Add:new(file_paths)
+    local cmd = P4_Command_Add:new(file_path_list)
 
     local success, sc = pcall(cmd:run().wait)
 
@@ -69,32 +62,25 @@ end
 
 --- Checks out one or more files in the client workspace.
 ---
---- @param file_paths string|string[] One or more files.
+--- @param file_path_list string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
-function P4_File_API.edit(file_paths, opts)
+function P4_File_API.edit(file_path_list, opts)
 
   log.trace("P4_File_API: edit")
 
-  --- @diagnostic disable-next-line String[] not recognized as table
-  vim.validate("file_paths", file_paths, {"string", "table"})
   vim.validate("opts", opts, "table", true)
 
   opts = opts or {}
 
-  if type(file_paths) == "string" and file_paths == "" then
-    log.debug("No files specified to edit")
-    return
-  end
-
-  if type(file_paths) == "table" and vim.tbl_isempty(file_paths) then
+  if type(file_path_list) == "table" and vim.tbl_isempty(file_path_list) then
     log.debug("No files specified to edit")
     return
   end
 
   nio.run(function()
-    P4_Command_Edit = require("p4.core.lib.command.edit")
+    local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-    local cmd = P4_Command_Edit:new(file_paths)
+    local cmd = P4_Command_Edit:new(file_path_list)
 
     local success, sc = pcall(cmd:run().wait)
 
@@ -116,32 +102,25 @@ end
 
 --- Reverts one or more files in the client workspace.
 ---
---- @param file_paths string|string[] One or more files.
+--- @param file_path_list string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
-function P4_File_API.revert(file_paths, opts)
+function P4_File_API.revert(file_path_list, opts)
 
   log.trace("P4_File_API: revert")
 
-  --- @diagnostic disable-next-line String[] not recognized as table
-  vim.validate("file_paths", file_paths, {"string", "table"})
   vim.validate("opts", opts, "table", true)
 
   opts = opts or {}
 
-  if type(file_paths) == "string" and file_paths == "" then
-    log.debug("No files specified to revert")
-    return
-  end
-
-  if type(file_paths) == "table" and vim.tbl_isempty(file_paths) then
+  if type(file_path_list) == "table" and vim.tbl_isempty(file_path_list) then
     log.debug("No files specified to revert")
     return
   end
 
   nio.run(function()
-    P4_Command_Revert = require("p4.core.lib.command.revert")
+    local P4_Command_Revert = require("p4.core.lib.command.revert")
 
-    local cmd = P4_Command_Revert:new(file_paths)
+    local cmd = P4_Command_Revert:new(file_path_list)
 
     local success, sc = pcall(cmd:run().wait)
 
@@ -163,32 +142,25 @@ end
 
 --- Shelves one or more files in the client workspace.
 ---
---- @param file_paths string|string[] One or more files.
+--- @param file_path_list string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
-function P4_File_API.shelve(file_paths, opts)
+function P4_File_API.shelve(file_path_list, opts)
 
   log.trace("P4_File_API: shelve")
 
-  --- @diagnostic disable-next-line String[] not recognized as table
-  vim.validate("file_paths", file_paths, {"string", "table"})
   vim.validate("opts", opts, "table", true)
 
   opts = opts or {}
 
-  if type(file_paths) == "string" and file_paths == "" then
-    log.error("No files specified to shelve")
-    return
-  end
-
-  if type(file_paths) == "table" and vim.tbl_isempty(file_paths) then
+  if type(file_path_list) == "table" and vim.tbl_isempty(file_path_list) then
     log.error("No files specified to shelve")
     return
   end
 
   nio.run(function()
-    P4_Command_Shelve = require("p4.core.lib.command.shelve")
+    local P4_Command_Shelve = require("p4.core.lib.command.shelve")
 
-    local cmd = P4_Command_Shelve:new(file_paths)
+    local cmd = P4_Command_Shelve:new(file_path_list)
 
     local success, sc = pcall(cmd:run().wait)
 

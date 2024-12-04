@@ -4,7 +4,7 @@ local log = require("p4.log")
 --- @field cl? string Only files in the specified changelist.
 
 --- @class P4_Command_Opened_Result : table
---- @field depot_path string P4 depot file path.
+--- @field path P4_Depot_File_Path P4 depot file path.
 --- @field cl string P4 CL.
 
 --- @class P4_Command_Opened : P4_Command
@@ -69,7 +69,7 @@ function P4_Command_Opened:process_response(output)
 
     --- @type P4_Command_Opened_Result
     local file_info = {
-      depot_path = vim.split(chunks[1], '#')[1],
+      path = vim.split(chunks[1], '#')[1],
       cl = chunks[5],
     }
 

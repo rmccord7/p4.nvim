@@ -1,16 +1,29 @@
 local log = require("p4.log")
 
+--- Represents a P4 file spec.
+---@alias P4_File_Spec string P4 file spec.
+
+--- Represents the different types of P4 files specs.
+---@alias P4_Depot_File_Spec P4_File_Spec Indicates this is a depot P4 file spec.
+---@alias P4_Client_File_Spec P4_File_Spec Indicates this is a client P4 file spec.
+---@alias P4_Host_File_Spec P4_File_Spec Indicates this is a host P4 file spec.
+
+--- Represents P4 files specs that map to a specific file.
+---@alias P4_Depot_File_Path P4_Depot_File_Spec Indicates this is a depot P4 file spec to a specific file.
+---@alias P4_Client_File_Path P4_Depot_File_Spec Indicates this is a client P4 file spec to a specific file.
+---@alias P4_Host_File_Path P4_Host_File_Spec Indicates this is a host P4 file spec to a specific file.
+
 --- @class P4_Path : table
 --- @field type P4_PATH_TYPE P4 file path type.
 --- @field path string File path.
 
 --- @class P4_File_Path : table
 --- @field private depot_valid boolean Indicates tha the P4 depot file path is valid.
---- @field private depot string P4 depot file path.
+--- @field private depot P4_Depot_File_Path P4 depot file path.
 --- @field private client_valid boolean Indicates tha the P4 client file path is valid.
---- @field private client string P4 client file path.
+--- @field private client P4_Client_File_Path P4 client file path.
 --- @field private host_valid boolean Indicates tha the P4 local file path is valid.
---- @field private host string P4 local file path (can't use local keyword).
+--- @field private host P4_Host_File_Path P4 local file path (can't use local keyword).
 local P4_File_Path = {}
 
 --- @enum P4_PATH_TYPE

@@ -3,7 +3,7 @@ local log = require("p4.log")
 --- @class P4_Command_Files_Options : table
 
 --- @class P4_Command_Files_Result : table
---- @field depot_path string Depot path to the file.
+--- @field path P4_Depot_File_Spec Depot path to the file.
 --- @field head_rev string head revision.
 --- @field submit_cl string Last P4 CL that corresponds to the head revision.
 
@@ -13,7 +13,7 @@ local P4_Command_Files = {}
 
 --- Creates the P4 command.
 ---
---- @param file_spec string File spec.
+--- @param file_spec P4_File_Spec File spec.
 --- @param opts? P4_Command_Files_Options P4 command options.
 --- @return P4_Command_Files P4_Command_Files P4 command.
 function P4_Command_Files:new(file_spec, opts)
@@ -65,7 +65,7 @@ function P4_Command_Files:process_response(output)
 
     --- @type P4_Command_Files_Result
     local result = {
-      depot_path = vim.split(chunks[1], '#')[1],
+      path = vim.split(chunks[1], '#')[1],
       head_rev = vim.split(chunks[1], '#')[2],
       submit_cl = chunks[5],
     }

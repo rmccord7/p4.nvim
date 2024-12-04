@@ -5,11 +5,22 @@ local task = require("p4.task")
 
 local P4_File_Path = require("p4.core.lib.file_path")
 
+--- @class P4_File_Stats : table
+--- @field clientFile P4_Host_File_Path Local path to the file.
+--- @field depotFile P4_Depot_File_Path Depot path to the file.
+--- @field isMapped boolean Indicates if file is mapped to the current client workspace.
+--- @field shelved boolean Indicates if file is shelved.
+--- @field change string Open change list number if file is opened in client workspace.
+--- @field headRev integer Head revision number if in depot.
+--- @field haveRev integer Revision last synced to workpace.
+--- @field workRev integer Revision if file is opened.
+--- @field action string Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
+
 --- @class P4_File : table
 --- @field protected client P4_Client P4 Client.
 --- @field protected cl P4_CL P4 CL.
 --- @field protected path P4_File_Path P4 file path.
---- @field protected fstat? P4_FStat P4 file stats.
+--- @field protected fstat? P4_File_Stats P4 file stats.
 local P4_File = {}
 
 --- @class P4_New_File_Information
@@ -65,29 +76,9 @@ function P4_File:set_cl(cl)
   self.cl = cl
 end
 
---- Returns the P4 CL.
----
---- @return P4_CL cl? P4 CL.
---- @nodiscard
-function P4_File:get_cl()
-  log.trace("P4_File: get_cl")
-
-  return self.cl
-end
-
---- Returns the P4 Client.
----
---- @return P4_Client cl? P4 Client.
---- @nodiscard
-function P4_File:get_client()
-  log.trace("P4_File: get_client")
-
-  return self.cl
-end
-
 --- Set's the file's stats.
 ---
---- @param fstat P4_FStat P4 file stat.
+--- @param fstat P4_File_Stats P4 file stat.
 function P4_File:set_file_stats(fstat)
   log.trace("P4_File: set_file_stats")
 
@@ -96,7 +87,7 @@ end
 
 --- Returns the file's stats.
 ---
---- @return P4_FStat P4 file stats.
+--- @return P4_File_Stats? P4 file stats.
 --- @nodiscard
 function P4_File:get_file_stats()
   log.trace("P4_File: get_file_stats")
@@ -116,7 +107,7 @@ function P4_File:add(on_exit)
 
     local P4_Command_Add = require("p4.core.lib.command.add")
 
-    local cmd = P4_Command_Add:new(self.path:get_file_path())
+    local cmd = P4_Command_Add:new({self.path:get_file_path()})
 
     local success, _ = pcall(cmd:run().wait)
 
@@ -148,7 +139,7 @@ function P4_File:edit(on_exit)
 
     local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-    local cmd = P4_Command_Edit:new(self.path:get_file_path())
+    local cmd = P4_Command_Edit:new({self.path:get_file_path()})
 
     local success, _ = pcall(cmd:run().wait)
 
@@ -180,7 +171,7 @@ function P4_File:revert(on_exit)
 
     local P4_Command_Revert = require("p4.core.lib.command.revert")
 
-    local cmd = P4_Command_Revert:new(self.path:get_file_path())
+    local cmd = P4_Command_Revert:new({self.path:get_file_path()})
 
     local success, _ = pcall(cmd:run().wait)
 
@@ -212,7 +203,7 @@ function P4_File:delete(on_exit)
 
     local P4_Command_Delete = require("p4.core.lib.command.delete")
 
-    local cmd = P4_Command_Delete:new(self.path:get_file_path())
+    local cmd = P4_Command_Delete:new({self.path:get_file_path()})
 
     local success, _ = pcall(cmd:run().wait)
 
@@ -244,7 +235,7 @@ function P4_File:update_stats(on_exit)
 
     local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-    local cmd = P4_Command_FStat:new(self.path:get_file_path())
+    local cmd = P4_Command_FStat:new({self.path:get_file_path()})
 
     local success, sc = pcall(cmd:run().wait)
 

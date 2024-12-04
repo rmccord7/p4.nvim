@@ -10,10 +10,10 @@ local P4_Command_Edit = {}
 
 --- Creates the P4 command.
 ---
---- @param file_paths string|string[] One or more file paths.
+--- @param file_spec_list P4_File_Spec[] One or more file paths.
 --- @param opts? P4_Command_Edit_Options P4 command options.
 --- @return P4_Command_Edit P4_Command_Edit P4 command.
-function P4_Command_Edit:new(file_paths, opts)
+function P4_Command_Edit:new(file_spec_list, opts)
   opts = opts or {}
 
   log.trace("P4_Command_Edit: new")
@@ -29,11 +29,7 @@ function P4_Command_Edit:new(file_paths, opts)
     "edit",
   }
 
-  if type(file_paths) == "string" then
-    table.insert(command, file_paths)
-  else
-    vim.list_extend(command, file_paths)
-  end
+  vim.list_extend(command, file_spec_list)
 
   --- @type P4_Command_Edit
   local new = P4_Command:new(command)

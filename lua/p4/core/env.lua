@@ -121,7 +121,7 @@ local function prompt_open_for_edit(file_path)
       if result == "y" or result == "Y" then
         local P4_File_API = require("p4.api.file")
 
-        P4_File_API.edit(file_path)
+        P4_File_API.edit({file_path})
       else
         vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
 

@@ -111,9 +111,9 @@ function P4_File_List:add(on_exit)
 
   nio.run(function()
 
-    local P4_Command_add = require("p4.core.lib.command.add")
+    local P4_Command_Add = require("p4.core.lib.command.add")
 
-    local cmd = P4_Command_add:new(self:build_file_path_list())
+    local cmd = P4_Command_Add:new(self:build_file_path_list())
 
     local success, sc = pcall(cmd:run().wait)
 

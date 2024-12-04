@@ -21,7 +21,7 @@ local task = require("p4.task")
 --- @field identity string CL description
 --- @field jobs string CL description
 --- @field stream string CL description
---- @field files table List of files checked out for this CL
+--- @field file_path_list P4_Depot_File_Path[] List of files checked out for this CL
 
 --- @class P4_CL : table
 --- @field protected name string P4 CL name
@@ -157,6 +157,7 @@ end
 --- Reads the client spec from the P4 server.
 ---
 --- @param on_exit? fun(success: boolean, ...) Callback function when function completes
+--- @async
 function P4_CL:read_spec(on_exit)
 
   log.trace("P4_CL: read_spec")
@@ -200,6 +201,7 @@ end
 --- Writes the CL spec from a specified buffer to the P4 server.
 ---
 --- @param buf integer Identifies the buffer that will used to store the client spec
+--- @async
 function P4_CL:write_spec(buf)
 
   log.trace("P4_CL: write_spec")
@@ -254,6 +256,7 @@ end
 --- Gets files from the CL spec
 ---
 --- @param on_exit fun(success: boolean, ...) Callback function when function completes
+--- @async
 function P4_CL:update_file_list_from_spec(on_exit)
 
   log.trace("P4_CL: update_file_list_from_spec")
@@ -267,7 +270,7 @@ function P4_CL:update_file_list_from_spec(on_exit)
     local function read_spec_done(success)
       if success then
 
-        if not vim.tbl_isempty(self.spec.files) then
+        if not vim.tbl_isempty(self.spec.file_path_list) then
 
           local P4_File_Path = require("p4.core.lib.file_path")
           local P4_File_List = require("p4.core.lib.file_list")
@@ -275,7 +278,7 @@ function P4_CL:update_file_list_from_spec(on_exit)
           --- @type P4_New_File_Information[]
           local new_file_list = {}
 
-          for _, file_path in ipairs(self.spec.files) do
+          for _, file_path in ipairs(self.spec.file_path_list) do
 
             --- @type P4_New_File_Information
             local new_file = {

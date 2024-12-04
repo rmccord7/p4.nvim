@@ -7,7 +7,7 @@ local task = require("p4.task")
 --- @class P4_Client : table
 --- @field name string Client name
 --- @field protected spec P4_Client_Spec Client spec
---- @field protected workspace_root_spec string Workspace root file spec
+--- @field protected root_file_spec P4_File_Spec Workspace root file spec
 --- @field protected p4_file_list P4_File_List List of open P4 files.
 --- @field protected p4_cl_list P4_CL[] List of open P4 CLs.
 local P4_Client = {}
@@ -60,7 +60,7 @@ function P4_Client:read_spec(on_exit)
       self.spec = cmd:process_response(sc.stdout)
 
       -- The workspace root may have changed.
-      self.workspace_root_spec = self.spec.root .. "/..."
+      self.root_file_spec = self.spec.root .. "/..."
 
       log.fmt_info("Client root: %s", self.spec.root);
     else
@@ -251,7 +251,7 @@ function P4_Client:update_file_list(on_exit)
                 cl = P4_CL:new(new_cl),
                 path = {
                   type = P4_File_Path.type.DEPOT,
-                  path = file_info.depot_path,
+                  path = file_info.path,
                 },
               }
 
