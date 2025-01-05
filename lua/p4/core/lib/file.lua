@@ -1,7 +1,6 @@
 local nio = require("nio")
 
 local log = require("p4.log")
-local task = require("p4.task")
 
 local P4_File_Path = require("p4.core.lib.file_path")
 
@@ -97,166 +96,157 @@ end
 
 --- Opens the file for add.
 ---
---- @param on_exit? fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File:add(on_exit)
+function P4_File:add()
 
   log.trace("P4_File: add")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_Add = require("p4.core.lib.command.add")
+  local P4_Command_Add = require("p4.core.lib.command.add")
 
-    local cmd = P4_Command_Add:new({self.path:get_file_path()})
+  local cmd = P4_Command_Add:new({self.path:get_file_path()})
 
-    local success, _ = pcall(cmd:run().wait)
+  local success, _ = pcall(cmd:run().wait)
 
-    if success then
+  if success then
+    log.fmt_debug("Successfully opened the file for add: %s", self.path:get_file_path())
 
-      log.fmt_debug("Successfully opened the file for add: %s", self.path:get_file_path())
+    future.set()
+  else
+    log.fmt_debug("Failed to open the file for add: %s", self.path:get_file_path())
 
-    else
-      log.fmt_debug("Failed to open the file for add: %s", self.path:get_file_path())
-    end
+    future.set_error()
+  end
 
-    if on_exit then
-      on_exit(success)
-    end
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+  return future
 end
 
 --- Open the file for edit.
 ---
---- @param on_exit? fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File:edit(on_exit)
+function P4_File:edit()
 
   log.trace("P4_File: edit")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_Edit = require("p4.core.lib.command.edit")
+  local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-    local cmd = P4_Command_Edit:new({self.path:get_file_path()})
+  local cmd = P4_Command_Edit:new({self.path:get_file_path()})
 
-    local success, _ = pcall(cmd:run().wait)
+  local success, _ = pcall(cmd:run().wait)
 
-    if success then
+  if success then
+    log.fmt_debug("Successfully opened the file for edit: %s", self.path:get_file_path())
 
-      log.fmt_debug("Successfully opened the file for edit: %s", self.path:get_file_path())
+    future.set()
+  else
+    log.fmt_debug("Failed to open the file for edit: %s", self.path:get_file_path())
 
-    else
-      log.fmt_debug("Failed to open the file for edit: %s", self.path:get_file_path())
-    end
+    future.set_error()
+  end
 
-    if on_exit then
-      on_exit(success)
-    end
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+  return future
 end
 
 --- Reverts the file.
 ---
---- @param on_exit? fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File:revert(on_exit)
+function P4_File:revert()
 
   log.trace("P4_File: revert")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_Revert = require("p4.core.lib.command.revert")
+  local P4_Command_Revert = require("p4.core.lib.command.revert")
 
-    local cmd = P4_Command_Revert:new({self.path:get_file_path()})
+  local cmd = P4_Command_Revert:new({self.path:get_file_path()})
 
-    local success, _ = pcall(cmd:run().wait)
+  local success, _ = pcall(cmd:run().wait)
 
-    if success then
+  if success then
+    log.fmt_debug("Successfully reverted the file: %s", self.path:get_file_path())
 
-      log.fmt_debug("Successfully reverted the file: %s", self.path:get_file_path())
+    future.set()
+  else
+    log.fmt_debug("Failed to revert the file: %s", self.path:get_file_path())
 
-    else
-      log.fmt_debug("Failed to revert the file: %s", self.path:get_file_path())
-    end
+    future.set_error()
+  end
 
-    if on_exit then
-      on_exit(success)
-    end
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+  return future
 end
 
 --- Open the file for delete.
 ---
---- @param on_exit? fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File:delete(on_exit)
+function P4_File:delete()
 
   log.trace("P4_File: delete")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_Delete = require("p4.core.lib.command.delete")
+  local P4_Command_Delete = require("p4.core.lib.command.delete")
 
-    local cmd = P4_Command_Delete:new({self.path:get_file_path()})
+  local cmd = P4_Command_Delete:new({self.path:get_file_path()})
 
-    local success, _ = pcall(cmd:run().wait)
+  local success, _ = pcall(cmd:run().wait)
 
-    if success then
+  if success then
+    log.fmt_debug("Successfully opened the file for delete: %s", self.path:get_file_path())
 
-      log.fmt_debug("Successfully opened the file for delete: %s", self.path:get_file_path())
+    future.set()
+  else
+    log.fmt_debug("Failed to open the file for delete: %s", self.path:get_file_path())
 
-    else
-      log.fmt_debug("Failed to open the file for delete: %s", self.path:get_file_path())
-    end
+    future.set_error()
+  end
 
-    if on_exit then
-      on_exit(success)
-    end
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+  return future
 end
 
 --- Updates the file's stats.
 ---
---- @param on_exit? fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File:update_stats(on_exit)
+function P4_File:update_stats()
 
   log.trace("P4_File: update_stats")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_FStat = require("p4.core.lib.command.fstat")
+  local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-    local cmd = P4_Command_FStat:new({self.path:get_file_path()})
+  local cmd = P4_Command_FStat:new({self.path:get_file_path()})
 
-    local success, sc = pcall(cmd:run().wait)
+  local success, sc = pcall(cmd:run().wait)
 
-    if success then
+  if success then
 
-      log.fmt_debug("Successfully updated the file's stats: %s", self.path:get_file_path())
+    log.fmt_debug("Successfully updated the file's stats: %s", self.path:get_file_path())
 
-      --- @cast sc vim.SystemCompleted
+    --- @cast sc vim.SystemCompleted
 
-      self.spec = cmd:process_response(sc.stdout)[1]
+    self.spec = cmd:process_response(sc.stdout)[1]
 
-    else
-      log.fmt_debug("Failed to update the file's stats: %s", self.path:get_file_path())
-    end
+    future.set()
+  else
+    log.fmt_debug("Failed to update the file's stats: %s", self.path:get_file_path())
 
-    if on_exit then
-      on_exit(success)
-    end
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+    future.set_error()
+  end
+
+  return future
 end
 
 return P4_File

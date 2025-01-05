@@ -156,46 +156,45 @@ end
 
 --- Reads the client spec from the P4 server.
 ---
---- @param on_exit? fun(success: boolean, ...) Callback function when function completes
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_CL:read_spec(on_exit)
+function P4_CL:read_spec()
 
   log.trace("P4_CL: read_spec")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_Change = require("p4.core.lib.command.change")
+  local P4_Command_Change = require("p4.core.lib.command.change")
 
-    --- @type P4_Command_Change_Options
-    local cmd_opts = {
-      cl = self.name,
-      type = P4_Command_Change.opts_type.READ,
-      read = nil,
-    }
+  --- @type P4_Command_Change_Options
+  local cmd_opts = {
+    cl = self.name,
+    type = P4_Command_Change.opts_type.READ,
+    read = nil,
+  }
 
-    local cmd = P4_Command_Change:new(cmd_opts)
+  local cmd = P4_Command_Change:new(cmd_opts)
 
-    local success, sc = pcall(cmd:run().wait)
+  local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+  --- @cast sc vim.SystemCompleted
 
-    if success then
+  if success then
 
-      log.fmt_debug("Successfully read the CL's spec: %s", self.name)
+    log.fmt_debug("Successfully read the CL's spec: %s", self.name)
 
-      -- Build the spec table from the output.
-      self.spec = cmd:process_response(sc.stdout)
+    -- Build the spec table from the output.
+    self.spec = cmd:process_response(sc.stdout)
 
-    else
-      log.error("Failed to read the CL's spec: %s", self.name)
-    end
+    future.set()
+  else
+    log.error("Failed to read the CL's spec: %s", self.name)
 
-    if on_exit then
-      on_exit(success)
-    end
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+    future.set_error()
+  end
+
+  return future
 end
 
 --- Writes the CL spec from a specified buffer to the P4 server.
@@ -255,64 +254,64 @@ end
 
 --- Gets files from the CL spec
 ---
---- @param on_exit fun(success: boolean, ...) Callback function when function completes
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_CL:update_file_list_from_spec(on_exit)
+function P4_CL:update_file_list_from_spec()
 
   log.trace("P4_CL: update_file_list_from_spec")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local function update_stats_done(success)
-      on_exit(success)
-    end
+  -- Update the CL spec in case the file list has recently changed.
+  local success, _ = pcall(self:read_spec().wait)
 
-    local function read_spec_done(success)
-      if success then
+  if success then
 
-        if not vim.tbl_isempty(self.spec.file_path_list) then
+    if not vim.tbl_isempty(self.spec.file_path_list) then
 
-          local P4_File_Path = require("p4.core.lib.file_path")
-          local P4_File_List = require("p4.core.lib.file_list")
+      local P4_File_Path = require("p4.core.lib.file_path")
+      local P4_File_List = require("p4.core.lib.file_list")
 
-          --- @type P4_New_File_Information[]
-          local new_file_list = {}
+      --- @type P4_New_File_Information[]
+      local new_file_list = {}
 
-          for _, file_path in ipairs(self.spec.file_path_list) do
+      for _, file_path in ipairs(self.spec.file_path_list) do
 
-            --- @type P4_New_File_Information
-            local new_file = {
-              client = self:get().client,
-              cl = self,
-              path = {
-                type = P4_File_Path.type.DEPOT,
-                path = file_path,
-              },
-            }
+        --- @type P4_New_File_Information
+        local new_file = {
+          client = self:get().client,
+          cl = self,
+          path = {
+            type = P4_File_Path.type.DEPOT,
+            path = file_path,
+          },
+        }
 
-            table.insert(new_file_list, new_file)
-          end
-
-          self.p4_file_list = P4_File_List:new(new_file_list)
-
-          log.fmt_debug("Successfully updated the CL's file list: %s", self.name)
-
-          self.p4_file_list:update_stats(update_stats_done)
-        else
-          log.fmt_debug("No files list for CL: %s", self.name)
-
-          on_exit(false)
-        end
-      else
-        on_exit(false)
+        table.insert(new_file_list, new_file)
       end
-    end
 
-    -- Update the CL spec in case the file list has recently changed.
-    self:read_spec(read_spec_done)
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+      self.p4_file_list = P4_File_List:new(new_file_list)
+
+      log.fmt_debug("Successfully updated the CL's file list: %s", self.name)
+
+      success, _ = pcall(self.p4_file_list:update_stats().wait)
+
+      if success then
+        future.set()
+      else
+        future.set_error()
+      end
+    else
+      log.fmt_debug("No files list for CL: %s", self.name)
+
+      future.set_error()
+    end
+  else
+    future.set_error()
+  end
+
+  return future
 end
 
 return P4_CL

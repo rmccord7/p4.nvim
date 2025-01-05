@@ -7,6 +7,8 @@ local notify = require("p4.notify")
 local P4_CL_API = {}
 
 --- Creates a new CL in the current client workspace.
+---
+--- @async
 function P4_CL_API.new()
 
   log.trace("P4_CL_API: new")

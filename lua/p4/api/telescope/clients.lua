@@ -7,6 +7,8 @@ local notify = require("p4.notify")
 local P4_Telescope_Clients_API = {}
 
 --- Opens the telescope clients picker.
+---
+--- @async
 function P4_Telescope_Clients_API.display()
 
   log.trace("P4_Telescope_Clients_API: display")
@@ -19,7 +21,7 @@ function P4_Telescope_Clients_API.display()
 
       local cmd = P4_Command_Clients:new()
 
-      success, sc = pcall(cmd:run().wait)
+      local success, sc = pcall(cmd:run().wait)
 
       if success then
         log.trace("Successfully received clients.")

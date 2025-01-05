@@ -18,12 +18,11 @@ local function clear_buffer_writeable()
   vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
 end
 
-----@param on_exit fun(success: boolean,...) Callback to invoke when the task is complete. If success is false then the parameters will be an error message and a traceback of the error, otherwise it will be the result of the async function.
-
 --- Adds one or more files to the client workspace.
 ---
 --- @param file_path_list string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
+--- @async
 function P4_File_API.add(file_path_list, opts)
 
   log.trace("P4_File_API: add")
@@ -64,6 +63,7 @@ end
 ---
 --- @param file_path_list string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
+--- @async
 function P4_File_API.edit(file_path_list, opts)
 
   log.trace("P4_File_API: edit")
@@ -104,6 +104,7 @@ end
 ---
 --- @param file_path_list string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
+--- @async
 function P4_File_API.revert(file_path_list, opts)
 
   log.trace("P4_File_API: revert")
@@ -144,6 +145,7 @@ end
 ---
 --- @param file_path_list string[] One or more files.
 --- @param opts? table Optional parameters. Not used.
+--- @async
 function P4_File_API.shelve(file_path_list, opts)
 
   log.trace("P4_File_API: shelve")

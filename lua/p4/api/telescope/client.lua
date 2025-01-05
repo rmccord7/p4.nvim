@@ -27,6 +27,7 @@ end
 --- Opens the telescope cl picker with the specified client's CLs.
 ---
 --- @param client? string Optional P4 client (Current client is used if nil).
+--- @async
 function P4_Telescope_Client_API.display_client_cls(client)
 
   log.trace("P4_Telescope_Client_API: display_client_cls")
@@ -37,24 +38,23 @@ function P4_Telescope_Client_API.display_client_cls(client)
     ---
     --- @param p4_client P4_Client
     local function get_cl_list(p4_client)
-      p4_client:update_cl_list(function(success)
+      local success = pcall(p4_client:update_cl_list().wait)
 
-        if success then
+      if success then
 
-          vim.schedule(function()
+        vim.schedule(function()
 
-            local p4_cl_list = p4_client:get_cl_list()
+          local p4_cl_list = p4_client:get_cl_list()
 
-            -- No need to query the CL spec here for the CL picker's preview. If we
-            -- have it already, then it will be used, but the picker can query it as
-            -- well.
+          -- No need to query the CL spec here for the CL picker's preview. If we
+          -- have it already, then it will be used, but the picker can query it as
+          -- well.
 
-            require("telescope._extensions.p4.pickers.cl").load(p4_client.name, p4_cl_list)
-          end)
-        else
-          log.fmt_debug("Failed to update the client's cl list: %s", p4_client.name)
-        end
-      end)
+          require("telescope._extensions.p4.pickers.cl").load(p4_client.name, p4_cl_list)
+        end)
+      else
+        log.fmt_debug("Failed to update the client's cl list: %s", p4_client.name)
+      end
     end
 
     nio.run(function()
@@ -83,6 +83,7 @@ end
 --- Opens the telescope file picker with the specified client's open files.
 ---
 --- @param client? string Optional P4 client (Current client is used if nil).
+--- @async
 function P4_Telescope_Client_API.display_opened_files(client)
 
   log.trace("P4_Telescope_Client_API: display_opened_files")
@@ -93,26 +94,25 @@ function P4_Telescope_Client_API.display_opened_files(client)
     ---
     --- @param p4_client P4_Client
     local function get_opened_files(p4_client)
-      p4_client:update_file_list(function(success)
+      local success = pcall(p4_client:update_file_list().wait)
 
-        if success then
+      if success then
 
-          vim.schedule(function()
+        vim.schedule(function()
 
-            local p4_file_list = p4_client:get_file_list()
+          local p4_file_list = p4_client:get_file_list()
 
-            if  p4_file_list then
+          if p4_file_list then
 
-              -- Run the telescope file picker.
-              local picker = require("telescope._extensions.p4.pickers.file")
+            -- Run the telescope file picker.
+            local picker = require("telescope._extensions.p4.pickers.file")
 
-              picker.load("Opened", p4_file_list)
-            else
-              notify("No files are open in the client workspace.")
-            end
-          end)
-        end
-      end)
+            picker.load("Opened", p4_file_list)
+          else
+            notify("No files are open in the client workspace.")
+          end
+        end)
+      end
     end
 
     nio.run(function()

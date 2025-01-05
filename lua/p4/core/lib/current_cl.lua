@@ -1,3 +1,5 @@
+local nio = require("nio")
+
 local log = require("p4.log")
 
 local env = require("p4.core.env")
@@ -28,21 +30,29 @@ function P4_Current_CL:new(cl)
 end
 
 --- Reads the current CL spec
+---
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
+--- @async
 function P4_Current_CL:read_spec()
 
   log.trace("P4_Current_CL: read_spec")
 
+  local future = nio.control.future()
+
   local P4_CL = require("p4.core.lib.cl")
 
-  --- TODO: handle on exit
-  if P4_CL.read_spec(self) then
+  local success = pcall(P4_CL.read_spec(self).wait)
+
+  if success then
 
     -- Make sure this CL belongs to the current user.
     if env.user ~= self.spec.user then
       log.error("P4 CL is not owned by the current user")
 
       self.spec = nil
-      return false
+
+      future.set_error()
     end
 
     -- Make sure this CL belongs to the current client.
@@ -50,13 +60,18 @@ function P4_Current_CL:read_spec()
       log.error("P4 CL does not belong to the current client")
 
       self.spec = nil
-      return false
+
+      future.set_error()
+    end
+
+    if not future.is_set() then
+      future.set()
     end
   else
-    return false
+    future.set_error()
   end
 
-  return true
+  return future
 end
 
 return P4_Current_CL

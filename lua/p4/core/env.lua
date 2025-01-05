@@ -227,6 +227,8 @@ function P4_Env.clear()
 end
 
 --- Updates the P4 environment information
+---
+--- @async
 function P4_Env.update()
 
   log.debug("Updating P4 config")
@@ -286,8 +288,9 @@ function P4_Env.update()
         p4.current_client = P4_Current_Client:new(P4_Env.client)
 
         nio.run(function()
-          p4.current_client:read_spec(function()
-          end)
+
+          pcall(p4.current_client:read_spec().wait)
+
         end, function(success, ...)
           task.complete(nil, success, ...)
         end)

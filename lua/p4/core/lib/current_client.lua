@@ -36,10 +36,14 @@ end
 --- Sets the current P4 client's CL.
 ---
 --- @param cl string P4 CL.
---- @return boolean result Returns true if the current client's CL has been set
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
+--- @async
 function P4_Current_Client:set_cl(cl)
 
   log.trace("P4_Current_Client: set_cl")
+
+  local future = nio.control.future()
 
   -- If CL has never been current or CL is not
   -- the current CL, then we need to update it.
@@ -58,20 +62,28 @@ function P4_Current_Client:set_cl(cl)
 
     local p4_cl = P4_Current_CL:new(new_cl)
 
+    local success = pcall(p4_cl:read_spec().wait)
+
     -- Make sure it exists by reading the spec.
-    if p4_cl:read_spec() then
+    if success then
 
       self.cl = p4_cl
 
       log.fmt_info("Client: %s", self.name);
       log.fmt_info("Client CL: %s", self.cl.name);
+
+      future.set()
+    else
+      future.set_error()
     end
+
   else
     log.warn("CL already set as the current client's CL")
-    return false
+
+    future.set_error()
   end
 
-  return true
+  return future
 end
 
 return P4_Current_Client

@@ -103,168 +103,174 @@ end
 
 --- Opens each file for add.
 ---
---- @param on_exit fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File_List:add(on_exit)
+function P4_File_List:add()
 
   log.trace("P4_File_List: add")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_Add = require("p4.core.lib.command.add")
+  local P4_Command_Add = require("p4.core.lib.command.add")
 
-    local cmd = P4_Command_Add:new(self:build_file_path_list())
+  local cmd = P4_Command_Add:new(self:build_file_path_list())
 
-    local success, sc = pcall(cmd:run().wait)
+  local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+  --- @cast sc vim.SystemCompleted
 
-    if success then
+  if success then
 
-      log.debug("Successfully opened each file for add")
+    log.debug("Successfully opened each file for add")
 
-    else
-      log.fmt_debug("Failed to open each file for add: %s", sc.stderr)
-    end
+    future.set()
+  else
+    log.fmt_debug("Failed to open each file for add: %s", sc.stderr)
 
-    on_exit(success)
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+    future.set_error()
+  end
+
+  return future
 end
 
 --- Opens each file for edit.
 ---
---- @param on_exit fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File_List:edit(on_exit)
+function P4_File_List:edit()
 
   log.trace("P4_File_List: edit")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_Edit = require("p4.core.lib.command.edit")
+  local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-    local cmd = P4_Command_Edit:new(self:build_file_path_list())
+  local cmd = P4_Command_Edit:new(self:build_file_path_list())
 
-    local success, sc = pcall(cmd:run().wait)
+  local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+  --- @cast sc vim.SystemCompleted
 
-    if success then
+  if success then
 
-      log.debug("Successfully opened each file for edit")
+    log.debug("Successfully opened each file for edit")
 
-    else
-      log.fmt_debug("Failed to open each file for edit: %s", sc.stderr)
-    end
+    future.set()
+  else
+    log.fmt_debug("Failed to open each file for edit: %s", sc.stderr)
 
-    on_exit(success)
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+    future.set_error()
+  end
+
+  return future
 end
 
 --- Reverts each file.
 ---
---- @param on_exit fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File_List:revert(on_exit)
+function P4_File_List:revert()
 
   log.trace("P4_File_List: revert")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_Edit = require("p4.core.lib.command.edit")
+  local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-    local cmd = P4_Command_Edit:new(self:build_file_path_list())
+  local cmd = P4_Command_Edit:new(self:build_file_path_list())
 
-    local success, sc = pcall(cmd:run().wait)
+  local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+  --- @cast sc vim.SystemCompleted
 
-    if success then
+  if success then
 
-      log.debug("Successfully reverted each file")
+    log.debug("Successfully reverted each file")
 
-    else
-      log.fmt_debug("Failed to revert each file: %s", sc.stderr)
-    end
+    future.set()
+  else
+    log.fmt_debug("Failed to revert each file: %s", sc.stderr)
 
-    on_exit(success)
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+    future.set_error()
+  end
+
+  return future
 end
 
 --- Opens each file for delete.
 ---
---- @param on_exit fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File_List:delete(on_exit)
+function P4_File_List:delete()
 
   log.trace("P4_File_List: delete")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_delete = require("p4.core.lib.command.delete")
+  local P4_Command_delete = require("p4.core.lib.command.delete")
 
-    local cmd = P4_Command_delete:new(self:build_file_path_list())
+  local cmd = P4_Command_delete:new(self:build_file_path_list())
 
-    local success, sc = pcall(cmd:run().wait)
+  local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+  --- @cast sc vim.SystemCompleted
 
-    if success then
+  if success then
 
-      log.debug("Successfully opened each file for delete")
+    log.debug("Successfully opened each file for delete")
 
-    else
-      log.fmt_debug("Failed to open each file for delete: %s", sc.stderr)
-    end
+    future.set()
+  else
+    log.fmt_debug("Failed to open each file for delete: %s", sc.stderr)
 
-    on_exit(success)
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+    future.set_error()
+  end
+
+  return future
 end
 
 --- Updates each file's stats.
 ---
---- @param on_exit fun(success: boolean) Callback to invoke when the task is complete.
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
 --- @async
-function P4_File_List:update_stats(on_exit)
+function P4_File_List:update_stats()
 
   log.trace("P4_File_List: update_stats")
 
-  nio.run(function()
+  local future = nio.control.future()
 
-    local P4_Command_FStat = require("p4.core.lib.command.fstat")
+  local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-    local cmd = P4_Command_FStat:new(self:build_file_path_list())
+  local cmd = P4_Command_FStat:new(self:build_file_path_list())
 
-    local success, sc = pcall(cmd:run().wait)
+  local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+  --- @cast sc vim.SystemCompleted
 
-    if success then
+  if success then
 
-      log.debug("Successfully updated each file's stats")
+    log.debug("Successfully updated each file's stats")
 
-      --- @type P4_Command_FStat_Result
-      local result = cmd:process_response(sc.stdout)
+    --- @type P4_Command_FStat_Result
+    local result = cmd:process_response(sc.stdout)
 
-      for index, file in ipairs(self.files) do
-        file:set_file_stats(result[index])
-      end
-    else
-      log.fmt_debug("Failed to update each file's stats: %s", sc.stderr)
+    for index, file in ipairs(self.files) do
+      file:set_file_stats(result[index])
     end
 
-    on_exit(success)
-  end, function(success, ...)
-    task.complete(on_exit, success, ...)
-  end)
+    future.set()
+  else
+    log.fmt_debug("Failed to update each file's stats: %s", sc.stderr)
+
+    future.set_error()
+  end
+
+  return future
 end
 
 return P4_File_List

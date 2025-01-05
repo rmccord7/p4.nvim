@@ -13,6 +13,7 @@ local P4_Client_API = {}
 ---
 --- @param client_name string P4 client name.
 --- @param opts? P4_Client_API_New_Options Options.
+--- @async
 function P4_Client_API.new(client_name, opts)
   opts = opts or {}
 

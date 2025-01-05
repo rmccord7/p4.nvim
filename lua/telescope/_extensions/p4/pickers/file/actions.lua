@@ -1,8 +1,11 @@
+local nio = require("nio")
+
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
 local log = require("p4.log")
 local notify = require("p4.notify")
+local task = require("p4.task")
 
 --- @class P4_Telescope_File_Actions
 local P4_Telescope_File_Actions = {}
@@ -79,6 +82,7 @@ end
 --- Diffs the selected file with the head revision.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.diff(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: diff")
@@ -101,6 +105,7 @@ end
 --- Opens a file history picker to view the selected file's history.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.history(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: history")
@@ -123,6 +128,7 @@ end
 --- Moves all selected files from one CL to another.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.move(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: move")
@@ -145,6 +151,7 @@ end
 --- Opens the selected files for add.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.add(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: add")
@@ -155,10 +162,15 @@ function P4_Telescope_File_Actions.add(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    p4_file_list:add(function(success)
+    nio.run(function()
+
+      local success, _ = pcall(p4_file_list:add().wait)
+
       if not success then
         log.error("Telescope file action failed.")
       end
+    end, function(success, ...)
+      task.complete(nil, success, ...)
     end)
   end
 end
@@ -166,6 +178,7 @@ end
 --- Opens the selected files for edit.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.edit(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: edit")
@@ -176,10 +189,15 @@ function P4_Telescope_File_Actions.edit(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    p4_file_list:edit(function(success)
+    nio.run(function()
+
+      local success, _ = pcall(p4_file_list:edit().wait)
+
       if not success then
         log.error("Telescope file action failed.")
       end
+    end, function(success, ...)
+      task.complete(nil, success, ...)
     end)
   end
 end
@@ -187,6 +205,7 @@ end
 --- Reverts the selected files.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.revert(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: revert")
@@ -197,10 +216,15 @@ function P4_Telescope_File_Actions.revert(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    p4_file_list:revert(function(success)
+    nio.run(function()
+
+      local success, _ = pcall(p4_file_list:revert().wait)
+
       if not success then
         log.error("Telescope file action failed.")
       end
+    end, function(success, ...)
+      task.complete(nil, success, ...)
     end)
   end
 end
@@ -208,6 +232,7 @@ end
 --- Opens the selected files for delete.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.delete(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: delete")
@@ -218,10 +243,15 @@ function P4_Telescope_File_Actions.delete(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    p4_file_list:delete(function(success)
+    nio.run(function()
+
+      local success, _ = pcall(p4_file_list:delete().wait)
+
       if not success then
         log.error("Telescope file action failed.")
       end
+    end, function(success, ...)
+      task.complete(nil, success, ...)
     end)
   end
 end
@@ -229,6 +259,7 @@ end
 --- Gets file stats for each of the selected files.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.fstat(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: fstat")
@@ -239,10 +270,15 @@ function P4_Telescope_File_Actions.fstat(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    p4_file_list:update_stats(function(success)
+    nio.run(function()
+
+      local success, _ = pcall(p4_file_list:update_stats().wait)
+
       if not success then
         log.error("Telescope file action failed.")
       end
+    end, function(success, ...)
+      task.complete(nil, success, ...)
     end)
   end
 end
@@ -250,6 +286,7 @@ end
 --- Shelves all selected files.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.shelve(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: shelve")
@@ -272,6 +309,7 @@ end
 --- Un-shelves all selected files.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
+--- @async
 function P4_Telescope_File_Actions.unshelve(prompt_bufnr)
 
   log.trace("Telescope_File_Actions: unshelve")
