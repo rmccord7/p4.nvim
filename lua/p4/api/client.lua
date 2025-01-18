@@ -44,8 +44,7 @@ function P4_Client_API.new(client_name, opts)
         local buf = vim.api.nvim_create_buf(false, true)
 
         vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
-        vim.api.nvim_set_option_value("filetype", "conf", { buf = buf })
-        vim.api.nvim_set_option_value("expandtab", false, { buf = buf })
+        vim.api.nvim_set_option_value("filetype", "p4_spec", { buf = buf })
 
         -- CL name won't be assigned until the CL spec is written so
         -- we can't know what it is ahead of time.

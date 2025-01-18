@@ -83,8 +83,7 @@ function P4_Client:write_spec(buf)
   log.trace("P4_Client: write_spec")
 
   vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
-  vim.api.nvim_set_option_value("filetype", "conf", { buf = buf })
-  vim.api.nvim_set_option_value("expandtab", false, { buf = buf })
+  vim.api.nvim_set_option_value("filetype", "p4_spec", { buf = buf })
 
   vim.api.nvim_buf_set_name(buf, "Client: " .. self.name)
 
