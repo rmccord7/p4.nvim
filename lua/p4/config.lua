@@ -76,7 +76,7 @@ local defaults = {
     },
     file = { -- P4 file picker options
       mappings = { -- P4 change lists picker mappings.
-        open = "<c-o>", -- Opens the picker's selected file in a buffer.
+        open = "<CR>", -- Opens the picker's selected file in a buffer.
         diff = "<c-d>", -- Diffs the selected file against the head revision.
         history = "<c-h>", -- Opens a file history picker to view the selected file's history.
         move = "<c-m>", -- Moves all selected files from one CL to another.

@@ -41,36 +41,36 @@ function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
 
   --- Defines mappings.
   ---
-  --- @param prompt_bufnr integer Prompt buffer number.
+  --- @param _ integer Prompt buffer number.
   ---
   --- @param map function Maps keys to functions.
   ---
-  local function attach_mappings(prompt_bufnr, map)
+  local function attach_mappings(_, map)
 
-    actions.select_default:replace(function()
-
-      actions.close(prompt_bufnr)
-
-      local entry = actions_state.get_selected_entry()
-
-      if entry then
-
-        -- Use the last preview buffer since it displayed the P4 change
-        -- list spec.
-        local state = require("telescope.state")
-
-        local bufnr = state.get_global_key("last_preview_bufnr")
-
-        if bufnr then
-          --- @type P4_CL
-          local p4_cl = entry.value
-
-          p4_cl:write_spec(bufnr)
-        end
-      else
-        notify("Please make a valid selection before performing the action.", vim.log.levels.WARN)
-      end
-    end)
+    -- actions.select_default:replace(function()
+    --
+    --   actions.close(prompt_bufnr)
+    --
+    --   local entry = actions_state.get_selected_entry()
+    --
+    --   if entry then
+    --
+    --     -- Use the last preview buffer since it displayed the P4 change
+    --     -- list spec.
+    --     local state = require("telescope.state")
+    --
+    --     local bufnr = state.get_global_key("last_preview_bufnr")
+    --
+    --     if bufnr then
+    --       --- @type P4_CL
+    --       local p4_cl = entry.value
+    --
+    --       p4_cl:write_spec(bufnr)
+    --     end
+    --   else
+    --     notify("Please make a valid selection before performing the action.", vim.log.levels.WARN)
+    --   end
+    -- end)
 
     local p4_config = require("p4.config")
     local file_mappings = p4_config.opts.telescope.file.mappings
