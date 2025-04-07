@@ -111,7 +111,7 @@ end
 
 -- Joins the specified file system paths.
 function M.join(...)
-  return table.concat(vim.tbl_flatten { ... }, '/')
+  return table.concat(vim.iter({ ... }):flatten():totable(), '/')
 end
 
 -- Traverses the parent directories starting at the specified path until
