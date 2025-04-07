@@ -87,11 +87,11 @@ function P4_Command_FStat:process_response(output)
           if t[2] ~= "..." then
             result[t[2]] = t[3]
 
-            -- Make path relative to the CWD.
-            if t[2] == "clientFile" then
-              --- @diagnostic disable-next-line No annotation for cwd()
-              result[t[2]] = t[3]:gsub(vim.uv.cwd(), '.')
-            end
+            -- -- Make path relative to the CWD.
+            -- if t[2] == "clientFile" then
+            --   --- @diagnostic disable-next-line No annotation for cwd()
+            --   result[t[2]] = t[3]:gsub(vim.uv.cwd(), '.')
+            -- end
           end
         end
       end

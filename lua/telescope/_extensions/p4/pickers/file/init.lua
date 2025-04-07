@@ -1,8 +1,8 @@
 local config = require("telescope.config").values
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
-local actions = require("telescope.actions")
-local actions_state = require("telescope.actions.state")
+-- local actions = require("telescope.actions")
+local utils = require("telescope.utils")
 
 local notify = require("p4.notify")
 
@@ -35,7 +35,7 @@ function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
       value = entry,
       ordinal = file_stats.clientFile,
       filename = file_stats.clientFile,
-      display = file_stats.clientFile .. " (" .. file_stats.change .. ")",
+      display = utils.transform_path(opts, (file_stats.clientFile)) .. " (" .. file_stats.change .. ")",
     }
   end
 
