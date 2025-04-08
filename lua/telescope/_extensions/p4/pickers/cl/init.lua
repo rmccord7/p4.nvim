@@ -28,9 +28,9 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
   local function entry_maker(entry)
 
     local displayer = entry_display.create({
-      separator = ': ',
+      separator = "",
       items = {
-        { width = 8 },
+        { remaining = true },
         { remaining = true },
       },
     })
@@ -42,7 +42,7 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
       local p4_cl = _entry.value
 
       return displayer {
-        p4_cl:get().name,
+        p4_cl:get().name .. ":",
         p4_cl:get_formatted_description(),
       }
     end

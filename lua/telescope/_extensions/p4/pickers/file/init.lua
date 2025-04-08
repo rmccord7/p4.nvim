@@ -4,6 +4,8 @@ local pickers = require("telescope.pickers")
 -- local actions = require("telescope.actions")
 local utils = require("telescope.utils")
 
+local entry_display = require("telescope.pickers.entry_display")
+
 local notify = require("p4.notify")
 
 --- @class P4_Telescope_File_Picker
@@ -31,11 +33,43 @@ function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
 
     assert(file_stats, "File stats have not been read")
 
+    local hl_group, icon
+    local display, _ = utils.transform_path(opts, file_stats.clientFile)
+    _, hl_group, icon = utils.transform_devicons(file_stats.clientFile, display, opts.disable_devicons)
+
+    local displayer = entry_display.create {
+      separator = "",
+      items = {
+        { width = #icon }, -- File icon
+        { remaining = true }, -- File path
+        { remaining = true }, -- File P4 CL
+      },
+    }
+
+    --- @diagnostic disable-next-line Ignore redefined entry.
+    local make_display = function(_entry)
+
+      if hl_group then
+        return displayer {
+          {icon, hl_group},
+          display,
+          " (" .. file_stats.change .. ")",
+        }
+      else
+        return displayer {
+          icon,
+          display,
+          " (" .. file_stats.change .. ")",
+        }
+      end
+    end
+
     return {
       value = entry,
       ordinal = file_stats.clientFile,
       filename = file_stats.clientFile,
-      display = utils.transform_path(opts, (file_stats.clientFile)) .. " (" .. file_stats.change .. ")",
+      -- display = utils.transform_path(opts, (file_stats.clientFile)) .. " (" .. file_stats.change .. ")",
+      display = make_display,
     }
   end
 
