@@ -1,12 +1,9 @@
-local nio = require("nio")
-
 local log = require("p4.log")
 local notify = require("p4.notify")
-local task = require("p4.task")
 
 local config = require("p4.core.config")
 
-    --TODO: Make p4 env private
+--TODO: Make p4 env private
 
 ---@class P4_Env : table
 ---@field user? string Identifies the P4 user
@@ -57,10 +54,10 @@ end
 --- Updates the P4 environment innformation from the shell's
 --- environment.
 local function update_from_env()
-  P4_Env.user = os.getenv('P4USER')
-  P4_Env.host = os.getenv('P4HOST')
-  P4_Env.port = os.getenv('P4PORT')
-  P4_Env.client = os.getenv('P4CLIENT')
+  P4_Env.user = os.getenv("P4USER")
+  P4_Env.host = os.getenv("P4HOST")
+  P4_Env.port = os.getenv("P4PORT")
+  P4_Env.client = os.getenv("P4CLIENT")
 
   if check_env() then
     log.info("P4 configured from enviroment")
@@ -69,11 +66,9 @@ end
 
 --- Updates the P4 environment innformation from a P4CONFIG file.
 local function update_from_file(config_path)
-
   local input = io.open(config_path):read("*a")
 
   if input then
-
     local t = {}
     for k, v in string.gmatch(input, "([%w._]+)=([%w._]+)") do
       t[k] = v
@@ -92,51 +87,46 @@ end
 
 --- Prompts the user to open the file for add.
 local function prompt_open_for_add(file_path)
+  if P4_Env.check(true) then
+    vim.fn.inputsave()
+    local result = vim.fn.input("Open for add (y/n): ")
+    vim.fn.inputrestore()
 
-    if P4_Env.check() then
+    if result == "y" or result == "Y" then
+      local P4_File_API = require("p4.api.file")
 
-      vim.fn.inputsave()
-      local result = vim.fn.input("Open for add (y/n): ")
-      vim.fn.inputrestore()
-
-      if result == "y" or result == "Y" then
-        local P4_File_API = require("p4.api.file")
-
-        P4_File_API.add(file_path)
-      end
+      P4_File_API.add(file_path)
     end
+  end
 end
 
 --- Prompts the user to open the file for edit.
 local function prompt_open_for_edit(file_path)
+  if P4_Env.check(true) then
+    -- Prevent changing read only warning
+    vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
 
-    if P4_Env.check() then
+    vim.fn.inputsave()
+    local opts = { prompt = "[P4] Open file for edit (y/n): " }
+    local _, result = pcall(vim.fn.input, opts)
+    vim.fn.inputrestore()
 
-      -- Prevent changing read only warning
-      vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
+    if result == "y" or result == "Y" then
+      local P4_File_API = require("p4.api.file")
 
-      vim.fn.inputsave()
-      local opts = {prompt = '[P4] Open file for edit (y/n): ' }
-      local _, result = pcall(vim.fn.input, opts)
-      vim.fn.inputrestore()
+      P4_File_API.edit({ file_path })
+    else
+      vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
 
-      if result == "y" or result == "Y" then
-        local P4_File_API = require("p4.api.file")
-
-        P4_File_API.edit({file_path})
-      else
-        vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
-
-        -- Exit insert mode
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<ESC>", true, false, true), 'm', false)
-      end
+      -- Exit insert mode
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<ESC>", true, false, true), "m", false)
     end
+  end
 end
 
 --- Enables autocmds
 ---
 local function enable_autocmds()
-
   P4_Env.ac_group = vim.api.nvim_create_augroup("P4_File", {})
 
   --- Check for P4 workspace when buffer is entered.
@@ -145,13 +135,10 @@ local function enable_autocmds()
     group = P4_Env.ac_group,
     pattern = "*",
     callback = function()
-
       if P4_Env.update() then
-
         -- Set buffer to reload for changes made outside vim such as
         -- pulling latest revisions.
         vim.api.nvim_set_option_value("autoread", false, { scope = "local" })
-
       end
     end,
   })
@@ -176,11 +163,8 @@ local function enable_autocmds()
         local modifiable = vim.api.nvim_get_option_value("modifiable", { scope = "local" })
 
         if not modifiable then
-
           if vim.fn.filereadable(file_path) then
-
             prompt_open_for_edit(file_path)
-
           else
             prompt_open_for_add(file_path)
           end
@@ -197,7 +181,7 @@ local function enable_autocmds()
     group = P4_Env.ac_group,
     pattern = "*",
     callback = function()
-        prompt_open_for_edit(vim.fn.expand("%:p"))
+      prompt_open_for_edit(vim.fn.expand("%:p"))
     end,
   })
 end
@@ -205,10 +189,8 @@ end
 --- Disables autocmds
 ---
 local function disable_autocmds()
-
   if P4_Env.ac_group then
-
-     -- Remove file autocmds
+    -- Remove file autocmds
     vim.api.nvim_del_augroup_by_id(P4_Env.ac_group)
 
     P4_Env.ac_group = nil
@@ -217,7 +199,6 @@ end
 
 --- Clears the P4 environment information
 function P4_Env.clear()
-
   log.debug("Clearing P4 config")
 
   -- NOTE: This does not clear the P4CONFIG path if it has been cached.
@@ -230,13 +211,11 @@ end
 
 --- Updates the P4 environment information
 function P4_Env.update()
-
   log.debug("Updating P4 config")
 
   -- If we have already cached the P4 environment
   -- information, then there is nothing to do.
   if not check_env() then
-
     log.info("Configuring P4")
 
     -- Clear the current p4 environment information
@@ -247,14 +226,11 @@ function P4_Env.update()
 
     -- P4CONFIG for P4 config has the next highest precendence
     if not check_env() then
-
       -- Find P4 config file so we can try to use it.
       if config.find() then
-
         -- Need to find the P4CONFIG file to load p4 environment
         -- information.
         if config.config_path then
-
           update_from_file(config.config_path)
         end
       end
@@ -262,18 +238,15 @@ function P4_Env.update()
 
     -- Enviroment for P4 config has next highest precedence
     if not check_env() then
-
       -- Try to get P4 information from the shell enviroment
       -- (user using something like direnv).
       update_from_env()
-
     end
 
     local p4 = require("p4")
 
     -- Handle invalid configuration
     if check_env() then
-
       display_env()
 
       log.debug("P4 configured")
@@ -281,7 +254,6 @@ function P4_Env.update()
       -- Enable autocmds
       enable_autocmds()
     else
-
       -- Disable autocmds
       disable_autocmds()
 
@@ -293,7 +265,6 @@ function P4_Env.update()
       -- If nothing is configured, then we will assume this is
       -- not a P4 workspace.
       if P4_Env.user or P4_Env.host or P4_Env.port or P4_Env.client then
-
         -- Inform the user what has not been set.
         if not P4_Env.host then
           notify("Invalid P4Host", vim.log.levels.ERROR)
@@ -334,7 +305,6 @@ end
 ---
 --- @param command boolean Indicates if the we need to inform the user.
 function P4_Env.check(command)
-
   local env_valid = check_env()
 
   if not env_valid then
@@ -350,4 +320,3 @@ function P4_Env.check(command)
 end
 
 return P4_Env
-
