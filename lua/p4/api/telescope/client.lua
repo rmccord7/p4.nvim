@@ -26,13 +26,15 @@ local function update_current_client()
   if not p4.current_client or p4.current_client.name ~= p4_env.client then
 
     -- Create new current client.
-    p4.current_client = P4_Current_Client:new(p4_env.client)
+    local new_current_client = P4_Current_Client:new(p4_env.client)
 
     -- Read current client's spec from P4 server.
-    local success = pcall(p4.current_client:read_spec().wait)
+    local success = pcall(new_current_client:read_spec().wait)
 
     if success then
-      future.set()
+      p4.current_client = new_current_client
+
+      future.set(p4.current_client)
     else
       future.set_error()
     end
@@ -50,26 +52,24 @@ local function get_current_client()
 
   log.trace("P4_Telescope_Client_API: get_current_client")
 
-  local current_client = nil
-
   local p4_env = require("p4.core.env")
 
   local env_valid = p4_env.check(true)
 
   if env_valid then
 
-    local success = pcall(update_current_client().wait)
+    local success, current_client = pcall(update_current_client().wait)
 
-    if success then
-      current_client = require("p4").current_client
-    else
+    if not success then
       notify("Current client not set", vim.log.levels.ERROR)
 
       log.error("Current client not set")
     end
+
+    return current_client
   end
 
-  return current_client
+  return nil
 end
 
 --- Opens the telescope cl picker with the specified client's CLs.
