@@ -13,7 +13,7 @@ function P4_Telescope_Clients_API.display()
 
   log.trace("P4_Telescope_Clients_API: display")
 
-  if require("p4.api.telescope").check then
+  if require("p4.api.telescope").check() then
 
     nio.run(function()
 

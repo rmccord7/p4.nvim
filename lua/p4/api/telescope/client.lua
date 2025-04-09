@@ -8,17 +8,65 @@ local P4_Telescope_Client_API = {}
 
 --- Gets the current client.
 ---
+--- @return nio.control.Future future Future to wait on.
+--- @nodiscard
+--- @async
+local function update_current_client()
+
+  log.trace("P4_Telescope_Client_API: update_current_client")
+
+  local future = nio.control.future()
+
+  local p4 = require("p4")
+  local p4_env = require("p4.core.env")
+  local P4_Current_Client = require("p4.core.lib.current_client")
+
+  -- Only update the current client if it has not already been done or the current client does not match what was
+  -- previously set.
+  if not p4.current_client or p4.current_client.name ~= p4_env.client then
+
+    -- Create new current client.
+    p4.current_client = P4_Current_Client:new(p4_env.client)
+
+    -- Read current client's spec from P4 server.
+    local success = pcall(p4.current_client:read_spec().wait)
+
+    if success then
+      future.set()
+    else
+      future.set_error()
+    end
+  end
+
+  return future
+end
+
+--- Gets the current client.
+---
 --- @return P4_Current_Client? P4 client.
+--- @nodiscard
+--- @async
 local function get_current_client()
 
   log.trace("P4_Telescope_Client_API: get_current_client")
 
-  local current_client = require("p4").current_client
+  local current_client = nil
 
-  if not current_client then
-    notify("Current client not set", vim.log.levels.ERROR)
+  local p4_env = require("p4.core.env")
 
-    log.error("Current client not set")
+  local env_valid = p4_env.check(true)
+
+  if env_valid then
+
+    local success = pcall(update_current_client().wait)
+
+    if success then
+      current_client = require("p4").current_client
+    else
+      notify("Current client not set", vim.log.levels.ERROR)
+
+      log.error("Current client not set")
+    end
   end
 
   return current_client
@@ -32,7 +80,7 @@ function P4_Telescope_Client_API.display_client_cls(client)
 
   log.trace("P4_Telescope_Client_API: display_client_cls")
 
-  if require("p4.api.telescope").check then
+  if require("p4.api.telescope").check() then
 
     --- Gets the CL list for the specified P4 client.
     ---
@@ -88,7 +136,7 @@ function P4_Telescope_Client_API.display_opened_files(client)
 
   log.trace("P4_Telescope_Client_API: display_opened_files")
 
-  if require("p4.api.telescope").check then
+  if require("p4.api.telescope").check() then
 
     --- Gets the opened files for the specified P4 client.
     ---

@@ -6,6 +6,8 @@ local task = require("p4.task")
 
 local config = require("p4.core.config")
 
+    --TODO: Make p4 env private
+
 ---@class P4_Env : table
 ---@field user? string Identifies the P4 user
 ---@field host? string Identifies the P4 host
@@ -227,8 +229,6 @@ function P4_Env.clear()
 end
 
 --- Updates the P4 environment information
----
---- @async
 function P4_Env.update()
 
   log.debug("Updating P4 config")
@@ -280,21 +280,6 @@ function P4_Env.update()
 
       -- Enable autocmds
       enable_autocmds()
-
-      local P4_Current_Client = require("p4.core.lib.current_client")
-
-      -- Update the current client.
-      if not p4.current_client or p4.current_client.name ~= P4_Env.client then
-        p4.current_client = P4_Current_Client:new(P4_Env.client)
-
-        nio.run(function()
-
-          pcall(p4.current_client:read_spec().wait)
-
-        end, function(success, ...)
-          task.complete(nil, success, ...)
-        end)
-      end
     else
 
       -- Disable autocmds
@@ -339,25 +324,29 @@ function P4_Env.update()
 
       -- Clear the current p4 environment information
       P4_Env.clear()
-
     end
   end
 
   return check_env()
 end
 
---- Clears the P4 environment information
-function P4_Env.check()
+--- Checks if the P4 environment information is valid.
+---
+--- @param command boolean Indicates if the we need to inform the user.
+function P4_Env.check(command)
 
-  if check_env() then
-    return true
-  else
-    notify("Env not configured", vim.log.levels.ERROR)
+  local env_valid = check_env()
+
+  if not env_valid then
+    -- Only notify the user if a command was issued.
+    if command then
+      notify("Env not configured", vim.log.levels.ERROR)
+    end
 
     log.debug("Env not configured")
-
-    return false
   end
+
+  return env_valid
 end
 
 return P4_Env

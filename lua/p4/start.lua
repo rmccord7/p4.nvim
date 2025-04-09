@@ -24,15 +24,28 @@ local function start()
     callback = function()
       log.debug("Directory Changed")
 
-      -- Set up the Rocks user command
+      -- Set up the user commands.
       require("p4.commands").create_commands()
+
+      -- Check if the P4 environment was previoulsy set since this will be cleared. This will always be false at startup
+      -- so we won't load the P4 enviroment until the user performs a command.
+      local reload = false
+
+      if p4_env.check(false) then
+       reload = true
+      end
+
+      -- Force the P4 environment information update
+      p4_env.clear()
 
       -- Clear the current P4CONFIG path if it exists.
       p4_config.clear()
 
-      -- Force the P4 environment information update
-      p4_env.clear()
-      p4_env.update()
+      -- Reload the P4 environemnt if it was previously set for the previous directory since we may have just changed
+      -- projects.
+      if reload then
+        p4_env:update()
+      end
     end
   })
 end

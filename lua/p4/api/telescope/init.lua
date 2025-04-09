@@ -3,7 +3,7 @@ local p4 = require("p4")
 local log = require("p4.log")
 local notify = require("p4.notify")
 
-local env = require("p4.core.env")
+local p4_env = require("p4.core.env")
 
 --- @class P4_Telescope_API
 local P4_Telescope_API = {}
@@ -14,14 +14,14 @@ function P4_Telescope_API.check()
 
   log.trace("P4_Telescope_API: check")
 
-  -- Make sure the P4 environment is valid.
-  if not env.check() then
+  -- Ensure P4 environment is set.
+  if not p4_env.update() then
     return false
   end
 
-  -- Make sure telescope is supported.
+  -- Ensure the telescope plugin is supported.
   if not p4.telescope then
-    notify("Command not supported", vim.log.levels.ERROR)
+    notify("Telescope not supported", vim.log.levels.ERROR)
 
     log.error("Telescope not supported")
 
