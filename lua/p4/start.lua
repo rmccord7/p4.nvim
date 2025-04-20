@@ -25,7 +25,7 @@ local function start()
       log.debug("Directory Changed")
 
       -- Set up the user commands.
-      require("p4.commands").create_commands()
+      require("p4.commands")
 
       -- Check if the P4 environment was previoulsy set since this will be cleared. This will always be false at startup
       -- so we won't load the P4 enviroment until the user performs a command.
