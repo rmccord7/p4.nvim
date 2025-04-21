@@ -23,8 +23,9 @@ local function update_current_client()
 
   -- Only update the current client if it has not already been done or the current client does not match what was
   -- previously set.
-  if not p4.current_client or p4.current_client.name ~= p4_env.client then
-
+  if p4.current_client and p4.current_client.name == p4_env.client then
+    future.set(p4.current_client)
+  else
     -- Create new current client.
     local new_current_client = P4_Current_Client:new(p4_env.client)
 
