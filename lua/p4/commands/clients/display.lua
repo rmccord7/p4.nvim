@@ -5,9 +5,9 @@ function M.add_parser(parent_subparser)
   local parser = parent_subparser:add_parser({ name="display", help = "Displays the P4 clients for the specified user." })
 
   parser:set_execute(function()
-    local client_api = require("p4.api.client")
+    local telescope_clients_api = require("p4.api.telescope.clients")
 
-    client_api.new()
+    telescope_clients_api.display()
   end)
 end
 
