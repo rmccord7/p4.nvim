@@ -94,11 +94,16 @@ function P4_Telescope_Client_API.display_client_cls(client)
 
           local p4_cl_list = p4_client:get_cl_list()
 
-          -- No need to query the CL spec here for the CL picker's preview. If we
-          -- have it already, then it will be used, but the picker can query it as
-          -- well.
+          if p4_cl_list then
 
-          require("telescope._extensions.p4.pickers.cl").load(p4_client.name, p4_cl_list)
+            -- No need to query the CL spec here for the CL picker's preview. If we
+            -- have it already, then it will be used, but the picker can query it as
+            -- well.
+
+            require("telescope._extensions.p4.pickers.cl").load(p4_client.name, p4_cl_list)
+          else
+            notify("No CLs are pending in the client workspace.")
+          end
         end)
       else
         log.fmt_debug("Failed to update the client's cl list: %s", p4_client.name)
