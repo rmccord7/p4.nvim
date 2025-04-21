@@ -20,7 +20,7 @@ function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
   opts = opts or {}
 
   if vim.tbl_isempty(p4_file_list:get().files) then
-    notify("No files to display in pickker", vim.log.levels.ERROR)
+    notify("No files to display in picker", vim.log.levels.ERROR)
     return
   end
 
