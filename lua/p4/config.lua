@@ -96,7 +96,7 @@ end
 ---
 --- @param opts table? Optional parameters. Not used.
 ---
-function config.setup(opts)
+function config.load_defaults(opts)
   config.opts = vim.tbl_deep_extend("force", {}, defaults, opts or {})
 end
 

@@ -17,14 +17,14 @@ local function update_current_client()
 
   local future = nio.control.future()
 
-  local p4 = require("p4")
+  local p4_context = require("p4.context")
   local p4_env = require("p4.core.env")
   local P4_Current_Client = require("p4.core.lib.current_client")
 
   -- Only update the current client if it has not already been done or the current client does not match what was
   -- previously set.
-  if p4.current_client and p4.current_client.name == p4_env.client then
-    future.set(p4.current_client)
+  if p4_context.current_client and p4_context.current_client.name == p4_env.client then
+    future.set(p4_context.current_client)
   else
     -- Create new current client.
     local new_current_client = P4_Current_Client:new(p4_env.client)
@@ -33,9 +33,9 @@ local function update_current_client()
     local success = pcall(new_current_client:read_spec().wait)
 
     if success then
-      p4.current_client = new_current_client
+      p4_context.current_client = new_current_client
 
-      future.set(p4.current_client)
+      future.set(p4_context.current_client)
     else
       future.set_error()
     end

@@ -243,7 +243,7 @@ function P4_Env.update()
       update_from_env()
     end
 
-    local p4 = require("p4")
+    local context = require("p4")
 
     -- Handle invalid configuration
     if check_env() then
@@ -258,8 +258,8 @@ function P4_Env.update()
       disable_autocmds()
 
       -- Update the current client.
-      if not p4.current_client or p4.current_client.name ~= P4_Env.client then
-        p4.current_client = nil
+      if not context.current_client or context.current_client.name ~= P4_Env.client then
+        context.current_client = nil
       end
 
       -- If nothing is configured, then we will assume this is

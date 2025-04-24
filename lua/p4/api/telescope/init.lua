@@ -1,4 +1,3 @@
-local p4 = require("p4")
 
 local log = require("p4.log")
 local notify = require("p4.notify")
@@ -19,8 +18,10 @@ function P4_Telescope_API.check()
     return false
   end
 
+  local p4_context = require("p4.context")
+
   -- Ensure the telescope plugin is supported.
-  if not p4.telescope then
+  if not p4_context.telescope then
     notify("Telescope not supported", vim.log.levels.ERROR)
 
     log.error("Telescope not supported")
