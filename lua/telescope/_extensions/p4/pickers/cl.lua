@@ -1,4 +1,4 @@
-local config = require("telescope.config").values
+local config = require("telescope.config.values")
 local finders = require("telescope.finders")
 local pickers = require("telescope.pickers")
 local actions = require("telescope.actions")
