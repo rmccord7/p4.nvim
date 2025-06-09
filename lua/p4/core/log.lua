@@ -1,7 +1,5 @@
 local settings = require("p4.config")
 
-local path = require("p4.core.path")
-
 local config = {
   name = "command", -- Name of the plugin. Prepended to log messages.
   use_console = vim.env.P4_SHELL_VERBOSE_LOGS == "1", -- Determines whether console logging is enabled.
@@ -17,10 +15,9 @@ local config = {
 }
 
 local log = {
-  outfile = path.concat {
-    (vim.fn.has "nvim-0.8.0" == 1) and vim.fn.stdpath "log" or vim.fn.stdpath "cache",
-    ("p4_%s.log"):format(config.name),
-  },
+  outfile = vim.fs.joinpath(
+    (vim.fn.has "nvim-0.10.0" == 1) and vim.fn.stdpath "log" or vim.fn.stdpath "cache",
+    ("p4_%s.log"):format(config.name))
 }
 
 do
