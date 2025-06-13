@@ -1,4 +1,4 @@
-M = {}
+local M = {}
 
 function M.add_parser(parent_subparser)
 

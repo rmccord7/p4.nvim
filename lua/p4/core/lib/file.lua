@@ -15,6 +15,16 @@ local P4_File_Path = require("p4.core.lib.file_path")
 --- @field workRev integer Revision if file is opened.
 --- @field action string Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
 
+--- @class P4_File_Revision : table
+--- @field depot_file P4_Depot_File_Path Depot path to the file.
+--- @field number string Revision number.
+--- @field action string CL Action.
+--- @field cl string CL ID.
+--- @field user string CL user.
+--- @field client string Name of the client associated with the CL.
+--- @field date P4_Command_Describe_Result_Date_Time CL submission date/time.
+--- @field description string CL description.
+
 --- @class P4_File : table
 --- @field protected client P4_Client P4 Client.
 --- @field protected cl P4_CL P4 CL.

@@ -72,7 +72,7 @@ end
 --- Parses the output of the P4 command.
 ---
 --- @param output string
---- @return P4_Command_Change_Result result Hold's the parsed result from the command output.
+--- @return P4_Command_Describe_Result[] result Hold's the parsed result from the command output.
 function P4_Command_Describe:process_response(output)
   log.trace("P4_Command_Describe: process_response")
 

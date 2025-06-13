@@ -3,7 +3,7 @@ local log = require("p4.log")
 --- @class P4_Command_Changes_Options : table
 --- @field client? string Limit CLs to the specified P4 client
 
---- @class P4_Command_Changes_Result
+--- @class P4_Command_Changes_Result : table
 --- @field name string P4 CL name
 --- @field user string CL user.
 --- @field client_name string CL Client's name.
