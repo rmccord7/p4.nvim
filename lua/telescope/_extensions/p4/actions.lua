@@ -19,8 +19,6 @@ function M.get_selection(prompt_bufnr)
     table.insert(selection, actions_state.get_selected_entry()[1])
   end
 
-  print(vim.inspect(selection))
-
   return(selection)
 end
 

@@ -1,9 +1,22 @@
----@class P4Commands
-local M = {}
+local cmdparse = require("mega.cmdparse")
 
-M.file = require("p4.commands.file")
-M.cl = require("p4.commands.cl")
-M.client = require("p4.commands.client")
-M.login = require("p4.commands.login").login
+local _PREFIX = "P4"
 
-return M
+---@type mega.cmdparse.ParserCreator
+local _SUBCOMMANDS = function()
+  local parser = cmdparse.ParameterParser.new({ name = _PREFIX, help = "The root of all P4 commands." })
+  local sub_parser = parser:add_subparsers({ destination = "commands" })
+
+  require("p4.commands.file").get_parser(sub_parser)
+  require("p4.commands.cl").get_parser(sub_parser)
+  require("p4.commands.client").get_parser(sub_parser)
+  require("p4.commands.clients").get_parser(sub_parser)
+
+  require("p4.commands.opened").add_parser(sub_parser)
+  require("p4.commands.log").add_parser(sub_parser)
+  require("p4.commands.output").add_parser(sub_parser)
+
+  return parser
+end
+
+cmdparse.create_user_command(_SUBCOMMANDS, _PREFIX)

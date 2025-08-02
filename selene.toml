@@ -1,0 +1,4 @@
+std="neovim"
+
+[rules]
+allow = ["mixed_tables"]

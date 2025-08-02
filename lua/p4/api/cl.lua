@@ -1,72 +1,87 @@
-local util = require("p4.util")
-local commands = require("p4.commands")
+local nio = require("nio")
 
---- P4 Change List
-local M = {}
+local log = require("p4.log")
+local notify = require("p4.notify")
 
---- Edits the CL spec
-function M.edit_spec(buf, cl)
+--- @class P4_CL_API
+local P4_CL_API = {}
 
-  vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
-  vim.api.nvim_set_option_value("filetype", "conf", { buf = buf })
-  vim.api.nvim_set_option_value("expandtab", false, { buf = buf })
+--- Creates a new CL in the current client workspace.
+---
+--- @async
+function P4_CL_API.new()
 
-  vim.api.nvim_buf_set_name(buf, "change list: " .. cl)
+  log.trace("P4_CL_API: new")
 
-  vim.api.nvim_win_set_buf(0, buf)
+  nio.run(function()
+    local P4_Command_Change = require("p4.core.lib.command.change")
 
-  vim.api.nvim_create_autocmd("BufWriteCmd", {
-    buffer = buf,
-    once = true,
-    callback = function()
-      local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+    --- @type P4_Command_Change_Options
+    local cmd_opts = {
+      cl = nil,
+      type = P4_Command_Change.opts_type.READ,
+      read = nil,
+    }
 
-      result = vim.system(commands.cl.write(cl), { stdin = content }):wait()
+    -- Create a new CL and dump to stdout.
+    local cmd = P4_Command_Change:new(cmd_opts)
 
-      if result.code > 0 then
-        util.error(result.stderr)
-        return
-      end
+    local success, sc = pcall(cmd:run().wait)
 
-      vim.api.nvim_buf_delete(buf, { force = true })
-    end,
-  })
-end
+    --- @cast sc vim.SystemCompleted
 
---- Get files from CL spec
-function M.get_files_from_spec(spec)
+    if success then
+      vim.schedule(function()
+        local buf = vim.api.nvim_create_buf(false, true)
 
-  local result
-  local files = {}
+        vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
+        vim.api.nvim_set_option_value("filetype", "p4_spec", { buf = buf })
 
-  for index, line in ipairs(vim.split(spec, "\n")) do
+        -- CL name won't be assigned until the CL spec is written so
+        -- we can't know what it is ahead of time.
+        vim.api.nvim_buf_set_name(buf, "CL: New")
 
-    -- Files in the changelist begin with '#'
-    if line:find("#", 1, true) then
+        vim.api.nvim_buf_set_lines(buf, 0, 1, true, vim.split(sc.stdout, "\n"))
 
-      -- CL spec lists files in depot path
-      local depot_path = line:sub(1, line:find("#", 1, true) - 1)
+        vim.api.nvim_win_set_buf(0, buf)
 
-      result = util.run_command(commands.file.where(depot_path))
+        vim.api.nvim_create_autocmd("BufWriteCmd", {
+          buffer = buf,
+          once = true,
+          callback = function()
 
-      if result.code == 0 then
+            local cl_spec = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
 
-        -- Result contains "depot_path client_path file_path"
-        local path = {}
+            vim.api.nvim_buf_delete(buf, { force = true })
 
-        -- Convert to table
-        for string in result.stdout:gmatch("%S+") do
-          table.insert(path, string)
-        end
+            nio.run(function()
 
-        -- Third element contains the file path
-        table.insert(files, index, path[3])
-      end
+              --- @type P4_Command_Change_Options
+              cmd_opts = {
+                cl = nil,
+                type = P4_Command_Change.opts_type.WRITE,
+                write = {
+                  input = cl_spec
+                },
+              }
+
+              cmd = P4_Command_Change:new(cmd_opts)
+
+              success, sc = pcall(cmd:run().wait)
+
+              if success then
+                notify("New CL spec written")
+
+                log.debug("Successfully written the new CL's spec")
+              else
+                log.fmt_error("Failed to write the new CL's spec")
+              end
+            end)
+          end,
+        })
+      end)
     end
-  end
-
-  return files
+  end)
 end
 
-return M
-
+return P4_CL_API

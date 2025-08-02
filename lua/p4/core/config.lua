@@ -1,75 +1,36 @@
-local uv = vim.loop
-
 local config = require("p4.config")
-local debug = require("p4.debug")
-
-local core_path = require("p4.core.path")
+local log = require("p4.log")
 
 --- P4 config
 local M = {
-    path = nil, -- path to config file
+    config_path = nil, -- path to config file
 }
 
--- https://github.com/neovim/nvim-lspconfig/blob/master/lua/lspconfig/util.lua#L209
-local function search_ancestors(startpath, func)
-  vim.validate { func = { func, 'f' } }
-  if func(startpath) then
-    return startpath
-  end
-  local guard = 100
-  for path in core_path.iterate_parents(startpath) do
-    -- Prevent infinite recursion if our algorithm breaks
-    guard = guard - 1
-    if guard == 0 then
-      return
-    end
-
-    if func(path) then
-      return path
-    end
-  end
-end
-
--- https://github.com/neovim/nvim-lspconfig/blob/master/lua/lspconfig/util.lua#L209
-local function find_p4_ancestor(startpath)
-  return search_ancestors(startpath, function(path)
-    debug.print("Path" .. core_path.sanitize(core_path.join(path, config.opts.p4.config)))
-    if core_path.is_file(core_path.join(path, config.opts.p4.config)) then
-      return path
-    end
-  end)
-end
 --- Clears the P4CONFIG path
 function M.clear()
-  M.path = nil
+  M.config_path = nil
 end
 
 --- Find the P4CONFIG file
 function M.find()
-  debug.print("Finding P4 Config")
-  debug.print("P4CONFIG: " .. config.opts.p4.config)
+  log.debug("Finding P4 Config")
+  log.debug("P4CONFIG: " .. config.opts.p4.config)
 
   -- Check if we cached the P4config path the last time this
   -- function was called.
-  if M.path == nil then
+  if M.config_path == nil then
 
-    -- Start at the CWD and go up until the P4CONFIG is found
-    local path = find_p4_ancestor(uv.cwd())
+    M.config_path = vim.fs.find(config.opts.p4.config, {
+      upward = true,
+    })[1]
 
-    if path then
+    log.debug("P4 Config: " .. M.config_path)
 
-      M.path = core_path.sanitize(path .. "/" .. config.opts.p4.config)
-
-      debug.print("Config Path: " .. M.path)
-
-    else
-      debug.print("Config: Not found")
-    end
-
-  else
-
-    debug.print("P4 Config: " .. M.path)
     return true
+  else
+    log.debug("P4 Config: Not found")
+
+    return false
   end
 end
 
