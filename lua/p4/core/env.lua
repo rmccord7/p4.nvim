@@ -3,21 +3,19 @@ local notify = require("p4.notify")
 
 local config = require("p4.core.config")
 
---TODO: Make p4 env private
-
 ---@class P4_Env : table
 ---@field user? string Identifies the P4 user
 ---@field host? string Identifies the P4 host
 ---@field port? string Identifies the P4 port
 ---@field client? string Identifies the P4 client
----@field private ac_group? integer Identifies the P4 client
 local P4_Env = {
   user = nil,
   host = nil,
   port = nil,
   client = nil,
-  ac_group = nil,
 }
+
+local ac_group = nil
 
 --- Checks to make sure the P4 enviroment is configured.
 local function check_env()
@@ -36,9 +34,10 @@ local function display_env()
   log.info("P4CLIENT: " .. P4_Env.client)
 end
 
---- Updates the P4 environment innformation from the shell's
---- environment.
-local function update_from_config()
+--- Tries to update the P4 environment information from NVIM variables.
+local function update_from_NVIM()
+  log.trace("Trying to update P4 environment from NVIM")
+
   if vim.g.p4 and vim.g.p4.config then
     P4_Env.user = vim.g.p4.config.user
     P4_Env.host = vim.g.p4.config.host
@@ -47,25 +46,33 @@ local function update_from_config()
   end
 
   if check_env() then
-    log.info("P4 configured from plugin config")
+    log.info("P4 environment configured from NVIM")
+  else
+    P4_Env.clear()
   end
 end
 
---- Updates the P4 environment innformation from the shell's
+--- Tries to update the P4 environment innformation from the shell's
 --- environment.
-local function update_from_env()
+local function update_from_shell_env()
+  log.trace("Trying to update P4 environment from the shell enviroment")
+
   P4_Env.user = os.getenv("P4USER")
   P4_Env.host = os.getenv("P4HOST")
   P4_Env.port = os.getenv("P4PORT")
   P4_Env.client = os.getenv("P4CLIENT")
 
   if check_env() then
-    log.info("P4 configured from enviroment")
+    log.info("P4 environment configured from the shell enviroment")
+  else
+    P4_Env.clear()
   end
 end
 
---- Updates the P4 environment innformation from a P4CONFIG file.
-local function update_from_file(config_path)
+--- Tries to update the P4 environment information from a P4CONFIG file.
+local function update_from_config_file(config_path)
+  log.trace("Trying to update P4 environment from the shell enviroment")
+
   local input = io.open(config_path):read("*a")
 
   if input then
@@ -81,6 +88,8 @@ local function update_from_file(config_path)
 
     if check_env() then
       log.info("P4 configured from P4CONFIG")
+    else
+      P4_Env.clear()
     end
   end
 end
@@ -127,12 +136,12 @@ end
 --- Enables autocmds
 ---
 local function enable_autocmds()
-  P4_Env.ac_group = vim.api.nvim_create_augroup("P4_File", {})
+  ac_group = vim.api.nvim_create_augroup("P4_File", {})
 
   --- Check for P4 workspace when buffer is entered.
   ---
   vim.api.nvim_create_autocmd("BufEnter", {
-    group = P4_Env.ac_group,
+    group = ac_group,
     pattern = "*",
     callback = function()
       if P4_Env.update() then
@@ -144,7 +153,7 @@ local function enable_autocmds()
   })
 
   vim.api.nvim_create_autocmd("BufNewFile", {
-    group = P4_Env.ac_group,
+    group = ac_group,
     pattern = "*",
     callback = function()
       prompt_open_for_add(vim.fn.expand("%:p"))
@@ -155,7 +164,7 @@ local function enable_autocmds()
   --- the associated file opened for add/edit in the client workspace.
   ---
   vim.api.nvim_create_autocmd("BufWrite", {
-    group = P4_Env.ac_group,
+    group = ac_group,
     pattern = "*",
     callback = function()
       if P4_Env.update() then
@@ -178,7 +187,7 @@ local function enable_autocmds()
   --- client workspace.
   ---
   vim.api.nvim_create_autocmd("FileChangedRO", {
-    group = P4_Env.ac_group,
+    group = ac_group,
     pattern = "*",
     callback = function()
       prompt_open_for_edit(vim.fn.expand("%:p"))
@@ -189,11 +198,11 @@ end
 --- Disables autocmds
 ---
 local function disable_autocmds()
-  if P4_Env.ac_group then
+  if ac_group then
     -- Remove file autocmds
-    vim.api.nvim_del_augroup_by_id(P4_Env.ac_group)
+    vim.api.nvim_del_augroup_by_id(ac_group)
 
-    P4_Env.ac_group = nil
+    ac_group = nil
   end
 end
 
@@ -209,29 +218,44 @@ function P4_Env.clear()
   P4_Env.client = nil
 end
 
+--- Gets the P4 environment information is valid.
+---
+--- @return P4_Env? P4_Env P4 environment if valid. Otherwise nil.
+--- @nodiscard
+function P4_Env.get()
+  log.trace("Get P4 Enviroment")
+
+  local env_valid = check_env()
+
+  if env_valid then
+    return P4_Env
+  else
+    return nil
+  end
+end
+
 --- Updates the P4 environment information
 function P4_Env.update()
-  log.debug("Updating P4 config")
+  log.trace("Updating P4 environment")
 
   -- If we have already cached the P4 environment
   -- information, then there is nothing to do.
   if not check_env() then
-    log.info("Configuring P4")
-
     -- Clear the current p4 environment information
     P4_Env.clear()
 
     -- Plugin config for P4 config has highest precedence
-    update_from_config()
+    update_from_NVIM()
 
     -- P4CONFIG for P4 config has the next highest precendence
     if not check_env() then
+
       -- Find P4 config file so we can try to use it.
       if config.find() then
         -- Need to find the P4CONFIG file to load p4 environment
         -- information.
         if config.config_path then
-          update_from_file(config.config_path)
+          update_from_config_file(config.config_path)
         end
       end
     end
@@ -240,7 +264,7 @@ function P4_Env.update()
     if not check_env() then
       -- Try to get P4 information from the shell enviroment
       -- (user using something like direnv).
-      update_from_env()
+      update_from_shell_env()
     end
 
     local context = require("p4")
@@ -296,6 +320,10 @@ function P4_Env.update()
       -- Clear the current p4 environment information
       P4_Env.clear()
     end
+
+    vim.api.nvim_exec_autocmds('User', {
+      pattern = 'P4EnvUpdate',
+    })
   end
 
   return check_env()
