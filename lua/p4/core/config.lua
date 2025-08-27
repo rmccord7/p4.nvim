@@ -6,24 +6,21 @@ local M = {
     config_path = nil, -- path to config file
 }
 
---- Clears the P4CONFIG path
+--- Clears the path to the P4CONFIG file.
 function M.clear()
   M.config_path = nil
 end
 
---- Find the P4CONFIG file
+--- Finds the P4CONFIG file.
 function M.find()
-  log.debug("Finding P4 Config")
+  log.trace("Finding P4CONFIG")
   log.debug("P4CONFIG: " .. config.opts.p4.config)
 
-  -- Check if we cached the P4config path the last time this
-  -- function was called.
-  if M.config_path == nil then
+  M.config_path = vim.fs.find(config.opts.p4.config, {
+    upward = true,
+  })[1]
 
-    M.config_path = vim.fs.find(config.opts.p4.config, {
-      upward = true,
-    })[1]
-
+  if M.config_path then
     log.debug("P4 Config: " .. M.config_path)
 
     return true
