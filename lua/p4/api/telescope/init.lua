@@ -1,4 +1,3 @@
-
 local log = require("p4.log")
 local notify = require("p4.notify")
 
@@ -10,11 +9,10 @@ local P4_Telescope_API = {}
 --- Performs common checks for all Telescope APIs to make sure that
 --- the plugin has been configured correctly for their use.
 function P4_Telescope_API.check()
-
   log.trace("P4_Telescope_API: check")
 
   -- Ensure P4 environment is set.
-  if not p4_env.update() then
+  if not p4_env.check() then
     return false
   end
 

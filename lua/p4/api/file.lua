@@ -3,6 +3,8 @@ local nio = require("nio")
 local log = require("p4.log")
 local notify = require("p4.notify")
 
+local p4_env = require("p4.core.env")
+
 --- @class P4_File_API
 local P4_File_API = {}
 
@@ -36,27 +38,30 @@ function P4_File_API.add(file_path_list, opts)
     return
   end
 
-  nio.run(function()
-    local P4_Command_Add = require("p4.core.lib.command.add")
+  -- Ensure the P4 environment is valid before we continue.
+  if p4_env.check() then
+    nio.run(function()
+      local P4_Command_Add = require("p4.core.lib.command.add")
 
-    local cmd = P4_Command_Add:new(file_path_list)
+      local cmd = P4_Command_Add:new(file_path_list)
 
-    local success, sc = pcall(cmd:run().wait)
+      local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+      --- @cast sc vim.SystemCompleted
 
-    if success then
-      vim.schedule(function()
-        set_buffer_writeable()
+      if success then
+        vim.schedule(function()
+          set_buffer_writeable()
 
-        log.debug("Successfully added the file(s)")
+          log.debug("Successfully added the file(s)")
 
-        notify("File(s) opened for add")
-      end)
-    else
-      log.debug("Failed to add the files: %s", sc.stderr)
-    end
-  end)
+          notify("File(s) opened for add")
+        end)
+      else
+        log.debug("Failed to add the files: %s", sc.stderr)
+      end
+    end)
+  end
 end
 
 --- Checks out one or more files in the client workspace.
@@ -77,27 +82,30 @@ function P4_File_API.edit(file_path_list, opts)
     return
   end
 
-  nio.run(function()
-    local P4_Command_Edit = require("p4.core.lib.command.edit")
+  -- Ensure the P4 environment is valid before we continue.
+  if p4_env.check() then
+    nio.run(function()
+      local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-    local cmd = P4_Command_Edit:new(file_path_list)
+      local cmd = P4_Command_Edit:new(file_path_list)
 
-    local success, sc = pcall(cmd:run().wait)
+      local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+      --- @cast sc vim.SystemCompleted
 
-    if success then
-      vim.schedule(function()
-        set_buffer_writeable()
+      if success then
+        vim.schedule(function()
+          set_buffer_writeable()
 
-        log.debug("Successfully edited the file(s)")
+          log.debug("Successfully edited the file(s)")
 
-        notify("File(s) opened for edit")
-      end)
-    else
-      log.debug("Failed to add the files: %s", sc.stderr)
-    end
-  end)
+          notify("File(s) opened for edit")
+        end)
+      else
+        log.debug("Failed to add the files: %s", sc.stderr)
+      end
+    end)
+  end
 end
 
 --- Reverts one or more files in the client workspace.
@@ -159,23 +167,26 @@ function P4_File_API.shelve(file_path_list, opts)
     return
   end
 
-  nio.run(function()
-    local P4_Command_Shelve = require("p4.core.lib.command.shelve")
+  -- Ensure the P4 environment is valid before we continue.
+  if p4_env.check() then
+    nio.run(function()
+      local P4_Command_Shelve = require("p4.core.lib.command.shelve")
 
-    local cmd = P4_Command_Shelve:new(file_path_list)
+      local cmd = P4_Command_Shelve:new(file_path_list)
 
-    local success, sc = pcall(cmd:run().wait)
+      local success, sc = pcall(cmd:run().wait)
 
-    --- @cast sc vim.SystemCompleted
+      --- @cast sc vim.SystemCompleted
 
-    if success then
-      log.debug("Successfully shelved the file(s)")
+      if success then
+        log.debug("Successfully shelved the file(s)")
 
-      notify("File(s) shelved")
-    else
-      log.debug("Failed to shelved the files: %s", sc.stderr)
-    end
-  end)
+        notify("File(s) shelved")
+      else
+        log.debug("Failed to shelved the files: %s", sc.stderr)
+      end
+    end)
+  end
 end
 
 return P4_File_API

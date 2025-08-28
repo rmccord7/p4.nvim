@@ -140,13 +140,11 @@ function P4_Env.update()
   -- If we have already cached the P4 environment
   -- information, then there is nothing to do.
   if not check_env() then
-
     -- Plugin config for P4 config has highest precedence
     update_env_from_NVIM()
 
     -- P4CONFIG for P4 config has the next highest precendence
     if not check_env() then
-
       update_env_from_config_file()
     end
 
@@ -174,7 +172,6 @@ function P4_Env.update()
       -- If nothing is configured, then we will assume this is
       -- not a P4 workspace.
       if P4_Env.user or P4_Env.host or P4_Env.port or P4_Env.client then
-
         -- Inform the user what has not been set.
         if not P4_Env.host then
           notify("Invalid P4Host", vim.log.levels.ERROR)
@@ -201,11 +198,14 @@ function P4_Env.update()
         end
       end
 
+      -- We should only notify the user that the environment is invalid if they try to do something since this may not
+      -- be a valid P4 workspace.
+
       log.error("Configuring P4 environment failed")
     end
 
-    vim.api.nvim_exec_autocmds('User', {
-      pattern = 'P4EnvUpdate',
+    vim.api.nvim_exec_autocmds("User", {
+      pattern = "P4EnvUpdate",
     })
   end
 
@@ -219,6 +219,8 @@ function P4_Env.check()
   local env_valid = check_env()
 
   if not env_valid then
+    notify("Invalid environment", vim.log.levels.ERROR)
+
     log.debug("P4 environment not configured")
   end
 
