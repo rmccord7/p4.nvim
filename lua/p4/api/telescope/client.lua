@@ -55,7 +55,7 @@ local function get_current_client()
 
   local p4_env = require("p4.core.env")
 
-  local env_valid = p4_env.check(true)
+  local env_valid = p4_env.check()
 
   if env_valid then
 
