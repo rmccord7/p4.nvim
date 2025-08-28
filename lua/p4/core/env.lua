@@ -165,11 +165,11 @@ function P4_Env.update()
 
       log.debug("P4 environment configured")
 
-      -- Enable autocmds
-      ac.enable_autocmds()
+      -- Enable file autocmds
+      ac.enable_file_autocmds()
     else
-      -- Disable autocmds
-      ac.disable_autocmds()
+      -- Disable file autocmds
+      ac.disable_file_autocmds()
 
       -- If nothing is configured, then we will assume this is
       -- not a P4 workspace.

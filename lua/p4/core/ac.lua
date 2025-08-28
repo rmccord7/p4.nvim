@@ -5,7 +5,7 @@ local P4_AC = {
 }
 
 --- Prompts the user to open the file for add.
-local function prompt_open_for_add(file_path)
+local function prompt_file_open_for_add(file_path)
   vim.fn.inputsave()
   local result = vim.fn.input("Open for add (y/n): ")
   vim.fn.inputrestore()
@@ -18,7 +18,7 @@ local function prompt_open_for_add(file_path)
 end
 
 --- Prompts the user to open the file for edit.
-local function prompt_open_for_edit(file_path)
+local function prompt_file_open_for_edit(file_path)
   -- Prevent changing read only warning
   vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
 
@@ -39,9 +39,9 @@ local function prompt_open_for_edit(file_path)
   end
 end
 
---- Enables autocmds
+--- Enables file autocmds.
 ---
-function P4_AC.enable_autocmds()
+function P4_AC.enable_file_autocmds()
   P4_AC.ac_group = vim.api.nvim_create_augroup("P4_File", {})
 
   --- Check for P4 workspace when buffer is entered.
@@ -60,7 +60,7 @@ function P4_AC.enable_autocmds()
     group = P4_AC.ac_group,
     pattern = "*",
     callback = function()
-      prompt_open_for_add(vim.fn.expand("%:p"))
+      prompt_file_open_for_add(vim.fn.expand("%:p"))
     end,
   })
 
@@ -76,9 +76,9 @@ function P4_AC.enable_autocmds()
 
       if not modifiable then
         if vim.fn.filereadable(file_path) then
-          prompt_open_for_edit(file_path)
+          prompt_file_open_for_edit(file_path)
         else
-          prompt_open_for_add(file_path)
+          prompt_file_open_for_add(file_path)
         end
       end
     end,
@@ -92,14 +92,14 @@ function P4_AC.enable_autocmds()
     group = P4_AC.ac_group,
     pattern = "*",
     callback = function()
-      prompt_open_for_edit(vim.fn.expand("%:p"))
+      prompt_file_open_for_edit(vim.fn.expand("%:p"))
     end,
   })
 end
 
---- Disables autocmds
+--- Disables file autocmds.
 ---
-function P4_AC.disable_autocmds()
+function P4_AC.disable_file_autocmds()
   if P4_AC.ac_group then
     -- Remove file autocmds
     vim.api.nvim_del_augroup_by_id(P4_AC.ac_group)
