@@ -19,7 +19,7 @@ end
 
 --- Prompts the user to open the file for edit.
 local function prompt_file_open_for_edit(file_path)
-  -- Prevent changing read only warning
+  -- Prevent changing read only warning.
   vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
 
   vim.fn.inputsave()
@@ -44,18 +44,18 @@ end
 function P4_AC.enable_file_autocmds()
   P4_AC.ac_group = vim.api.nvim_create_augroup("P4_File", {})
 
-  --- Check for P4 workspace when buffer is entered.
-  ---
+  -- Set buffer to reload for changes made outside vim such as
+  -- pulling latest revisions.
   vim.api.nvim_create_autocmd("BufEnter", {
     group = P4_AC.ac_group,
     pattern = "*",
     callback = function()
-      -- Set buffer to reload for changes made outside vim such as
-      -- pulling latest revisions.
       vim.api.nvim_set_option_value("autoread", false, { scope = "local" })
     end,
   })
 
+  -- If we create a new buffer, then check if the user wants to add it to the
+  -- workspace.
   vim.api.nvim_create_autocmd("BufNewFile", {
     group = P4_AC.ac_group,
     pattern = "*",
@@ -64,9 +64,8 @@ function P4_AC.enable_file_autocmds()
     end,
   })
 
-  --- If the buffer is written, then prompt the user whether they want
-  --- the associated file opened for add/edit in the client workspace.
-  ---
+  --- If the buffer is written, then check if the user wants to add/edit it in
+  --- the client workspace.
   vim.api.nvim_create_autocmd("BufWrite", {
     group = P4_AC.ac_group,
     pattern = "*",
@@ -84,10 +83,8 @@ function P4_AC.enable_file_autocmds()
     end,
   })
 
-  --- If the buffer is modified and read only, then prompt the user
-  --- whether they want the associated file opened for edit in the
-  --- client workspace.
-  ---
+  -- If the buffer is modified and read only, then prompt the user whether they
+  -- want the associated file opened for edit in the client workspace.
   vim.api.nvim_create_autocmd("FileChangedRO", {
     group = P4_AC.ac_group,
     pattern = "*",
