@@ -16,6 +16,9 @@ log.trace("Plugin start")
 -- Set up the user commands.
 require("p4.commands")
 
+-- Update the P4 environment.
+p4_env:update()
+
 --- Update the P4 workspace if the directory changed.
 local group = vim.api.nvim_create_augroup("P4", {})
 
@@ -28,7 +31,7 @@ vim.api.nvim_create_autocmd({"DirChanged"}, {
     -- Clear the previous P4 environment since we may be changing projects.
     p4_env.clear()
 
-    -- Update the P4 enviroment.
+    -- Update the P4 environment.
     p4_env:update()
   end
 })
