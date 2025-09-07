@@ -1,5 +1,6 @@
 local log = require("p4.log")
 local notify = require("p4.notify")
+local task = require("p4.task")
 
 local p4_log = require("p4.core.log")
 
@@ -49,14 +50,20 @@ function P4_Command:run()
   local nio = require("nio")
   local future = nio.control.future()
 
-  --- @param sc vim.SystemCompleted
-  local on_exit = function(sc)
-    if sc.code == 0 then
+  local start_time = vim.uv.hrtime()
+
+  nio.run(function()
+    p4_log.command(self.command)
+
+    local result = vim.system(self.command, self.sys_opts):wait()
+
+    if result.code == 0 then
 
       log.debug("Command success")
-      p4_log.output(sc.stdout)
+      log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
+      p4_log.output(result.stdout)
 
-      future.set(sc)
+      future.set(result)
     else
       local P4_Command_Login = require("p4.core.lib.command.login")
 
@@ -64,132 +71,54 @@ function P4_Command:run()
       if getmetatable(self) ~= P4_Command_Login then
 
         -- If we failed because we are not logged in.
-        if string.find(sc.stderr, "Your session has expired, please login again.", 1, true) or
-          string.find(sc.stderr, "Perforce password (P4PASSWD) invalid or unset.", 1, true) then
+        if string.find(result.stderr, "Your session has expired, please login again.", 1, true) or
+          string.find(result.stderr, "Perforce password (P4PASSWD) invalid or unset.", 1, true) then
 
           log.debug("Command failed: Not logged in")
 
-          nio.run(function()
+          -- Get user password
+          nio.fn.inputsave()
+          local password = nio.fn.inputsecret("Password: ")
+          nio.fn.inputrestore()
 
-            -- Get user password
-            nio.fn.inputsave()
-            local password = nio.fn.inputsecret("Password: ")
-            nio.fn.inputrestore()
+          --- @type P4_Command_Login_Options
+          local cmd_opts = {
+            password = password,
+          }
 
-            --- @type P4_Command_Login_Options
-            local cmd_opts = {
-              password = password,
-            }
+          -- Login to the P4 server.
+          local cmd = P4_Command_Login:new(cmd_opts)
 
-            -- Login to the P4 server.
-            local cmd = P4_Command_Login:new(cmd_opts)
+          local success, _ = pcall(cmd:run().wait)
 
-            local success, _ = pcall(cmd:run().wait)
+          -- Re-run the previous command.
+          if success then
 
-            -- Re-run the previous command.
+            log.trace("Re-trying previous command")
+
+            success, result = pcall(self:run().wait)
+
             if success then
+              log.debug("Command success")
+              p4_log.output(result.stdout)
 
-              log.debug("Re-try previous command")
-
-              success, sc = pcall(self:run().wait)
-
-              if success then
-                future.set(sc)
-              end
+              future.set(result)
             end
-          end)
+          end
         end
       else
         log.error("P4 command failed. See `:P4CLog` for more info")
-        p4_log.error(sc.stderr)
+        p4_log.error(result.stderr)
         notify("P4 command failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
 
-        future.set_error(sc)
+        future.set_error(result)
       end
     end
-  end
-
-  p4_log.command(self.command)
-
-  local ok, err = pcall(vim.system, self.command, self.sys_opts, on_exit)
-
-  if not ok then
-
-    ---@type vim.SystemCompleted
-    local sc = {
-      code = 99999,
-      signal = 0,
-      stderr = "Failed to invoke p4: " .. err,
-    }
-
-    on_exit(sc)
-  end
+  end, function(success, ...)
+        task.complete(nil, success, ...)
+  end)
 
   return future
-end
-
---- Runs the P4 command synchronously.
----
---- @return vim.SystemCompleted Vim system complete object.
---- @see vim.system
-function P4_Command:wait()
-
-  log.trace("P4_Command: wait")
-
-  p4_log.command(self.command)
-
-  local sc = vim.system(self.command, self.sys_opts):wait()
-
-  --- @cast sc vim.SystemCompleted
-
-  if sc.code == 0 then
-    self.output = sc.stdout
-
-    p4_log.output(sc.stdout)
-  else
-    local P4_Command_Login = require("p4.core.lib.command.login")
-
-    -- Make sure we do not infinitely loop if user fails to enter the correct password.
-    if getmetatable(self) ~= P4_Command_Login:new() then
-
-      -- If we failed because we are not logged in.
-      if string.find(sc.stderr, "Your session has expired, please login again.", 1, true) or
-        string.find(sc.stderr, "Perforce password (P4PASSWD) invalid or unset.", 1, true) then
-
-          -- Get user password
-          vim.fn.inputsave()
-          local password = vim.fn.inputsecret("Password: ")
-          vim.fn.inputrestore()
-
-          require("p4.core.lib.command.login")
-
-          -- Login to the P4 server.
-          local cmd = P4_Command_Login:new()
-
-          -- Update vim system options.
-          cmd.sys_opts["stdin"] = password
-
-          sc = cmd:wait()
-
-          -- Login was successful so re-run the previous command.
-          if sc.code == 0 then
-
-            sc = self:wait()
-
-          else
-            log.error("P4 command failed. See `:P4CLog` for more info")
-            p4_log.error(sc.stderr)
-            notify("P4 command failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
-          end
-      end
-    else
-      log.error("P4 command failed. See `:P4CLog` for more info")
-      p4_log.error(sc.stderr)
-      notify("P4 command failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
-    end
-  end
-
-  return sc
 end
 
 return P4_Command

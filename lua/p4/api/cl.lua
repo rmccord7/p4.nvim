@@ -1,5 +1,3 @@
-local nio = require("nio")
-
 local log = require("p4.log")
 local notify = require("p4.notify")
 
@@ -8,7 +6,7 @@ local p4_env = require("p4.core.env")
 --- @class P4_CL_API
 local P4_CL_API = {}
 
---- Creates a new CL in the current client workspace.
+--- Creates a new CL.
 ---
 --- @async
 function P4_CL_API.new()
@@ -17,75 +15,130 @@ function P4_CL_API.new()
 
   -- Ensure the P4 environment is valid before we continue.
   if p4_env.check() then
-    nio.run(function()
-      local P4_Command_Change = require("p4.core.lib.command.change")
+    local P4_Command_Change = require("p4.core.lib.command.change")
 
-      --- @type P4_Command_Change_Options
-      local cmd_opts = {
-        cl = nil,
-        type = P4_Command_Change.opts_type.READ,
-        read = nil,
-      }
+    --- @type P4_Command_Change_Options
+    local cmd_opts = {
+      cl = nil,
+      type = P4_Command_Change.opts_type.READ,
+      read = nil,
+    }
 
-      -- Create a new CL and dump to stdout.
-      local cmd = P4_Command_Change:new(cmd_opts)
+    -- Create a new CL and dump to stdout.
+    local cmd = P4_Command_Change:new(cmd_opts)
 
-      local success, sc = pcall(cmd:run().wait)
+    local success, sc = pcall(cmd:run().wait)
 
-      --- @cast sc vim.SystemCompleted
+    --- @cast sc vim.SystemCompleted
 
-      if success then
-        vim.schedule(function()
-          local buf = vim.api.nvim_create_buf(false, true)
+    if success then
+      vim.schedule(function()
+        local buf = vim.api.nvim_create_buf(false, true)
 
-          vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
-          vim.api.nvim_set_option_value("filetype", "p4_spec", { buf = buf })
+        vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
+        vim.api.nvim_set_option_value("filetype", "p4_spec", { buf = buf })
 
-          -- CL name won't be assigned until the CL spec is written so
-          -- we can't know what it is ahead of time.
-          vim.api.nvim_buf_set_name(buf, "CL: New")
+        -- CL name won't be assigned until the CL spec is written so
+        -- we can't know what it is ahead of time.
+        vim.api.nvim_buf_set_name(buf, "CL: New")
 
-          vim.api.nvim_buf_set_lines(buf, 0, 1, true, vim.split(sc.stdout, "\n"))
+        vim.api.nvim_buf_set_lines(buf, 0, 1, true, vim.split(sc.stdout, "\n"))
 
-          vim.api.nvim_win_set_buf(0, buf)
+        vim.api.nvim_win_set_buf(0, buf)
 
-          vim.api.nvim_create_autocmd("BufWriteCmd", {
-            buffer = buf,
-            once = true,
-            callback = function()
+        vim.api.nvim_create_autocmd("BufWriteCmd", {
+          buffer = buf,
+          once = true,
+          callback = function()
 
-              local cl_spec = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
+            local cl_spec = vim.api.nvim_buf_get_lines(buf, 0, -1, true)
 
-              vim.api.nvim_buf_delete(buf, { force = true })
+            vim.api.nvim_buf_delete(buf, { force = true })
 
-              nio.run(function()
+            --- @type P4_Command_Change_Options
+            cmd_opts = {
+              cl = nil,
+              type = P4_Command_Change.opts_type.WRITE,
+              write = {
+                input = cl_spec
+              },
+            }
 
-                --- @type P4_Command_Change_Options
-                cmd_opts = {
-                  cl = nil,
-                  type = P4_Command_Change.opts_type.WRITE,
-                  write = {
-                    input = cl_spec
-                  },
-                }
+            cmd = P4_Command_Change:new(cmd_opts)
 
-                cmd = P4_Command_Change:new(cmd_opts)
+            success, sc = pcall(cmd:run().wait)
 
-                success, sc = pcall(cmd:run().wait)
+            if success then
+              notify("New CL spec written")
 
-                if success then
-                  notify("New CL spec written")
+              log.debug("Successfully written the new CL's spec")
+            else
+              log.fmt_error("Failed to write the new CL's spec")
+            end
+          end,
+        })
+      end)
+    end
+  end
+end
 
-                  log.debug("Successfully written the new CL's spec")
-                else
-                  log.fmt_error("Failed to write the new CL's spec")
-                end
-              end)
-            end,
-          })
-        end)
-      end
-    end)
+--- Reverts a CL.
+---
+--- @param cl integer Identifies the CL.
+---
+--- @async
+function P4_CL_API._revert(cl)
+
+  -- Ensure the P4 environment is valid before we continue.
+  if p4_env.check() then
+  end
+end
+
+--- Reverts a CL.
+---
+--- @async
+function P4_CL_API.revert()
+
+  log.trace("P4_CL_API: revert")
+
+  -- Ensure the P4 environment is valid before we continue.
+  if p4_env.check() then
+  end
+end
+
+--- Shelves a CL's files.
+---
+--- @async
+function P4_CL_API.shelve_files()
+
+  log.trace("P4_CL_API: shelve files")
+
+  -- Ensure the P4 environment is valid before we continue.
+  if p4_env.check() then
+  end
+end
+
+--- Deletes a CLs shelved files.
+---
+--- @async
+function P4_CL_API.delete_shelved_files()
+
+  log.trace("P4_CL_API: ")
+
+  -- Ensure the P4 environment is valid before we continue.
+  if p4_env.check() then
+  end
+end
+
+--- Deletes a CL
+---
+--- @async
+function P4_CL_API.delete()
+
+  log.trace("P4_CL_API: delete")
+
+  -- Ensure the P4 environment is valid before we continue.
+  if p4_env.check() then
   end
 end
 

@@ -1,11 +1,8 @@
-local nio = require("nio")
-
 local log = require("p4.log")
 
 local env = require("p4.core.env")
 
 --- @class P4_Current_Client : P4_Client
---- @field semaphore nio.control.Semaphore Semaphore for the current client
 local P4_Current_Client = {}
 
 --- Creates a new current client
@@ -28,22 +25,16 @@ function P4_Current_Client:new(client_name)
 
   setmetatable(new, P4_Current_Client)
 
-  new.semaphore = nio.control.semaphore(1)
-
   return new
 end
 
 --- Sets the current P4 client's CL.
 ---
 --- @param cl string P4 CL.
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_Current_Client:set_cl(cl)
 
   log.trace("P4_Current_Client: set_cl")
-
-  local future = nio.control.future()
 
   -- If CL has never been current or CL is not
   -- the current CL, then we need to update it.
@@ -62,28 +53,17 @@ function P4_Current_Client:set_cl(cl)
 
     local p4_cl = P4_Current_CL:new(new_cl)
 
-    local success = pcall(p4_cl:read_spec().wait)
+    p4_cl:read_spec()
 
     -- Make sure it exists by reading the spec.
-    if success then
+    self.cl = p4_cl
 
-      self.cl = p4_cl
-
-      log.fmt_info("Client: %s", self.name);
-      log.fmt_info("Client CL: %s", self.cl.name);
-
-      future.set()
-    else
-      future.set_error()
-    end
+    log.fmt_info("Client: %s", self.name);
+    log.fmt_info("Client CL: %s", self.cl.name);
 
   else
     log.warn("CL already set as the current client's CL")
-
-    future.set_error()
   end
-
-  return future
 end
 
 return P4_Current_Client

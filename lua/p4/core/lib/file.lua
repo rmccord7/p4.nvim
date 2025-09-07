@@ -1,5 +1,3 @@
-local nio = require("nio")
-
 local log = require("p4.log")
 
 local P4_File_Path = require("p4.core.lib.file_path")
@@ -106,14 +104,10 @@ end
 
 --- Opens the file for add.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File:add()
 
   log.trace("P4_File: add")
-
-  local future = nio.control.future()
 
   local P4_Command_Add = require("p4.core.lib.command.add")
 
@@ -123,27 +117,17 @@ function P4_File:add()
 
   if success then
     log.fmt_debug("Successfully opened the file for add: %s", self.path:get_file_path())
-
-    future.set()
   else
     log.fmt_debug("Failed to open the file for add: %s", self.path:get_file_path())
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Open the file for edit.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File:edit()
 
   log.trace("P4_File: edit")
-
-  local future = nio.control.future()
 
   local P4_Command_Edit = require("p4.core.lib.command.edit")
 
@@ -153,27 +137,17 @@ function P4_File:edit()
 
   if success then
     log.fmt_debug("Successfully opened the file for edit: %s", self.path:get_file_path())
-
-    future.set()
   else
     log.fmt_debug("Failed to open the file for edit: %s", self.path:get_file_path())
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Reverts the file.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File:revert()
 
   log.trace("P4_File: revert")
-
-  local future = nio.control.future()
 
   local P4_Command_Revert = require("p4.core.lib.command.revert")
 
@@ -183,27 +157,17 @@ function P4_File:revert()
 
   if success then
     log.fmt_debug("Successfully reverted the file: %s", self.path:get_file_path())
-
-    future.set()
   else
     log.fmt_debug("Failed to revert the file: %s", self.path:get_file_path())
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Open the file for delete.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File:delete()
 
   log.trace("P4_File: delete")
-
-  local future = nio.control.future()
 
   local P4_Command_Delete = require("p4.core.lib.command.delete")
 
@@ -213,27 +177,17 @@ function P4_File:delete()
 
   if success then
     log.fmt_debug("Successfully opened the file for delete: %s", self.path:get_file_path())
-
-    future.set()
   else
     log.fmt_debug("Failed to open the file for delete: %s", self.path:get_file_path())
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Updates the file's stats.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File:update_stats()
 
   log.trace("P4_File: update_stats")
-
-  local future = nio.control.future()
 
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
@@ -248,15 +202,9 @@ function P4_File:update_stats()
     --- @cast sc vim.SystemCompleted
 
     self.spec = cmd:process_response(sc.stdout)[1]
-
-    future.set()
   else
     log.fmt_debug("Failed to update the file's stats: %s", self.path:get_file_path())
-
-    future.set_error()
   end
-
-  return future
 end
 
 return P4_File

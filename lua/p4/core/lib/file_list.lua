@@ -1,7 +1,4 @@
-local nio = require("nio")
-
 local log = require("p4.log")
-local task = require("p4.task")
 
 --- @class P4_File_List : table
 --- @field protected files P4_File[] P4 files.
@@ -103,14 +100,10 @@ end
 
 --- Opens each file for add.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File_List:add()
 
   log.trace("P4_File_List: add")
-
-  local future = nio.control.future()
 
   local P4_Command_Add = require("p4.core.lib.command.add")
 
@@ -123,28 +116,18 @@ function P4_File_List:add()
   if success then
 
     log.debug("Successfully opened each file for add")
-
-    future.set()
   else
     log.fmt_debug("Failed to open each file for add: %s", sc.stderr)
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Opens each file for edit.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File_List:edit()
 
   log.trace("P4_File_List: edit")
 
-  local future = nio.control.future()
-
   local P4_Command_Edit = require("p4.core.lib.command.edit")
 
   local cmd = P4_Command_Edit:new(self:build_file_path_list())
@@ -154,30 +137,19 @@ function P4_File_List:edit()
   --- @cast sc vim.SystemCompleted
 
   if success then
-
     log.debug("Successfully opened each file for edit")
-
-    future.set()
   else
     log.fmt_debug("Failed to open each file for edit: %s", sc.stderr)
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Reverts each file.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File_List:revert()
 
   log.trace("P4_File_List: revert")
 
-  local future = nio.control.future()
-
   local P4_Command_Edit = require("p4.core.lib.command.edit")
 
   local cmd = P4_Command_Edit:new(self:build_file_path_list())
@@ -187,29 +159,18 @@ function P4_File_List:revert()
   --- @cast sc vim.SystemCompleted
 
   if success then
-
     log.debug("Successfully reverted each file")
-
-    future.set()
   else
     log.fmt_debug("Failed to revert each file: %s", sc.stderr)
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Opens each file for delete.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File_List:delete()
 
   log.trace("P4_File_List: delete")
-
-  local future = nio.control.future()
 
   local P4_Command_delete = require("p4.core.lib.command.delete")
 
@@ -220,29 +181,18 @@ function P4_File_List:delete()
   --- @cast sc vim.SystemCompleted
 
   if success then
-
     log.debug("Successfully opened each file for delete")
-
-    future.set()
   else
     log.fmt_debug("Failed to open each file for delete: %s", sc.stderr)
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Updates each file's stats.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_File_List:update_stats()
 
   log.trace("P4_File_List: update_stats")
-
-  local future = nio.control.future()
 
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
@@ -262,15 +212,9 @@ function P4_File_List:update_stats()
     for index, file in ipairs(self.files) do
       file:set_file_stats(result[index])
     end
-
-    future.set()
   else
     log.fmt_debug("Failed to update each file's stats: %s", sc.stderr)
-
-    future.set_error()
   end
-
-  return future
 end
 
 return P4_File_List

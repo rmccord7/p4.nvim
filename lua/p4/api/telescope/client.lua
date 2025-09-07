@@ -8,14 +8,10 @@ local P4_Telescope_Client_API = {}
 
 --- Gets the current client.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 local function update_current_client()
 
   log.trace("P4_Telescope_Client_API: update_current_client")
-
-  local future = nio.control.future()
 
   local p4_context = require("p4.context")
   local p4_env = require("p4.core.env")
@@ -23,9 +19,8 @@ local function update_current_client()
 
   -- Only update the current client if it has not already been done or the current client does not match what was
   -- previously set.
-  if p4_context.current_client and p4_context.current_client.name == p4_env.client then
-    future.set(p4_context.current_client)
-  else
+  if not p4_context.current_client or p4_context.current_client.name ~= p4_env.client then
+
     -- Create new current client.
     local new_current_client = P4_Current_Client:new(p4_env.client)
 
@@ -34,14 +29,8 @@ local function update_current_client()
 
     if success then
       p4_context.current_client = new_current_client
-
-      future.set(p4_context.current_client)
-    else
-      future.set_error()
     end
   end
-
-  return future
 end
 
 --- Gets the current client.
@@ -59,15 +48,18 @@ local function get_current_client()
 
   if env_valid then
 
-    local success, current_client = pcall(update_current_client().wait)
+    update_current_client()
 
-    if not success then
+    local p4_context = require("p4.context")
+
+    if not p4_context.current_client then
+
       notify("Current client not set", vim.log.levels.ERROR)
 
       log.error("Current client not set")
     end
 
-    return current_client
+    return p4_context.current_client
   end
 
   return nil

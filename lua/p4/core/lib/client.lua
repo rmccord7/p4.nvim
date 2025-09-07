@@ -1,5 +1,3 @@
-local nio = require("nio")
-
 local log = require("p4.log")
 local notify = require("p4.notify")
 
@@ -31,14 +29,10 @@ end
 
 --- Reads the client spec
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_Client:read_spec()
 
   log.trace("P4_Client: read_spec")
-
-  local future = nio.control.future()
 
   local P4_Command_Client = require("p4.core.lib.command.client")
 
@@ -64,15 +58,10 @@ function P4_Client:read_spec()
     self.root_file_spec = self.spec.root .. "/..."
 
     log.fmt_info("Client root: %s", self.spec.root);
-
-    future.set()
   else
     log.debug("Failed to read the client's spec: %s", self.name)
 
-    future.set_error()
   end
-
-  return future
 end
 
 --- Writes the client spec from a specified buffer to the P4 server.
@@ -92,7 +81,7 @@ function P4_Client:write_spec(buf)
   vim.api.nvim_create_autocmd("BufWriteCmd", {
     buffer = buf,
     once = true,
-    callback = nio.wrap(function()
+    callback = require("nio").wrap(function()
       local spec = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
       vim.api.nvim_buf_delete(buf, { force = true })
@@ -117,76 +106,61 @@ end
 
 --- Sends a request to P4 server for a list of the specified client's CLs.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_Client:update_cl_list()
 
   log.trace("P4_Client: update_cl_list")
 
-  local future = nio.control.future()
-
   -- Read the current client's spec so we can get the client's
   -- workspace root.
-  local success, _ = pcall(self:read_spec().wait)
+  self:read_spec()
 
-    if success then
+  local P4_Command_Changes = require("p4.core.lib.command.changes")
 
-      local P4_Command_Changes = require("p4.core.lib.command.changes")
+  --- @type P4_Command_Changes_Options
+  local cmd_opts = {
+    client = self.name
+  }
 
-      --- @type P4_Command_Changes_Options
-      local cmd_opts = {
-        client = self.name
+  local cmd = P4_Command_Changes:new(cmd_opts)
+
+  local sc
+
+  success, sc = pcall(cmd:run().wait)
+
+  if success then
+
+    --- @cast sc vim.SystemCompleted
+
+    --- @type P4_Command_Changes_Result[]
+    local result_list = cmd:process_response(sc.stdout)
+
+    local P4_CL = require("p4.core.lib.cl")
+
+    self.p4_cl_list = {}
+
+    for _, result in ipairs(result_list) do
+
+      --- @type P4_New_CL_Information
+      local new_cl = {
+        name = result.name,
+        client = self,
+        user = result.user,
+        description = result.description,
+        status = P4_CL.set_status_from_string(result.status),
       }
 
-      local cmd = P4_Command_Changes:new(cmd_opts)
+      local p4_cl = P4_CL:new(new_cl)
 
-      local sc
-
-      success, sc = pcall(cmd:run().wait)
-
-      if success then
-
-        --- @cast sc vim.SystemCompleted
-
-        --- @type P4_Command_Changes_Result[]
-        local result_list = cmd:process_response(sc.stdout)
-
-        local P4_CL = require("p4.core.lib.cl")
-
-        self.p4_cl_list = {}
-
-        for _, result in ipairs(result_list) do
-
-          --- @type P4_New_CL_Information
-          local new_cl = {
-            name = result.name,
-            client = self,
-            user = result.user,
-            description = result.description,
-            status = P4_CL.set_status_from_string(result.status),
-          }
-
-          local p4_cl = P4_CL:new(new_cl)
-
-          table.insert(self.p4_cl_list, p4_cl)
-        end
-
-        log.fmt_debug("Successfully updated the client's cl list: %s", self.name)
-
-        future.set()
-      else
-        log.fmt_debug("Failed to read the client's file list: %s", self.name)
-
-        self.p4_cl_list = nil
-
-        future.set_error()
-      end
-    else
-      log.error("Failed to read the client's spec: %s", self.name)
+      table.insert(self.p4_cl_list, p4_cl)
     end
 
-  return future
+    log.fmt_debug("Successfully updated the client's cl list: %s", self.name)
+  else
+    log.fmt_debug("Failed to read the client's file list: %s", self.name)
+
+    self.p4_cl_list = nil
+  end
 end
 
 --- Returns the list of P4 files that are open for the specified client.
@@ -201,88 +175,66 @@ end
 
 --- Sends a request to P4 server for a list of the specified client's open files.
 ---
---- @return nio.control.Future future Future to wait on.
---- @nodiscard
 --- @async
 function P4_Client:update_file_list()
 
   log.trace("P4_Client: update_file_list")
 
-  local future = nio.control.future()
-
   -- Read the current client's spec so we can get the client's
   -- workspace root.
-  local success, _ = pcall(self:read_spec().wait)
+  self:read_spec()
+
+  local P4_Command_Opened = require("p4.core.lib.command.opened")
+
+  local sc
+  local cmd = P4_Command_Opened:new()
+
+  success, sc = pcall(cmd:run().wait)
+
+  --- @cast sc vim.SystemCompleted
 
   if success then
-    local P4_Command_Opened = require("p4.core.lib.command.opened")
 
-    local sc
-    local cmd = P4_Command_Opened:new()
+    --- @type P4_Command_Opened_Result[]
+    local result = cmd:process_response(sc.stdout)
 
-    success, sc = pcall(cmd:run().wait)
+    if #result > 0 then
 
-    --- @cast sc vim.SystemCompleted
+      local P4_File_Path = require("p4.core.lib.file_path")
+      local P4_File_List = require("p4.core.lib.file_list")
+      local P4_CL = require("p4.core.lib.cl")
 
-    if success then
+      --- @type P4_New_File_Information[]
+      local new_file_list = {}
 
-      --- @type P4_Command_Opened_Result[]
-      local result = cmd:process_response(sc.stdout)
+      for _, file_info in ipairs(result) do
 
-      if #result > 0 then
+        --- @type P4_New_CL_Information
+        local new_cl = {
+          name = file_info.cl,
+          client = self,
+        }
 
-        local P4_File_Path = require("p4.core.lib.file_path")
-        local P4_File_List = require("p4.core.lib.file_list")
-        local P4_CL = require("p4.core.lib.cl")
+        --- @type P4_New_File_Information
+        local new_file = {
+          client = self,
+          cl = P4_CL:new(new_cl),
+          path = {
+            type = P4_File_Path.type.DEPOT,
+            path = file_info.path,
+          },
+        }
 
-        --- @type P4_New_File_Information[]
-        local new_file_list = {}
-
-        for _, file_info in ipairs(result) do
-
-          --- @type P4_New_CL_Information
-          local new_cl = {
-            name = file_info.cl,
-            client = self,
-          }
-
-          --- @type P4_New_File_Information
-          local new_file = {
-            client = self,
-            cl = P4_CL:new(new_cl),
-            path = {
-              type = P4_File_Path.type.DEPOT,
-              path = file_info.path,
-            },
-          }
-
-          table.insert(new_file_list, new_file)
-        end
-
-        self.p4_file_list = P4_File_List:new(new_file_list)
-
-        log.fmt_debug("Successfully updated the client's file list: %s", self.name)
-
-        success, _ = pcall(self.p4_file_list:update_stats().wait)
-
-        if success then
-          future.set()
-        else
-          future.set_error()
-        end
-      else
-        future.set()
+        table.insert(new_file_list, new_file)
       end
+
+      self.p4_file_list = P4_File_List:new(new_file_list)
+
+      log.fmt_debug("Successfully updated the client's file list: %s", self.name)
+
+      self.p4_file_list:update_stats()
     end
-  else
-    log.fmt_debug("Failed to read the client's file list: %s", self.name)
-
-    self.p4_file_list = nil
-
-    future.set_error()
   end
-
-  return future
 end
 
 --- Returns the list of P4 files that are open for the specified client.
