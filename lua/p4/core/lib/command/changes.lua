@@ -1,5 +1,7 @@
 local log = require("p4.log")
 
+local P4_Command = require("p4.core.lib.command")
+
 --- @class P4_Command_Changes_Options : table
 --- @field client? string Limit CLs to the specified P4 client
 
@@ -14,53 +16,11 @@ local log = require("p4.log")
 --- @field opts P4_Command_Changes_Options Command options.
 local P4_Command_Changes = {}
 
---- Creates the P4 command.
----
---- @param opts? P4_Command_Changes_Options P4 command options.
---- @return P4_Command_Changes P4_Command_Changes P4 command.
-function P4_Command_Changes:new(opts)
-  opts = opts or {}
-
-  log.trace("P4_Command_Changes: new")
-
-  P4_Command_Changes.__index = P4_Command_Changes
-
-  local P4_Command = require("p4.core.lib.command")
-
-  setmetatable(P4_Command_Changes, {__index = P4_Command})
-
-  local command = {
-    "p4",
-    "changes",
-    "--me", -- Current user
-    "-l", -- Long output
-    "-s", -- Pending CLs only for now
-    "pending",
-  }
-
-  if opts.client then
-
-    local ext_cmd = {
-      "-c",
-      opts.client
-    }
-
-    vim.list_extend(command, ext_cmd)
-  end
-
-  --- @type P4_Command_Changes
-  local new = P4_Command:new(command)
-
-  setmetatable(new, P4_Command_Changes)
-
-  return new
-end
-
 --- Parses the output of the P4 command.
 ---
 --- @param output string
 --- @return P4_Command_Changes_Result[] result Hold's the parsed result from the command output.
-function P4_Command_Changes:process_response(output)
+local function process_response(output)
 
   log.trace("P4_Command_Changes: process_response")
 
@@ -120,6 +80,64 @@ function P4_Command_Changes:process_response(output)
   log.fmt_debug("P4_Command_Changes: Process Response result, %s", result_list)
 
   return result_list
+end
+
+--- Creates the P4 command.
+---
+--- @param opts? P4_Command_Changes_Options P4 command options.
+--- @return P4_Command_Changes P4_Command_Changes P4 command.
+function P4_Command_Changes:new(opts)
+  opts = opts or {}
+
+  log.trace("P4_Command_Changes: new")
+
+  P4_Command_Changes.__index = P4_Command_Changes
+
+  setmetatable(P4_Command_Changes, {__index = P4_Command})
+
+  local command = {
+    "p4",
+    "changes",
+    "--me", -- Current user
+    "-l", -- Long output
+    "-s", -- Pending CLs only for now
+    "pending",
+  }
+
+  if opts.client then
+
+    local ext_cmd = {
+      "-c",
+      opts.client
+    }
+
+    vim.list_extend(command, ext_cmd)
+  end
+
+  --- @type P4_Command_Changes
+  local new = P4_Command:new(command)
+
+  setmetatable(new, P4_Command_Changes)
+
+  return new
+end
+
+--- Runs the P4 command.
+---
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Changes_Result[]|nil Result Holds the result if the function was successful.
+--- @async
+function P4_Command_Changes:run()
+
+  local result = nil
+
+  local success, sc = pcall(P4_Command.run(self).wait)
+
+  if success then
+    result = process_response(sc.stdout)
+  end
+
+  return success, result
 end
 
 return P4_Command_Changes

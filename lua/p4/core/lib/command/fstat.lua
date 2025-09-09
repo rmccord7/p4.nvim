@@ -1,5 +1,7 @@
 local log = require("p4.log")
 
+local P4_Command = require("p4.core.lib.command")
+
 --- @class P4_Command_FStat_Options : table
 
 --- @class P4_Command_FStat_Result : table
@@ -17,42 +19,11 @@ local log = require("p4.log")
 --- @field opts P4_Command_FStat_Options Command options.
 local P4_Command_FStat = {}
 
---- Creates the P4 command.
----
---- @param file_path_list P4_File_Spec[] One or more file paths.
---- @param opts? P4_Command_FStat_Options P4 command options.
---- @return P4_Command_FStat P4_Command_FStat P4 command.
-function P4_Command_FStat:new(file_path_list, opts)
-  opts = opts or {}
-
-  log.trace("P4_Command_FStat: new")
-
-  P4_Command_FStat.__index = P4_Command_FStat
-
-  local P4_Command = require("p4.core.lib.command")
-
-  setmetatable(P4_Command_FStat, {__index = P4_Command})
-
-  local command = {
-    "p4",
-    "fstat",
-  }
-
-  vim.list_extend(command, file_path_list)
-
-  --- @type P4_Command_FStat
-  local new = P4_Command:new(command)
-
-  setmetatable(new, P4_Command_FStat)
-
-  return new
-end
-
 --- Parses the output of the P4 command.
 ---
 --- @param output string Command output.
 --- @return P4_Command_FStat_Result[] result Hold's the parsed result from the command output.
-function P4_Command_FStat:process_response(output)
+function P4_Command_FStat:_process_response(output)
 
   log.trace("P4_Command_FStat: process_response")
 
@@ -101,6 +72,53 @@ function P4_Command_FStat:process_response(output)
   end
 
   return result_list
+end
+
+--- Creates the P4 command.
+---
+--- @param file_path_list P4_File_Spec[] One or more file paths.
+--- @param opts? P4_Command_FStat_Options P4 command options.
+--- @return P4_Command_FStat P4_Command_FStat P4 command.
+function P4_Command_FStat:new(file_path_list, opts)
+  opts = opts or {}
+
+  log.trace("P4_Command_FStat: new")
+
+  P4_Command_FStat.__index = P4_Command_FStat
+
+  setmetatable(P4_Command_FStat, {__index = P4_Command})
+
+  local command = {
+    "p4",
+    "fstat",
+  }
+
+  vim.list_extend(command, file_path_list)
+
+  --- @type P4_Command_FStat
+  local new = P4_Command:new(command)
+
+  setmetatable(new, P4_Command_FStat)
+
+  return new
+end
+
+--- Runs the P4 command.
+---
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_FStat_Result[]|nil Result Holds the result if the function was successful.
+--- @async
+function P4_Command_FStat:run()
+
+  local result = nil
+
+  local success, sc = pcall(P4_Command.run(self).wait)
+
+  if success then
+    result = P4_Command_FStat:_process_response(sc.stdout)
+  end
+
+  return success, result
 end
 
 return P4_Command_FStat

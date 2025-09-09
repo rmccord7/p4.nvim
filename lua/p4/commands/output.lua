@@ -2,7 +2,7 @@ local M = {}
 
 function M.add_parser(parent_subparser)
 
-  local parser = parent_subparser:add_parser({ name="log", help = "View P4 output." })
+  local parser = parent_subparser:add_parser({ name="output", help = "View P4 output." })
 
   parser:set_execute(function()
     local p4_log = require("p4.core.log")

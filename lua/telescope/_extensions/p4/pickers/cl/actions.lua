@@ -61,24 +61,15 @@ function P4_Telescope_CL_Actions.display_cl_files(prompt_bufnr)
       --- @type P4_CL
       local p4_cl = p4_cl_list[1]
 
-      nio.run(function()
+      local success = p4_cl:update_file_list_from_spec()
 
-        local success, _ = pcall(p4_cl:update_file_list_from_spec().wait)
+      if success then
 
-        if success then
+        -- Run the telescope file picker.
+        local picker = require("telescope._extensions.p4.pickers.file")
 
-          vim.schedule(function()
-
-            -- Run the telescope file picker.
-            local picker = require("telescope._extensions.p4.pickers.file")
-
-            picker.load("CL: " .. p4_cl:get().name, p4_cl:get_file_list())
-          end)
-        end
-      end, function(success, ...)
-        task.complete(nil, success, ...)
-      end)
-
+        picker.load("CL: " .. p4_cl:get().name, p4_cl:get_file_list())
+      end
     else
       notify("Only 1 CL may be selected for this action.", vim.log.levels.WARN)
     end

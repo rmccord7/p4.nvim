@@ -1,11 +1,13 @@
 local log = require("p4.log")
+local notify = require("p4.notify")
+
+local P4_Command = require("p4.core.lib.command")
 
 --- @class P4_Command_Login_Options : table
 --- @field check? boolean Checks if a user is logged in.
 --- @field password? string Password for login. Required if check is nil or false.
 
---- @class P4_Command_Login_Result : table
---- @field result boolean Path of the file in the depot.
+--- @class P4_Command_Login_Result : boolean
 
 --- @class P4_Command_Login : P4_Command
 --- @field opts P4_Command_Login_Options Command options.
@@ -22,8 +24,6 @@ function P4_Command_Login:new(opts)
   log.trace("P4_Command_Login: new")
 
   P4_Command_Login.__index = P4_Command_Login
-
-  local P4_Command = require("p4.core.lib.command")
 
   setmetatable(P4_Command_Login, {__index = P4_Command})
 
@@ -53,6 +53,21 @@ function P4_Command_Login:new(opts)
   end
 
   return new
+end
+
+--- Runs the P4 command.
+---
+--- @return P4_Command_Login_Result Result Indicates if the function was successful.
+--- @async
+function P4_Command_Login:run()
+
+  local success, _ = pcall(P4_Command.run(self).wait)
+
+  if success then
+    notify("Login success")
+  end
+
+  return success
 end
 
 return P4_Command_Login

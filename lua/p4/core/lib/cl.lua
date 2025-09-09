@@ -153,6 +153,7 @@ end
 
 --- Reads the client spec from the P4 server.
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_CL:read_spec()
 
@@ -167,21 +168,22 @@ function P4_CL:read_spec()
     read = nil,
   }
 
-  local cmd = P4_Command_Change:new(cmd_opts)
+  local success, result = P4_Command_Change:new(cmd_opts):run()
 
-  local success, sc = pcall(cmd:run().wait)
-
-  --- @cast sc vim.SystemCompleted
+  --- @cast result P4_Command_Change_Result
 
   if success then
 
     log.fmt_debug("Successfully read the CL's spec: %s", self.name)
 
     -- Build the spec table from the output.
-    self.spec = cmd:process_response(sc.stdout)
+    --FIX: Currently types align, but are different
+    self.spec = result
   else
     log.error("Failed to read the CL's spec: %s", self.name)
   end
+
+  return success
 end
 
 --- Writes the CL spec from a specified buffer to the P4 server.
@@ -219,12 +221,11 @@ function P4_CL:write_spec(buf)
         },
       }
 
-      local cmd = P4_Command_Change:new(cmd_opts)
-
-      local success, _ = pcall(cmd:run().wait)
+      local success, _ = P4_Command_Change:new(cmd_opts):run()
 
       if success then
         notify(("CL %s spec written").format(self.name))
+
         log.fmt_debug("Successfully written CL's spec: %s", self.name)
       else
         log.fmt_error("Failed to write the CL's spec: %s", self.name)
@@ -235,44 +236,49 @@ end
 
 --- Gets files from the CL spec
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_CL:update_file_list_from_spec()
 
   log.trace("P4_CL: update_file_list_from_spec")
 
-  self:read_spec()
+  local success = self:read_spec()
 
-  if not vim.tbl_isempty(self.spec.file_path_list) then
+  if success then
+    if not vim.tbl_isempty(self.spec.file_path_list) then
 
-    local P4_File_Path = require("p4.core.lib.file_path")
-    local P4_File_List = require("p4.core.lib.file_list")
+      local P4_File_Path = require("p4.core.lib.file_path")
+      local P4_File_List = require("p4.core.lib.file_list")
 
-    --- @type P4_New_File_Information[]
-    local new_file_list = {}
+      --- @type P4_New_File_Information[]
+      local new_file_list = {}
 
-    for _, file_path in ipairs(self.spec.file_path_list) do
+      for _, file_path in ipairs(self.spec.file_path_list) do
 
-      --- @type P4_New_File_Information
-      local new_file = {
-        client = self:get().client,
-        cl = self,
-        path = {
-          type = P4_File_Path.type.DEPOT,
-          path = file_path,
-        },
-      }
+        --- @type P4_New_File_Information
+        local new_file = {
+          client = self:get().client,
+          cl = self,
+          path = {
+            type = P4_File_Path.type.DEPOT,
+            path = file_path,
+          },
+        }
 
-      table.insert(new_file_list, new_file)
+        table.insert(new_file_list, new_file)
+      end
+
+      self.p4_file_list = P4_File_List:new(new_file_list)
+
+      log.fmt_debug("Successfully updated the CL's file list: %s", self.name)
+
+      self.p4_file_list:update_stats()
+    else
+      log.fmt_debug("No files list for CL: %s", self.name)
     end
-
-    self.p4_file_list = P4_File_List:new(new_file_list)
-
-    log.fmt_debug("Successfully updated the CL's file list: %s", self.name)
-
-    self.p4_file_list:update_stats()
-  else
-    log.fmt_debug("No files list for CL: %s", self.name)
   end
+
+  return success
 end
 
 return P4_CL

@@ -1,5 +1,7 @@
 local log = require("p4.log")
 
+local P4_Command = require("p4.core.lib.command")
+
 -- Lua 5.1 compatibility
 
 -- selene: allow(incorrect_standard_library_use)
@@ -47,69 +49,11 @@ P4_Command_Change.opts_type = {
     WRITE = 1,
 }
 
---- Creates the P4 command.
----
---- @param opts? P4_Command_Change_Options P4 command options.
---- @return P4_Command_Change P4_Command_Change P4 command.
-function P4_Command_Change:new(opts)
-  opts = opts or {}
-
-  log.trace("P4_Command_Change: new")
-
-  P4_Command_Change.__index = P4_Command_Change
-
-  local P4_Command = require("p4.core.lib.command")
-
-  setmetatable(P4_Command_Change, {__index = P4_Command})
-
-  local command = {
-    "p4",
-    "change",
-  }
-
-  if opts.type == P4_Command_Change.opts_type.READ then
-
-    local ext_cmd = {
-      "-o", -- Write change list to STDOUT
-    }
-
-    vim.list_extend(command, ext_cmd)
-  end
-
-  if opts.type == P4_Command_Change.opts_type.WRITE then
-    local ext_cmd = {
-      "-i", -- Read change list to STDIN
-    }
-
-    vim.list_extend(command, ext_cmd)
-  end
-
-  if opts.cl then
-    table.insert(command, opts.cl)
-  end
-
-  --- @type P4_Command_Change
-  local new = P4_Command:new(command)
-
-  setmetatable(new, P4_Command_Change)
-
-  new.opts = opts
-
-  if opts.type == P4_Command_Change.opts_type.WRITE then
-    assert(opts.write and opts.write.input, "Input required for P4 client command")
-
-    -- Input needs to be supplied to STDIN.
-    new.sys_opts["stdin"] = opts.write.input
-  end
-
-  return new
-end
-
 --- Parses the output of the P4 command.
 ---
 --- @param output string
 --- @return P4_Command_Change_Result result Hold's the parsed result from the command output.
-function P4_Command_Change:process_response(output)
+local function process_response(output)
 
   log.trace("P4_Command_Change: process_response")
 
@@ -233,6 +177,82 @@ function P4_Command_Change:process_response(output)
   log.fmt_debug("P4_Command_Change: Process Response result, %s", spec_table)
 
   return spec_table
+end
+
+--- Creates the P4 command.
+---
+--- @param opts? P4_Command_Change_Options P4 command options.
+--- @return P4_Command_Change P4_Command_Change P4 command.
+function P4_Command_Change:new(opts)
+  opts = opts or {}
+
+  log.trace("P4_Command_Change: new")
+
+  P4_Command_Change.__index = P4_Command_Change
+
+  setmetatable(P4_Command_Change, {__index = P4_Command})
+
+  local command = {
+    "p4",
+    "change",
+  }
+
+  if opts.type == P4_Command_Change.opts_type.READ then
+
+    local ext_cmd = {
+      "-o", -- Write change list to STDOUT
+    }
+
+    vim.list_extend(command, ext_cmd)
+  end
+
+  if opts.type == P4_Command_Change.opts_type.WRITE then
+    local ext_cmd = {
+      "-i", -- Read change list to STDIN
+    }
+
+    vim.list_extend(command, ext_cmd)
+  end
+
+  if opts.cl then
+    table.insert(command, opts.cl)
+  end
+
+  --- @type P4_Command_Change
+  local new = P4_Command:new(command)
+
+  setmetatable(new, P4_Command_Change)
+
+  new.opts = opts
+
+  if opts.type == P4_Command_Change.opts_type.WRITE then
+    assert(opts.write and opts.write.input, "Input required for P4 client command")
+
+    -- Input needs to be supplied to STDIN.
+    new.sys_opts["stdin"] = opts.write.input
+  end
+
+  return new
+end
+
+--- Runs the P4 command.
+---
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Change_Result|nil Result Holds the result if the function was successful.
+--- @async
+function P4_Command_Change:run()
+
+  local result = nil
+
+  local success, sc = pcall(P4_Command.run(self).wait)
+
+  if success then
+    if self.opts.type == P4_Command_Change.opts_type.READ then
+      result = process_response(sc.stdout)
+    end
+  end
+
+  return success, result
 end
 
 return P4_Command_Change

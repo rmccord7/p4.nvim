@@ -1,5 +1,7 @@
 local log = require("p4.log")
 
+local P4_Command = require("p4.core.lib.command")
+
 -- Lua 5.1 compatibility
 if not table.unpack then
     table.unpack = unpack
@@ -14,6 +16,7 @@ end
 --- @field Workspace string Workspace view mapping
 
 --- @class P4_Client_Spec : table
+--- @field output string Read change spec output.
 --- @field client string Name of the client
 --- @field update P4_Client_Spec_Date_Time Date/time this client was modified
 --- @field access P4_Client_Spec_Date_Time Date/time this client was last used
@@ -51,85 +54,18 @@ P4_Command_Client.opts_type = {
     WRITE = 1,
 }
 
---- Creates the P4 command.
----
---- @param client string P4 client name.
---- @param opts? P4_Command_Client_Options P4 command options.
---- @return P4_Command_Client P4_Command_Client P4 command.
-function P4_Command_Client:new(client, opts)
-  opts = opts or {}
-
-  log.trace("P4_Command_Client: new")
-
-  P4_Command_Client.__index = P4_Command_Client
-
-  local P4_Command = require("p4.core.lib.command")
-
-  setmetatable(P4_Command_Client, {__index = P4_Command})
-
-  local command = {
-    "p4",
-    "client",
-  }
-
-  if opts.type == P4_Command_Client.opts_type.READ then
-
-    local ext_cmd = {
-      "-o", -- Read client spec to STDOUT
-    }
-
-    vim.list_extend(command, ext_cmd)
-
-    if opts.read and opts.read.template then
-
-      ext_cmd = {
-        "-t", -- Get options and view from the specified template for the new client.
-        opts.read.template
-      }
-
-      vim.list_extend(command, ext_cmd)
-    end
-  end
-
-  if opts.type == P4_Command_Client.opts_type.WRITE then
-
-    local ext_cmd = {
-      "-i", -- Write client spec to STDIN
-    }
-
-    vim.list_extend(command, ext_cmd)
-  end
-
-  table.insert(command, client)
-
-  --- @type P4_Command_Client
-  local new = P4_Command:new(command)
-
-  setmetatable(new, P4_Command_Client)
-
-  new.opts = opts
-  new.client = client
-
-  if opts.type == P4_Command_Client.opts_type.WRITE then
-    assert(opts.write and opts.write.input, "Input required for P4 client command")
-
-    -- Input needs to be supplied to STDIN.
-    new.sys_opts["stdin"] = opts.write.input
-  end
-
-  return new
-end
-
 --- Parses the output of the P4 command.
 ---
 --- @param output string
 --- @return P4_Command_Client_Result result Hold's the parsed result from the command output.
-function P4_Command_Client:process_response(output)
+local function process_response(output)
 
   log.trace("P4_Command_Client: process_response")
 
   --- @type P4_Command_Client_Result
-  local spec_table = {}
+  local spec_table = {
+    output = output,
+  }
 
   local spec = output
 
@@ -260,6 +196,91 @@ function P4_Command_Client:process_response(output)
   end
 
   return spec_table
+end
+
+--- Creates the P4 command.
+---
+--- @param client string P4 client name.
+--- @param opts? P4_Command_Client_Options P4 command options.
+--- @return P4_Command_Client P4_Command_Client P4 command.
+function P4_Command_Client:new(client, opts)
+  opts = opts or {}
+
+  log.trace("P4_Command_Client: new")
+
+  P4_Command_Client.__index = P4_Command_Client
+
+  setmetatable(P4_Command_Client, {__index = P4_Command})
+
+  local command = {
+    "p4",
+    "client",
+  }
+
+  if opts.type == P4_Command_Client.opts_type.READ then
+
+    local ext_cmd = {
+      "-o", -- Read client spec to STDOUT
+    }
+
+    vim.list_extend(command, ext_cmd)
+
+    if opts.read and opts.read.template then
+
+      ext_cmd = {
+        "-t", -- Get options and view from the specified template for the new client.
+        opts.read.template
+      }
+
+      vim.list_extend(command, ext_cmd)
+    end
+  end
+
+  if opts.type == P4_Command_Client.opts_type.WRITE then
+
+    local ext_cmd = {
+      "-i", -- Write client spec to STDIN
+    }
+
+    vim.list_extend(command, ext_cmd)
+  end
+
+  table.insert(command, client)
+
+  --- @type P4_Command_Client
+  local new = P4_Command:new(command)
+
+  setmetatable(new, P4_Command_Client)
+
+  new.opts = opts
+  new.client = client
+
+  if opts.type == P4_Command_Client.opts_type.WRITE then
+    assert(opts.write and opts.write.input, "Input required for P4 client command")
+
+    -- Input needs to be supplied to STDIN.
+    new.sys_opts["stdin"] = opts.write.input
+  end
+
+  return new
+end
+
+--- Runs the P4 command.
+---
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Client_Result|nil Result Holds the result if the function was successful.
+--- @async
+function P4_Command_Client:run()
+
+  local result = nil
+
+  local success, sc = pcall(P4_Command.run(self).wait)
+
+  if success then
+    result = process_response(sc.stdout)
+  end
+
+  return success, result
 end
 
 return P4_Command_Client

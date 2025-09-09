@@ -1,11 +1,8 @@
-local nio = require("nio")
-
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
 local log = require("p4.log")
 local notify = require("p4.notify")
-local task = require("p4.task")
 
 --- @class P4_Telescope_File_Actions
 local P4_Telescope_File_Actions = {}
@@ -162,16 +159,11 @@ function P4_Telescope_File_Actions.add(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    nio.run(function()
+    local success = p4_file_list:add()
 
-      local success, _ = pcall(p4_file_list:add().wait)
-
-      if not success then
-        log.error("Telescope file action failed.")
-      end
-    end, function(success, ...)
-      task.complete(nil, success, ...)
-    end)
+    if not success then
+      log.error("Telescope file action failed.")
+    end
   end
 end
 
@@ -189,16 +181,11 @@ function P4_Telescope_File_Actions.edit(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    nio.run(function()
+    local success = p4_file_list:edit()
 
-      local success, _ = pcall(p4_file_list:edit().wait)
-
-      if not success then
-        log.error("Telescope file action failed.")
-      end
-    end, function(success, ...)
-      task.complete(nil, success, ...)
-    end)
+    if not success then
+      log.error("Telescope file action failed.")
+    end
   end
 end
 
@@ -216,16 +203,11 @@ function P4_Telescope_File_Actions.revert(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    nio.run(function()
+    local success = p4_file_list:revert()
 
-      local success, _ = pcall(p4_file_list:revert().wait)
-
-      if not success then
-        log.error("Telescope file action failed.")
-      end
-    end, function(success, ...)
-      task.complete(nil, success, ...)
-    end)
+    if not success then
+      log.error("Telescope file action failed.")
+    end
   end
 end
 
@@ -243,16 +225,11 @@ function P4_Telescope_File_Actions.delete(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    nio.run(function()
+    local success = p4_file_list:delete()
 
-      local success, _ = pcall(p4_file_list:delete().wait)
-
-      if not success then
-        log.error("Telescope file action failed.")
-      end
-    end, function(success, ...)
-      task.complete(nil, success, ...)
-    end)
+    if not success then
+      log.error("Telescope file action failed.")
+    end
   end
 end
 
@@ -270,16 +247,11 @@ function P4_Telescope_File_Actions.fstat(prompt_bufnr)
   -- No valid selection.
   if p4_file_list then
 
-    nio.run(function()
+    local success = p4_file_list:update_stats()
 
-      local success, _ = pcall(p4_file_list:update_stats().wait)
-
-      if not success then
-        log.error("Telescope file action failed.")
-      end
-    end, function(success, ...)
-      task.complete(nil, success, ...)
-    end)
+    if not success then
+      log.error("Telescope file action failed.")
+    end
   end
 end
 

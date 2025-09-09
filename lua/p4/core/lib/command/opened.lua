@@ -1,5 +1,7 @@
 local log = require("p4.log")
 
+local P4_Command = require("p4.core.lib.command")
+
 --- @class P4_Command_Opened_Options : table
 --- @field cl? string Only files in the specified changelist.
 
@@ -11,49 +13,11 @@ local log = require("p4.log")
 --- @field opts P4_Command_Opened_Options Command options.
 local P4_Command_Opened = {}
 
---- Creates the P4 command.
----
---- @param opts? P4_Command_Opened_Options P4 command options
---- @return P4_Command_Opened P4_Command_Opened A new current P4 client
-function P4_Command_Opened:new(opts)
-  opts = opts or {}
-
-  log.trace("P4_Command_Opened: new")
-
-  P4_Command_Opened.__index = P4_Command_Opened
-
-  local P4_Command = require("p4.core.lib.command")
-
-  setmetatable(P4_Command_Opened, {__index = P4_Command})
-
-  local command = {
-    "p4",
-    "opened",
-  }
-
-  if opts.cl then
-
-    local ext_cmd = {
-      "-c",
-      opts.cl,
-    }
-
-    vim.list_extend(command, ext_cmd)
-  end
-
-  --- @type P4_Command_Opened
-  local new = P4_Command:new(command)
-
-  setmetatable(new, P4_Command_Opened)
-
-  return new
-end
-
 --- Parses the output of the P4 command.
 ---
 --- @param output string
 --- @return P4_Command_Opened_Result[] result Hold's the parsed result from the command output.
-function P4_Command_Opened:process_response(output)
+function P4_Command_Opened:_process_response(output)
 
   log.trace("P4_Command_Opened: process_response")
 
@@ -82,6 +46,60 @@ function P4_Command_Opened:process_response(output)
   end
 
   return result
+end
+
+--- Creates the P4 command.
+---
+--- @param opts? P4_Command_Opened_Options P4 command options
+--- @return P4_Command_Opened P4_Command_Opened A new current P4 client
+function P4_Command_Opened:new(opts)
+  opts = opts or {}
+
+  log.trace("P4_Command_Opened: new")
+
+  P4_Command_Opened.__index = P4_Command_Opened
+
+  setmetatable(P4_Command_Opened, {__index = P4_Command})
+
+  local command = {
+    "p4",
+    "opened",
+  }
+
+  if opts.cl then
+
+    local ext_cmd = {
+      "-c",
+      opts.cl,
+    }
+
+    vim.list_extend(command, ext_cmd)
+  end
+
+  --- @type P4_Command_Opened
+  local new = P4_Command:new(command)
+
+  setmetatable(new, P4_Command_Opened)
+
+  return new
+end
+
+--- Runs the P4 command.
+---
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Opened_Result[]|nil Result Holds the result if the function was successful.
+--- @async
+function P4_Command_Opened:run()
+
+  local result = nil
+
+  local success, sc = pcall(P4_Command.run(self).wait)
+
+  if success then
+    result = P4_Command_Opened:_process_response(sc.stdout)
+  end
+
+  return success, result
 end
 
 return P4_Command_Opened

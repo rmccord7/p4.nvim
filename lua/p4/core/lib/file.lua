@@ -111,15 +111,7 @@ function P4_File:add()
 
   local P4_Command_Add = require("p4.core.lib.command.add")
 
-  local cmd = P4_Command_Add:new({self.path:get_file_path()})
-
-  local success, _ = pcall(cmd:run().wait)
-
-  if success then
-    log.fmt_debug("Successfully opened the file for add: %s", self.path:get_file_path())
-  else
-    log.fmt_debug("Failed to open the file for add: %s", self.path:get_file_path())
-  end
+  P4_Command_Add:new({self.path:get_file_path()}):run()
 end
 
 --- Open the file for edit.
@@ -131,15 +123,7 @@ function P4_File:edit()
 
   local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-  local cmd = P4_Command_Edit:new({self.path:get_file_path()})
-
-  local success, _ = pcall(cmd:run().wait)
-
-  if success then
-    log.fmt_debug("Successfully opened the file for edit: %s", self.path:get_file_path())
-  else
-    log.fmt_debug("Failed to open the file for edit: %s", self.path:get_file_path())
-  end
+  P4_Command_Edit:new({self.path:get_file_path()}):run()
 end
 
 --- Reverts the file.
@@ -151,15 +135,7 @@ function P4_File:revert()
 
   local P4_Command_Revert = require("p4.core.lib.command.revert")
 
-  local cmd = P4_Command_Revert:new({self.path:get_file_path()})
-
-  local success, _ = pcall(cmd:run().wait)
-
-  if success then
-    log.fmt_debug("Successfully reverted the file: %s", self.path:get_file_path())
-  else
-    log.fmt_debug("Failed to revert the file: %s", self.path:get_file_path())
-  end
+  P4_Command_Revert:new({self.path:get_file_path()}):run()
 end
 
 --- Open the file for delete.
@@ -171,15 +147,7 @@ function P4_File:delete()
 
   local P4_Command_Delete = require("p4.core.lib.command.delete")
 
-  local cmd = P4_Command_Delete:new({self.path:get_file_path()})
-
-  local success, _ = pcall(cmd:run().wait)
-
-  if success then
-    log.fmt_debug("Successfully opened the file for delete: %s", self.path:get_file_path())
-  else
-    log.fmt_debug("Failed to open the file for delete: %s", self.path:get_file_path())
-  end
+  P4_Command_Delete:new({self.path:get_file_path()}):run()
 end
 
 --- Updates the file's stats.
@@ -191,17 +159,15 @@ function P4_File:update_stats()
 
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-  local cmd = P4_Command_FStat:new({self.path:get_file_path()})
-
-  local success, sc = pcall(cmd:run().wait)
+  local success, result_list = P4_Command_FStat:new({self.path:get_file_path()}):run()
 
   if success then
 
+    --- @cast result_list P4_Command_FStat_Result[]
+
     log.fmt_debug("Successfully updated the file's stats: %s", self.path:get_file_path())
 
-    --- @cast sc vim.SystemCompleted
-
-    self.spec = cmd:process_response(sc.stdout)[1]
+    self.spec = result_list[1]
   else
     log.fmt_debug("Failed to update the file's stats: %s", self.path:get_file_path())
   end

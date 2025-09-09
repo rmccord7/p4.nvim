@@ -29,6 +29,7 @@ end
 
 --- Reads the client spec
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_Client:read_spec()
 
@@ -41,18 +42,16 @@ function P4_Client:read_spec()
     type = P4_Command_Client.opts_type.READ,
   }
 
-  local cmd = P4_Command_Client:new(self.name, cmd_opts)
-
-  local success, sc = pcall(cmd:run().wait)
+  local success, result = P4_Command_Client:new(self.name, cmd_opts):run()
 
   if success then
 
+    --- @cast result P4_Command_Client_Result
+
     log.fmt_debug("Successfully read the client's spec: %s", self.name)
 
-    --- @cast sc vim.SystemCompleted
-
     -- Build the spec table from the output.
-    self.spec = cmd:process_response(sc.stdout)
+    self.spec = result
 
     -- The workspace root may have changed.
     self.root_file_spec = self.spec.root .. "/..."
@@ -60,8 +59,9 @@ function P4_Client:read_spec()
     log.fmt_info("Client root: %s", self.spec.root);
   else
     log.debug("Failed to read the client's spec: %s", self.name)
-
   end
+
+  return success
 end
 
 --- Writes the client spec from a specified buffer to the P4 server.
@@ -106,6 +106,7 @@ end
 
 --- Sends a request to P4 server for a list of the specified client's CLs.
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_Client:update_cl_list()
 
@@ -122,18 +123,11 @@ function P4_Client:update_cl_list()
     client = self.name
   }
 
-  local cmd = P4_Command_Changes:new(cmd_opts)
-
-  local sc
-
-  success, sc = pcall(cmd:run().wait)
+  local success, result_list = P4_Command_Changes:new(cmd_opts):run()
 
   if success then
 
-    --- @cast sc vim.SystemCompleted
-
-    --- @type P4_Command_Changes_Result[]
-    local result_list = cmd:process_response(sc.stdout)
+    --- @cast result_list P4_Command_Changes_Result[]
 
     local P4_CL = require("p4.core.lib.cl")
 
@@ -161,6 +155,8 @@ function P4_Client:update_cl_list()
 
     self.p4_cl_list = nil
   end
+
+  return success
 end
 
 --- Returns the list of P4 files that are open for the specified client.
@@ -175,6 +171,7 @@ end
 
 --- Sends a request to P4 server for a list of the specified client's open files.
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_Client:update_file_list()
 
@@ -186,19 +183,13 @@ function P4_Client:update_file_list()
 
   local P4_Command_Opened = require("p4.core.lib.command.opened")
 
-  local sc
-  local cmd = P4_Command_Opened:new()
-
-  success, sc = pcall(cmd:run().wait)
-
-  --- @cast sc vim.SystemCompleted
+  local success, result_list = P4_Command_Opened:new():run()
 
   if success then
 
-    --- @type P4_Command_Opened_Result[]
-    local result = cmd:process_response(sc.stdout)
+    --- @cast result_list P4_Command_Opened_Result[]
 
-    if #result > 0 then
+    if #result_list > 0 then
 
       local P4_File_Path = require("p4.core.lib.file_path")
       local P4_File_List = require("p4.core.lib.file_list")
@@ -207,7 +198,7 @@ function P4_Client:update_file_list()
       --- @type P4_New_File_Information[]
       local new_file_list = {}
 
-      for _, file_info in ipairs(result) do
+      for _, file_info in ipairs(result_list) do
 
         --- @type P4_New_CL_Information
         local new_cl = {
@@ -235,6 +226,8 @@ function P4_Client:update_file_list()
       self.p4_file_list:update_stats()
     end
   end
+
+  return success
 end
 
 --- Returns the list of P4 files that are open for the specified client.

@@ -20,20 +20,12 @@ local P4_Telescope_Client_Actions = {}
 
   if entry then
 
-    local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
+    -- local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
     local P4_Client_API = require("p4.api.client")
 
-
-    --TODO: Finish implementation
-
-    --- @type P4_Client_API
-    local client = P4_Client_API.new(entry.name)
-
-    if bufnr then
-      client:edit_spec(bufnr)
-    end
-  else
+    --FIX: Use preview buffer
+    P4_Client_API.new(entry.name)
   end
 end
 

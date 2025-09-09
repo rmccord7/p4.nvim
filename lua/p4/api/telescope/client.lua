@@ -25,7 +25,7 @@ local function update_current_client()
     local new_current_client = P4_Current_Client:new(p4_env.client)
 
     -- Read current client's spec from P4 server.
-    local success = pcall(new_current_client:read_spec().wait)
+    local success = new_current_client:read_spec()
 
     if success then
       p4_context.current_client = new_current_client
@@ -42,27 +42,18 @@ local function get_current_client()
 
   log.trace("P4_Telescope_Client_API: get_current_client")
 
-  local p4_env = require("p4.core.env")
+  update_current_client()
 
-  local env_valid = p4_env.check()
+  local p4_context = require("p4.context")
 
-  if env_valid then
+  if not p4_context.current_client then
 
-    update_current_client()
+    notify("Current client not set", vim.log.levels.ERROR)
 
-    local p4_context = require("p4.context")
-
-    if not p4_context.current_client then
-
-      notify("Current client not set", vim.log.levels.ERROR)
-
-      log.error("Current client not set")
-    end
-
-    return p4_context.current_client
+    log.error("Current client not set")
   end
 
-  return nil
+  return p4_context.current_client
 end
 
 --- Opens the telescope cl picker with the specified client's CLs.
@@ -79,7 +70,7 @@ function P4_Telescope_Client_API.display_client_cls(client)
     ---
     --- @param p4_client P4_Client
     local function get_cl_list(p4_client)
-      local success = pcall(p4_client:update_cl_list().wait)
+      local success = p4_client:update_cl_list()
 
       if success then
 
@@ -111,9 +102,7 @@ function P4_Telescope_Client_API.display_client_cls(client)
 
         if current_client then
 
-          current_client.semaphore.with(function()
-            get_cl_list(current_client)
-          end)
+          get_cl_list(current_client)
         end
       else
         local P4_Client = require("p4.core.lib.client")
@@ -140,47 +129,38 @@ function P4_Telescope_Client_API.display_opened_files(client)
     ---
     --- @param p4_client P4_Client
     local function get_opened_files(p4_client)
-      local success = pcall(p4_client:update_file_list().wait)
+      local success = p4_client:update_file_list()
 
       if success then
 
-        vim.schedule(function()
+        local p4_file_list = p4_client:get_file_list()
 
-          local p4_file_list = p4_client:get_file_list()
+        if p4_file_list then
 
-          if p4_file_list then
+          -- Run the telescope file picker.
+          local picker = require("telescope._extensions.p4.pickers.file")
 
-            -- Run the telescope file picker.
-            local picker = require("telescope._extensions.p4.pickers.file")
-
-            picker.load("Opened", p4_file_list)
-          else
-            notify("No files are open in the client workspace.")
-          end
-        end)
+          picker.load("Opened", p4_file_list)
+        else
+          notify("No files are open in the client workspace.")
+        end
       end
     end
 
-    nio.run(function()
+    if not client then
 
-      if not client then
+      local current_client = get_current_client()
 
-        local current_client = get_current_client()
-
-        if current_client then
-
-          current_client.semaphore.with(function()
-            get_opened_files(current_client)
-          end)
-        end
-      else
-        local P4_Client = require("p4.core.lib.client")
-
-        local p4_client = P4_Client:new(client)
-
-        get_opened_files(p4_client)
+      if current_client then
+        get_opened_files(current_client)
       end
-    end)
+    else
+      local P4_Client = require("p4.core.lib.client")
+
+      local p4_client = P4_Client:new(client)
+
+      get_opened_files(p4_client)
+    end
   end
 end
 

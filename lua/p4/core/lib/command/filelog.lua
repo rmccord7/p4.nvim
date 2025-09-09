@@ -1,5 +1,7 @@
 local log = require("p4.log")
 
+local P4_Command = require("p4.core.lib.command")
+
 --- @class P4_Command_Filelog_Options : table
 
 --- @class P4_Command_Result_Result_Date_Time : table
@@ -89,45 +91,11 @@ local function process_revision(depot_file, lines, index)
   return revision, index
 end
 
---- Creates the P4 command.
----
---- @param file_spec_list P4_File_Spec[] One or more file paths.
---- @param opts? P4_Command_Filelog_Options P4 command options.
---- @return P4_Command_Filelog P4_Command_Filelog P4 command.
-function P4_Command_Filelog:new(file_spec_list, opts)
-  opts = opts or {}
-
-  log.trace("P4_Command_Filelog: new")
-
-  P4_Command_Filelog.__index = P4_Command_Filelog
-
-  local P4_Command = require("p4.core.lib.command")
-
-  setmetatable(P4_Command_Filelog, { __index = P4_Command })
-
-  local command = {
-    "p4",
-    "filelog",
-    "-i", -- Follow history across branches.
-    "-l", -- Full CL description.
-    "-t", -- Display the time and date.
-  }
-
-  vim.list_extend(command, file_spec_list)
-
-  --- @type P4_Command_Filelog
-  local new = P4_Command:new(command)
-
-  setmetatable(new, P4_Command_Filelog)
-
-  return new
-end
-
 --- Parses the output of the P4 command.
 ---
 --- @param output string
 --- @return P4_Command_Filelog_Result[] result Hold's the parsed result from the command output.
-function P4_Command_Filelog:process_response(output)
+function P4_Command_Filelog:_process_response(output)
   log.trace("P4_Command_Filelog: process_response")
 
   --- @type P4_Command_Filelog_Result[]
@@ -188,6 +156,56 @@ function P4_Command_Filelog:process_response(output)
   end
 
   return result_list
+end
+
+--- Creates the P4 command.
+---
+--- @param file_spec_list P4_File_Spec[] One or more file paths.
+--- @param opts? P4_Command_Filelog_Options P4 command options.
+--- @return P4_Command_Filelog P4_Command_Filelog P4 command.
+function P4_Command_Filelog:new(file_spec_list, opts)
+  opts = opts or {}
+
+  log.trace("P4_Command_Filelog: new")
+
+  P4_Command_Filelog.__index = P4_Command_Filelog
+
+  setmetatable(P4_Command_Filelog, { __index = P4_Command })
+
+  local command = {
+    "p4",
+    "filelog",
+    "-i", -- Follow history across branches.
+    "-l", -- Full CL description.
+    "-t", -- Display the time and date.
+  }
+
+  vim.list_extend(command, file_spec_list)
+
+  --- @type P4_Command_Filelog
+  local new = P4_Command:new(command)
+
+  setmetatable(new, P4_Command_Filelog)
+
+  return new
+end
+
+--- Runs the P4 command.
+---
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Filelog_Result[]|nil Result Holds the result if the function was successful.
+--- @async
+function P4_Command_Filelog:run()
+
+  local result = nil
+
+  local success, sc = pcall(P4_Command.run(self).wait)
+
+  if success then
+    result = P4_Command_Filelog:_process_response(sc.stdout)
+  end
+
+  return success, result
 end
 
 return P4_Command_Filelog

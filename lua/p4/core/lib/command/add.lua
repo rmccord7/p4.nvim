@@ -1,8 +1,11 @@
 local log = require("p4.log")
+local notify = require("p4.notify")
+
+local P4_Command = require("p4.core.lib.command")
 
 --- @class P4_Command_Add_Options : table
 
---- @class P4_Command_Add_Result : table
+--- @class P4_Command_Add_Result : boolean
 
 --- @class P4_Command_Add : P4_Command
 --- @field opts P4_Command_Add_Options Command options.
@@ -19,8 +22,6 @@ function P4_Command_Add:new(file_path_list, opts)
   log.trace("P4_Command_Add: new")
 
   P4_Command_Add.__index = P4_Command_Add
-
-  local P4_Command = require("p4.core.lib.command")
 
   setmetatable(P4_Command_Add, {__index = P4_Command})
 
@@ -39,13 +40,19 @@ function P4_Command_Add:new(file_path_list, opts)
   return new
 end
 
---- Parses the output of the P4 command.
+--- Runs the P4 command.
 ---
---- @param output string Command output.
-function P4_Command_Add:process_response(output)
-  log.trace("P4_Command_Add: process_response")
+--- @return P4_Command_Add_Result Result Indicates if the function was successful.
+--- @async
+function P4_Command_Add:run()
 
-  return output
+  local success, _ = pcall(P4_Command.run(self).wait)
+
+  if success then
+    notify("File(s) opened for add")
+  end
+
+  return success
 end
 
 return P4_Command_Add

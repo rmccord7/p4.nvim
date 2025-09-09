@@ -19,19 +19,15 @@ function P4_Telescope_History_API.display()
 
       local P4_Command_Clients = require("p4.core.lib.command.clients")
 
-      local cmd = P4_Command_Clients:new()
-
-      local success, sc = pcall(cmd:run().wait)
+      local success, result_list = P4_Command_Clients:new():run()
 
       if success then
         log.trace("Successfully received clients.")
 
-        --- @type P4_Command_Clients_Result[]
-        local result = cmd:process_response(sc.stdout)
-
+        --- @cast result_list P4_Command_Clients_Result[]
         local client_list = {}
 
-        for _, client_info in ipairs(result) do
+        for _, client_info in ipairs(result_list) do
           table.insert(client_list, client_info.client_name)
         end
 

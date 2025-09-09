@@ -3,6 +3,7 @@ local notify = require("p4.notify")
 local task = require("p4.task")
 
 local p4_log = require("p4.core.log")
+local p4_env = require("p4.core.env")
 
 ---@class P4_Command : table
 ---@field protected command string[] P4 command.
@@ -52,71 +53,83 @@ function P4_Command:run()
 
   local start_time = vim.uv.hrtime()
 
-  nio.run(function()
-    p4_log.command(self.command)
+  if p4_env.check() then
 
-    local result = vim.system(self.command, self.sys_opts):wait()
+    nio.run(function()
 
-    if result.code == 0 then
+      p4_log.command(self.command)
 
-      log.debug("Command success")
-      log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
-      p4_log.output(result.stdout)
+      local result = vim.system(self.command, self.sys_opts):wait()
 
-      future.set(result)
-    else
-      local P4_Command_Login = require("p4.core.lib.command.login")
+      if result.code == 0 then
 
-      -- Make sure we do not infinitely loop if user fails to enter the correct password.
-      if getmetatable(self) ~= P4_Command_Login then
+        log.debug("Command %s: success", self.command[2])
+        log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
+        p4_log.output(result.stdout)
 
-        -- If we failed because we are not logged in.
-        if string.find(result.stderr, "Your session has expired, please login again.", 1, true) or
-          string.find(result.stderr, "Perforce password (P4PASSWD) invalid or unset.", 1, true) then
+        future.set(result)
+      else
+        local P4_Command_Login = require("p4.core.lib.command.login")
 
-          log.debug("Command failed: Not logged in")
+        -- Make sure we do not infinitely loop if user fails to enter the correct password.
+        if getmetatable(self) ~= P4_Command_Login then
 
-          -- Get user password
-          nio.fn.inputsave()
-          local password = nio.fn.inputsecret("Password: ")
-          nio.fn.inputrestore()
+          -- If we failed because we are not logged in.
+          if string.find(result.stderr, "Your session has expired, please login again.", 1, true) or
+            string.find(result.stderr, "Perforce password (P4PASSWD) invalid or unset.", 1, true) then
 
-          --- @type P4_Command_Login_Options
-          local cmd_opts = {
-            password = password,
-          }
+            log.debug("Not logged into P4 server.")
 
-          -- Login to the P4 server.
-          local cmd = P4_Command_Login:new(cmd_opts)
+            -- Get user password
+            nio.fn.inputsave()
+            local password = nio.fn.inputsecret("Password: ")
+            nio.fn.inputrestore()
 
-          local success, _ = pcall(cmd:run().wait)
+            --- @type P4_Command_Login_Options
+            local cmd_opts = {
+              password = password,
+            }
 
-          -- Re-run the previous command.
-          if success then
+            -- Login to the P4 server.
+            local cmd = P4_Command_Login:new(cmd_opts)
 
-            log.trace("Re-trying previous command")
+            local success, _ = pcall(cmd:run().wait)
 
-            success, result = pcall(self:run().wait)
-
+            -- Re-run the previous command.
             if success then
-              log.debug("Command success")
-              p4_log.output(result.stdout)
 
-              future.set(result)
+              log.trace("Re-trying previous command.")
+
+              success, result = pcall(self:run().wait)
+
+              if success then
+                future.set(result)
+              end
+            else
+              log.error("Command %s: failed. See `:P4CLog` for more info.", self.command[2])
+              p4_log.error(result.stderr)
+              log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
+
+              notify("Command " .. self.command[2] .. " failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
+
+              future.set_error()
             end
           end
-        end
-      else
-        log.error("P4 command failed. See `:P4CLog` for more info")
-        p4_log.error(result.stderr)
-        notify("P4 command failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
+        else
+          log.error("Command %s: failed. See `:P4CLog` for more info", self.command[2])
+          p4_log.error(result.stderr)
+          log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
+          notify("Command " .. self.command[2] .. " failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
 
-        future.set_error(result)
+          future.set_error()
+        end
       end
-    end
-  end, function(success, ...)
-        task.complete(nil, success, ...)
-  end)
+    end, function(success, ...)
+      task.complete(nil, success, ...)
+    end)
+  else
+    future.set_error()
+  end
 
   return future
 end

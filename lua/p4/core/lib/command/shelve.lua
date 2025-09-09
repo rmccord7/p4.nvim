@@ -1,10 +1,13 @@
 local log = require("p4.log")
+local notify = require("p4.notify")
+
+local P4_Command = require("p4.core.lib.command")
 
 --- @class P4_Command_Shelve_Options : table
 --- @field cl? integer Shelves only the specified files in the
 ---                    specified change list.
 
---- @class P4_Command_Shelve_Result : table
+--- @class P4_Command_Shelve_Result : boolean
 
 --- @class P4_Command_Shelve : P4_Command
 --- @field opts P4_Command_Shelve_Options Command options.
@@ -21,8 +24,6 @@ function P4_Command_Shelve:new(file_spec_list, opts)
   log.trace("P4_Command_Shelve: new")
 
   P4_Command_Shelve.__index = P4_Command_Shelve
-
-  local P4_Command = require("p4.core.lib.command")
 
   setmetatable(P4_Command_Shelve, {__index = P4_Command})
 
@@ -51,9 +52,19 @@ function P4_Command_Shelve:new(file_spec_list, opts)
   return new
 end
 
---- Parses the output of the P4 command.
-function P4_Command_Shelve:process_response()
-  log.trace("P4_Command_Shelve: process_response")
+--- Runs the P4 command.
+---
+--- @return P4_Command_Shelve_Result Result Indicates if the function was successful.
+--- @async
+function P4_Command_Shelve:run()
+
+  local success, _ = pcall(P4_Command.run(self).wait)
+
+  if success then
+    notify("File(s) shelved")
+  end
+
+  return success
 end
 
 return P4_Command_Shelve

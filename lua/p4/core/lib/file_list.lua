@@ -100,6 +100,7 @@ end
 
 --- Opens each file for add.
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_File_List:add()
 
@@ -107,22 +108,12 @@ function P4_File_List:add()
 
   local P4_Command_Add = require("p4.core.lib.command.add")
 
-  local cmd = P4_Command_Add:new(self:build_file_path_list())
-
-  local success, sc = pcall(cmd:run().wait)
-
-  --- @cast sc vim.SystemCompleted
-
-  if success then
-
-    log.debug("Successfully opened each file for add")
-  else
-    log.fmt_debug("Failed to open each file for add: %s", sc.stderr)
-  end
+  return P4_Command_Add:new(self:build_file_path_list()):run()
 end
 
 --- Opens each file for edit.
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_File_List:edit()
 
@@ -130,21 +121,12 @@ function P4_File_List:edit()
 
   local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-  local cmd = P4_Command_Edit:new(self:build_file_path_list())
-
-  local success, sc = pcall(cmd:run().wait)
-
-  --- @cast sc vim.SystemCompleted
-
-  if success then
-    log.debug("Successfully opened each file for edit")
-  else
-    log.fmt_debug("Failed to open each file for edit: %s", sc.stderr)
-  end
+  return P4_Command_Edit:new(self:build_file_path_list()):run()
 end
 
 --- Reverts each file.
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_File_List:revert()
 
@@ -152,21 +134,12 @@ function P4_File_List:revert()
 
   local P4_Command_Edit = require("p4.core.lib.command.edit")
 
-  local cmd = P4_Command_Edit:new(self:build_file_path_list())
-
-  local success, sc = pcall(cmd:run().wait)
-
-  --- @cast sc vim.SystemCompleted
-
-  if success then
-    log.debug("Successfully reverted each file")
-  else
-    log.fmt_debug("Failed to revert each file: %s", sc.stderr)
-  end
+  return P4_Command_Edit:new(self:build_file_path_list()):run()
 end
 
 --- Opens each file for delete.
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_File_List:delete()
 
@@ -174,21 +147,12 @@ function P4_File_List:delete()
 
   local P4_Command_delete = require("p4.core.lib.command.delete")
 
-  local cmd = P4_Command_delete:new(self:build_file_path_list())
-
-  local success, sc = pcall(cmd:run().wait)
-
-  --- @cast sc vim.SystemCompleted
-
-  if success then
-    log.debug("Successfully opened each file for delete")
-  else
-    log.fmt_debug("Failed to open each file for delete: %s", sc.stderr)
-  end
+  return P4_Command_delete:new(self:build_file_path_list()):run()
 end
 
 --- Updates each file's stats.
 ---
+--- @return boolean success Indicates if the function was successful.
 --- @async
 function P4_File_List:update_stats()
 
@@ -196,25 +160,18 @@ function P4_File_List:update_stats()
 
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-  local cmd = P4_Command_FStat:new(self:build_file_path_list())
-
-  local success, sc = pcall(cmd:run().wait)
-
-  --- @cast sc vim.SystemCompleted
+  local success, result_list = P4_Command_FStat:new(self:build_file_path_list()):run()
 
   if success then
 
-    log.debug("Successfully updated each file's stats")
-
-    --- @type P4_Command_FStat_Result
-    local result = cmd:process_response(sc.stdout)
+    --- @cast result_list P4_Command_FStat_Result[]
 
     for index, file in ipairs(self.files) do
-      file:set_file_stats(result[index])
+      file:set_file_stats(result_list[index])
     end
-  else
-    log.fmt_debug("Failed to update each file's stats: %s", sc.stderr)
   end
+
+  return success
 end
 
 return P4_File_List
