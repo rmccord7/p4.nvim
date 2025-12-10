@@ -86,7 +86,7 @@ local function update_env_from_config_file()
 
     if input then
       local t = {}
-      for k, v in string.gmatch(input, "([%w._]+)=([%w._]+)") do
+      for k, v in string.gmatch(input, "([%w._]+)=([^%s]+)") do
         t[k] = v
       end
 
