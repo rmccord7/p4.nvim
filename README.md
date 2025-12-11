@@ -58,71 +58,71 @@ precedence:
 
     Recommended to use project specific .lazy.lua spec for this case.
 
-```lua
-  -- Always executed for lazy spec.
-  init = function(_)
-    vim.g.p4.user = "User",
-    vim.g.p4.host = "Host",
-    vim.g.p4.port = "Port",
-    vim.g.p4.client = "Client",
-  end,
-```
+    ```lua
+      -- Always executed for lazy spec.
+      init = function(_)
+        vim.g.p4.user = "User",
+        vim.g.p4.host = "Host",
+        vim.g.p4.port = "Port",
+        vim.g.p4.client = "Client",
+      end,
+    ```
 
    2. Project file (see :help exrc).
 
 2. P4CONFIG file at project root (Recommended)
 
-P4CONFIG enviroment variable is expected to be set in this case so the plugin
-knows the file name.
+    P4CONFIG enviroment variable is expected to be set in this case so the plugin
+    knows the file name.
 
 3. Shell environment
 
-Something like dotenv to set the required environment variables.
+    Something like dotenv to set the required environment variables.
 
-P4.nvim comes with the following default options:
+    P4.nvim comes with the following default options:
 
-```lua
-  -- Always executed for lazy spec.
-  init = function(_)
-    vim.g.p4.opts = {
-      p4 = { -- P4 config.
-          config = os.getenv('P4CONFIG') or "", -- Use enviroment or set explicity
-      },
-      telescope = { -- Telescope options
-        client = { -- P4 client picker options.
-          filter_current_host = true, -- Filters P4 clients for the current host.
-          mappings = { -- P4 client picker mappings.
-            delete = "<c-D",-- Deletes the selected P4 client.
-            display_cls = "<c-d>", -- Displays the selected P4 client's change lists.
-            edit_spec = "<c-e>", -- Edit the selected P4 client's spec.
+    ```lua
+      -- Always executed for lazy spec.
+      init = function(_)
+        vim.g.p4.opts = {
+          p4 = { -- P4 config.
+              config = os.getenv('P4CONFIG') or "", -- Use enviroment or set explicity
           },
-        },
-        cl = { -- P4 change list picker options
-          mappings = { -- P4 change list picker mappings.
-            delete = "<c-D>", -- Un-shelves the selected files.
-            display_files = "<c-d>", -- Display the selected P4 change list's files.
-            display_shelved_files = "<c-S>", -- Display the selected P4 change list's shelved files.
-            edit_spec = "<c-e>", -- Edit the selected P4 change list's spec.
-            revert = "<c-R>", -- Reverts the selected files.
-            shelve = "<c-s>", -- Shelves the selected files.
-            unshelve = "<c-u>", -- Un-shelves the selected files.
-          },
-        },
-        file = { -- P4 file picker options
-          mappings = { -- P4 change lists picker mappings.
-            open = "<c-e>", -- Opens the file for edit.
-            diff = "<c-d>", -- Diffs the selected file against the head revision.
-            history = "<c-h>", -- Opens a file history picker to view the selected file's history.
-            move = "<c-v>", -- Moves all selected files from one CL to another.
-            revert = "<c-R>", -- Reverts the selected files.
-            shelve = "<c-s>", -- Shelves all selected files..
-            unshelve = "<c-u>", -- Un-shelves all selected files.
-          },
-        },
-      }
-    }
-  end,
-```
+          telescope = { -- Telescope options
+            client = { -- P4 client picker options.
+              filter_current_host = true, -- Filters P4 clients for the current host.
+              mappings = { -- P4 client picker mappings.
+                delete = "<c-D",-- Deletes the selected P4 client.
+                display_cls = "<c-d>", -- Displays the selected P4 client's change lists.
+                edit_spec = "<c-e>", -- Edit the selected P4 client's spec.
+              },
+            },
+            cl = { -- P4 change list picker options
+              mappings = { -- P4 change list picker mappings.
+                delete = "<c-D>", -- Un-shelves the selected files.
+                display_files = "<c-d>", -- Display the selected P4 change list's files.
+                display_shelved_files = "<c-S>", -- Display the selected P4 change list's shelved files.
+                edit_spec = "<c-e>", -- Edit the selected P4 change list's spec.
+                revert = "<c-R>", -- Reverts the selected files.
+                shelve = "<c-s>", -- Shelves the selected files.
+                unshelve = "<c-u>", -- Un-shelves the selected files.
+              },
+            },
+            file = { -- P4 file picker options
+              mappings = { -- P4 change lists picker mappings.
+                open = "<c-e>", -- Opens the file for edit.
+                diff = "<c-d>", -- Diffs the selected file against the head revision.
+                history = "<c-h>", -- Opens a file history picker to view the selected file's history.
+                move = "<c-v>", -- Moves all selected files from one CL to another.
+                revert = "<c-R>", -- Reverts the selected files.
+                shelve = "<c-s>", -- Shelves all selected files..
+                unshelve = "<c-u>", -- Un-shelves all selected files.
+              },
+            },
+          }
+        }
+      end,
+    ```
 
 ## Usage
 
