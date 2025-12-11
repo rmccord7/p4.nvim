@@ -29,10 +29,10 @@ Install the plugin with your preferred package manager:
 return {
   'rmccord7/p4.nvim',
   dependencies = {
-    'nvim-neotest/nvim-nio',
-    'nvim-telescope/telescope.nvim',
+    'nvim-neotest/nvim-nio', -- Used for async
+    'nvim-telescope/telescope.nvim', -- Used for picker
     {
-      "ColinKennedy/mega.cmdparse",
+      "ColinKennedy/mega.cmdparse", -- Used for plugin command parsing
       dependencies = { "ColinKennedy/mega.logging" },
       version = "v1.*",
     },
@@ -44,46 +44,84 @@ return {
 
 ### Setup
 
-P4.nvim comes with the following defaults:
+P4.nvim can be configured with vim variables and does not require a function
+call to initialize the plugin or configure the defaults.
+
+P4.nvim needs information about the P4 environment in order to send commands to
+the P4 server. The P4USER, P4HOST, P4PORT, and P4CLIENT are required and must
+be specified using one of the three options below in order of highest to lowest
+precedence:
+
+1. Vim variables
+
+    1. Using lazy spec
+
+    Recommended to use project specific .lazy.lua spec for this case.
 
 ```lua
-{
-  p4 = { -- P4 config.
-      config = os.getenv('P4CONFIG') or "", -- Workspace P4CONFIG file name
-  },
-  telescope = { -- Telescope options
-    client = { -- P4 client picker options.
-      filter_current_host = true, -- Filters P4 clients for the current host.
-      mappings = { -- P4 client picker mappings.
-        delete = "<c-D",-- Deletes the selected P4 client.
-        display_cls = "<c-d>", -- Displays the selected P4 client's change lists.
-        edit_spec = "<c-e>", -- Edit the selected P4 client's spec.
+  -- Always executed for lazy spec.
+  init = function(_)
+    vim.g.p4.user = "User",
+    vim.g.p4.host = "Host",
+    vim.g.p4.port = "Port",
+    vim.g.p4.client = "Client",
+  end,
+```
+
+   2. Project file (see :help exrc).
+
+2. P4CONFIG file at project root (Recommended)
+
+P4CONFIG enviroment variable is expected to be set in this case so the plugin
+knows the file name.
+
+3. Shell environment
+
+Something like dotenv to set the required environment variables.
+
+P4.nvim comes with the following default options:
+
+```lua
+  -- Always executed for lazy spec.
+  init = function(_)
+    vim.g.p4.opts = {
+      p4 = { -- P4 config.
+          config = os.getenv('P4CONFIG') or "", -- Use enviroment or set explicity
       },
-    },
-    cl = { -- P4 change list picker options
-      mappings = { -- P4 change list picker mappings.
-        delete = "<c-D>", -- Un-shelves the selected files.
-        display_files = "<c-d>", -- Display the selected P4 change list's files.
-        display_shelved_files = "<c-S>", -- Display the selected P4 change list's shelved files.
-        edit_spec = "<c-e>", -- Edit the selected P4 change list's spec.
-        revert = "<c-R>", -- Reverts the selected files.
-        shelve = "<c-s>", -- Shelves the selected files.
-        unshelve = "<c-u>", -- Un-shelves the selected files.
-      },
-    },
-    file = { -- P4 file picker options
-      mappings = { -- P4 change lists picker mappings.
-        open = "<c-e>", -- Opens the file for edit.
-        diff = "<c-d>", -- Diffs the selected file against the head revision.
-        history = "<c-h>", -- Opens a file history picker to view the selected file's history.
-        move = "<c-v>", -- Moves all selected files from one CL to another.
-        revert = "<c-R>", -- Reverts the selected files.
-        shelve = "<c-s>", -- Shelves all selected files..
-        unshelve = "<c-u>", -- Un-shelves all selected files.
-      },
-    },
-  }
-}
+      telescope = { -- Telescope options
+        client = { -- P4 client picker options.
+          filter_current_host = true, -- Filters P4 clients for the current host.
+          mappings = { -- P4 client picker mappings.
+            delete = "<c-D",-- Deletes the selected P4 client.
+            display_cls = "<c-d>", -- Displays the selected P4 client's change lists.
+            edit_spec = "<c-e>", -- Edit the selected P4 client's spec.
+          },
+        },
+        cl = { -- P4 change list picker options
+          mappings = { -- P4 change list picker mappings.
+            delete = "<c-D>", -- Un-shelves the selected files.
+            display_files = "<c-d>", -- Display the selected P4 change list's files.
+            display_shelved_files = "<c-S>", -- Display the selected P4 change list's shelved files.
+            edit_spec = "<c-e>", -- Edit the selected P4 change list's spec.
+            revert = "<c-R>", -- Reverts the selected files.
+            shelve = "<c-s>", -- Shelves the selected files.
+            unshelve = "<c-u>", -- Un-shelves the selected files.
+          },
+        },
+        file = { -- P4 file picker options
+          mappings = { -- P4 change lists picker mappings.
+            open = "<c-e>", -- Opens the file for edit.
+            diff = "<c-d>", -- Diffs the selected file against the head revision.
+            history = "<c-h>", -- Opens a file history picker to view the selected file's history.
+            move = "<c-v>", -- Moves all selected files from one CL to another.
+            revert = "<c-R>", -- Reverts the selected files.
+            shelve = "<c-s>", -- Shelves all selected files..
+            unshelve = "<c-u>", -- Un-shelves all selected files.
+          },
+        },
+      }
+    }
+  end,
 ```
 
 ## Usage
@@ -121,22 +159,22 @@ P4 commands for telescope pickers.
 
 ```lua
 local telescope = require("telescope")
-local p4_telescope = require("p4.telescope")
+local file_picker_actions = require("telescope._extensions.p4.pickers.file.actions")
 
 telescope.setup({
   defaults = {
     mappings = {
       i = {
-          ["<c-a>"] = p4_telescope.add, -- Open all or selected files for add.
-          ["<c-e>"] = p4_telescope.edit, -- Open all or selected files for edit.
-          ["<c-r>"] = p4_telescope.revert, -- Revert all or selected files that are opened for add/edit.
-          ["<c-g>"] = p4_telescope.fstat, -- Get file information.
+          ["<c-a>"] = file_picker_actions.add, -- Open all or selected files for add.
+          ["<c-e>"] = file_picker_actions.edit, -- Open all or selected files for edit.
+          ["<c-r>"] = file_picker_actions.revert, -- Revert all or selected files that are opened for add/edit.
+          ["<c-g>"] = file_picker_actions.fstat, -- Get file information.
       },
       n = {
-          ["<c-a>"] = p4_telescope.add, -- Open all or selected files for add.
-          ["<c-e>"] = p4_telescope.edit, -- Open all or selected files for edit.
-          ["<c-r>"] = p4_telescope.revert, -- Revert all or selected files that are opened for add/edit.
-          ["<c-g>"] = p4_telescope.fstat, -- Get file information.
+          ["<c-a>"] = file_picker_actions.add, -- Open all or selected files for add.
+          ["<c-e>"] = file_picker_actions.edit, -- Open all or selected files for edit.
+          ["<c-r>"] = file_picker_actions.revert, -- Revert all or selected files that are opened for add/edit.
+          ["<c-g>"] = file_picker_actions.fstat, -- Get file information.
       },
     },
   },
