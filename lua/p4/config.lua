@@ -88,16 +88,12 @@ local defaults = {
   }
 }
 
-if vim.g.p4 and vim.g.p4.opts then
-  config.opts = vim.tbl_deep_extend("force", {}, defaults, vim.g.p4.opts or {})
-end
-
 --- Lets user update default options
 ---
 --- @param opts table? Optional parameters. Not used.
 ---
 function config.load_defaults(opts)
-  config.opts = vim.tbl_deep_extend("force", {}, defaults, opts or {})
+  config.opts = vim.tbl_deep_extend("force", defaults, opts or {}, vim.g.p4 and vim.g.p4.opts or {})
 end
 
 return config
