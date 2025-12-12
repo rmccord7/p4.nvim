@@ -29,6 +29,10 @@ end
 --- @field opts P4_Command_Describe_Options Command options.
 local P4_Command_Describe = {}
 
+P4_Command_Describe.__index = P4_Command_Describe
+
+setmetatable(P4_Command_Describe, {__index = P4_Command})
+
 --- Parses the output of the P4 command.
 ---
 --- @param output string
@@ -147,10 +151,6 @@ function P4_Command_Describe:new(cl_list, opts)
   opts = opts or {}
 
   log.trace("P4_Command_Describe: new")
-
-  P4_Command_Describe.__index = P4_Command_Describe
-
-  setmetatable(P4_Command_Describe, {__index = P4_Command})
 
   local command = {
     "p4",

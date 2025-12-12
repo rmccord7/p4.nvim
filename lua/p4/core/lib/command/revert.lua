@@ -13,6 +13,11 @@ local P4_Command = require("p4.core.lib.command")
 --- @field opts P4_Command_Revert_Options Command options.
 local P4_Command_Revert = {}
 
+P4_Command_Revert.__index = P4_Command_Revert
+
+setmetatable(P4_Command_Revert, {__index = P4_Command})
+
+
 --- Creates the P4 command.
 ---
 --- @param file_spec_list P4_File_Spec[] One or more file paths.
@@ -22,10 +27,6 @@ function P4_Command_Revert:new(file_spec_list, opts)
   opts = opts or {}
 
   log.trace("P4_Command_Revert: new")
-
-  P4_Command_Revert.__index = P4_Command_Revert
-
-  setmetatable(P4_Command_Revert, {__index = P4_Command})
 
   local command = {
     "p4",

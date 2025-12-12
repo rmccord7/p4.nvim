@@ -43,6 +43,10 @@ end
 --- @field opts P4_Command_Change_Options Command options.
 local P4_Command_Change = {}
 
+P4_Command_Change.__index = P4_Command_Change
+
+setmetatable(P4_Command_Change, {__index = P4_Command})
+
 --- @enum P4_COMMAND_CHANGE_OPTS_TYPE
 P4_Command_Change.opts_type = {
     READ = 0,
@@ -187,10 +191,6 @@ function P4_Command_Change:new(opts)
   opts = opts or {}
 
   log.trace("P4_Command_Change: new")
-
-  P4_Command_Change.__index = P4_Command_Change
-
-  setmetatable(P4_Command_Change, {__index = P4_Command})
 
   local command = {
     "p4",

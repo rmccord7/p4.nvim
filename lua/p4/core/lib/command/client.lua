@@ -48,6 +48,10 @@ end
 --- @field opts P4_Command_Client_Options Command options.
 local P4_Command_Client = {}
 
+P4_Command_Client.__index = P4_Command_Client
+
+setmetatable(P4_Command_Client, {__index = P4_Command})
+
 --- @enum P4_COMMAND_CLIENT_OPTS_TYPE
 P4_Command_Client.opts_type = {
     READ = 0,
@@ -207,10 +211,6 @@ function P4_Command_Client:new(client, opts)
   opts = opts or {}
 
   log.trace("P4_Command_Client: new")
-
-  P4_Command_Client.__index = P4_Command_Client
-
-  setmetatable(P4_Command_Client, {__index = P4_Command})
 
   local command = {
     "p4",

@@ -19,6 +19,10 @@ local P4_Command = require("p4.core.lib.command")
 --- @field opts P4_Command_FStat_Options Command options.
 local P4_Command_FStat = {}
 
+P4_Command_FStat.__index = P4_Command_FStat
+
+setmetatable(P4_Command_FStat, {__index = P4_Command})
+
 --- Parses the output of the P4 command.
 ---
 --- @param output string Command output.
@@ -83,10 +87,6 @@ function P4_Command_FStat:new(file_path_list, opts)
   opts = opts or {}
 
   log.trace("P4_Command_FStat: new")
-
-  P4_Command_FStat.__index = P4_Command_FStat
-
-  setmetatable(P4_Command_FStat, {__index = P4_Command})
 
   local command = {
     "p4",

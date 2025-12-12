@@ -10,6 +10,8 @@ local p4_env = require("p4.core.env")
 ---@field protected sys_opts vim.SystemOpts Vim system options.
 local P4_Command = {}
 
+P4_Command.__index = P4_Command
+
 --- Creates a new P4 command.
 ---
 --- @param command string[] P4 command
@@ -17,8 +19,6 @@ local P4_Command = {}
 function P4_Command:new(command)
 
   log.trace("P4_Command: new")
-
-  P4_Command.__index = P4_Command
 
   local new = setmetatable({}, P4_Command)
 

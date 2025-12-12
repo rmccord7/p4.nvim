@@ -14,6 +14,10 @@ local P4_Command = require("p4.core.lib.command")
 --- @field result P4_Command_Login_Result[] Parsed result list.
 local P4_Command_Login = {}
 
+P4_Command_Login.__index = P4_Command_Login
+
+setmetatable(P4_Command_Login, {__index = P4_Command})
+
 --- Creates the P4 command.
 ---
 --- @param opts? P4_Command_Login_Options P4 command options
@@ -22,10 +26,6 @@ function P4_Command_Login:new(opts)
   opts = opts or {}
 
   log.trace("P4_Command_Login: new")
-
-  P4_Command_Login.__index = P4_Command_Login
-
-  setmetatable(P4_Command_Login, {__index = P4_Command})
 
   local command = {
     "p4",

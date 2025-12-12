@@ -13,6 +13,10 @@ local P4_Command = require("p4.core.lib.command")
 --- @field opts P4_Command_Where_Options Command options.
 local P4_Command_Where = {}
 
+P4_Command_Where.__index = P4_Command_Where
+
+setmetatable(P4_Command_Where, {__index = P4_Command})
+
 --- Parses the output of the P4 command.
 ---
 --- @param output string Command output.
@@ -55,10 +59,6 @@ function P4_Command_Where:new(file_spec_list, opts)
   opts = opts or {}
 
   log.trace("P4_Command_Where: new")
-
-  P4_Command_Where.__index = P4_Command_Where
-
-  setmetatable(P4_Command_Where, {__index = P4_Command})
 
   local command = {
     "p4",

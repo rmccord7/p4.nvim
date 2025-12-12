@@ -39,6 +39,10 @@ local P4_Command_Filelog_Revision = {
 --- @field opts P4_Command_Filelog_Options Command options.
 local P4_Command_Filelog = {}
 
+P4_Command_Filelog.__index = P4_Command_Filelog
+
+setmetatable(P4_Command_Filelog, { __index = P4_Command })
+
 --- Creates a new P4 revision.
 ---
 --- @param depot_file string
@@ -167,10 +171,6 @@ function P4_Command_Filelog:new(file_spec_list, opts)
   opts = opts or {}
 
   log.trace("P4_Command_Filelog: new")
-
-  P4_Command_Filelog.__index = P4_Command_Filelog
-
-  setmetatable(P4_Command_Filelog, { __index = P4_Command })
 
   local command = {
     "p4",

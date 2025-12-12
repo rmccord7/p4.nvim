@@ -12,6 +12,10 @@ local P4_Command = require("p4.core.lib.command")
 --- @field opts P4_Command_Clients_Options Command options.
 local P4_Command_Clients = {}
 
+P4_Command_Clients.__index = P4_Command_Clients
+
+setmetatable(P4_Command_Clients, {__index = P4_Command})
+
 --- Parses the output of the P4 command.
 ---
 --- @param output string
@@ -50,10 +54,6 @@ function P4_Command_Clients:new(opts)
   opts = opts or {}
 
   log.trace("P4_Command_Clients: new")
-
-  P4_Command_Clients.__index = P4_Command_Clients
-
-  setmetatable(P4_Command_Clients, {__index = P4_Command})
 
   local command = {
     "p4",
