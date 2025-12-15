@@ -93,17 +93,33 @@ function P4_Command:run()
             -- Login to the P4 server.
             local cmd = P4_Command_Login:new(cmd_opts)
 
-            local success, _ = pcall(cmd:run().wait)
+            local success = cmd:run()
 
             -- Re-run the previous command.
             if success then
 
               log.trace("Re-trying previous command.")
 
-              success, result = pcall(self:run().wait)
+              -- Reset start time.
+              start_time = vim.uv.hrtime()
 
-              if success then
+              result = vim.system(self.command, self.sys_opts):wait()
+
+              if result.code == 0 then
+
+                log.debug("Command %s: success", self.command[2])
+                log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
+                p4_log.output(result.stdout)
+
                 future.set(result)
+              else
+                log.error("Command %s: failed. See `:P4CLog` for more info.", self.command[2])
+                p4_log.error(result.stderr)
+                log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
+
+                notify("Command " .. self.command[2] .. " failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
+
+                future.set_error()
               end
             else
               log.error("Command %s: failed. See `:P4CLog` for more info.", self.command[2])
