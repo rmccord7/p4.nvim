@@ -7,7 +7,12 @@ function M.add_parser(parent_subparser)
   add_parser:set_execute(function()
     local file_api = require("p4.api.file")
 
-    file_api.add({vim.fn.expand("%:p")})
+    local success = file_api.add(vim.fn.expand("%:p"))
+
+    if success then
+      vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
+      vim.api.nvim_set_option_value("modifiable", true, { scope = "local" })
+    end
   end)
 end
 

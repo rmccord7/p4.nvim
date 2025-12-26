@@ -25,7 +25,7 @@ local function update_current_client()
     local new_current_client = P4_Current_Client:new(p4_env.client)
 
     -- Read current client's spec from P4 server.
-    local success = new_current_client:read_spec()
+    local success = new_current_client:get_spec()
 
     if success then
       p4_context.current_client = new_current_client
@@ -70,13 +70,13 @@ function P4_Telescope_Client_API.display_client_cls(client)
     ---
     --- @param p4_client P4_Client
     local function get_cl_list(p4_client)
-      local success = p4_client:update_cl_list()
+      local success = p4_client:get_pending_cl_list()
 
       if success then
 
         vim.schedule(function()
 
-          local p4_cl_list = p4_client:get_cl_list()
+          local p4_cl_list = p4_client:get_pending_cl_list()
 
           if p4_cl_list then
 
@@ -129,7 +129,7 @@ function P4_Telescope_Client_API.display_opened_files(client)
     ---
     --- @param p4_client P4_Client
     local function get_opened_files(p4_client)
-      local success = p4_client:update_file_list()
+      local success = p4_client:get_open_files()
 
       if success then
 

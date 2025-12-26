@@ -1,9 +1,14 @@
 local log = require("p4.log")
 
 local env = require("p4.core.env")
+local P4_CL = require("p4.core.lib.cl")
 
 --- @class P4_Current_CL : P4_CL
 local P4_Current_CL = {}
+
+P4_Current_CL.__index = P4_Current_CL
+
+setmetatable(P4_Current_CL, {__index = P4_CL})
 
 --- Creates a new current CL
 ---
@@ -13,12 +18,6 @@ local P4_Current_CL = {}
 function P4_Current_CL:new(cl)
 
   log.trace("P4_Current_CL: new")
-
-  P4_Current_CL.__index = P4_Current_CL
-
-  local P4_CL = require("p4.core.lib.cl")
-
-  setmetatable(P4_Current_CL, {__index = P4_CL})
 
   local new = P4_CL:new(cl)
 
@@ -34,9 +33,7 @@ function P4_Current_CL:read_spec()
 
   log.trace("P4_Current_CL: read_spec")
 
-  local P4_CL = require("p4.core.lib.cl")
-
-  P4_CL.read_spec(self)
+  P4_CL.get_spec(self)
 
   -- Make sure this CL belongs to the current user.
   if env.user ~= self.spec.user then

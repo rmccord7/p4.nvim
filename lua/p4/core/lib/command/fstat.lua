@@ -5,8 +5,9 @@ local P4_Command = require("p4.core.lib.command")
 --- @class P4_Command_FStat_Options : table
 
 --- @class P4_Command_FStat_Result : table
---- @field clientFile P4_Host_File_Path Local path to the file.
---- @field depotFile P4_Depot_File_Path Depot path to the file.
+--- @field in_client_view boolean Indicates if the file is in the client view.
+--- @field clientFile Client_File_Path Local path to the file.
+--- @field depotFile Depot_File_Path Depot path to the file.
 --- @field isMapped boolean Indicates if file is mapped to the current client workspace.
 --- @field shelved boolean Indicates if file is shelved.
 --- @field change string Open change list number if file is opened in client workspace.
@@ -34,44 +35,66 @@ function P4_Command_FStat:_process_response(output)
   --- @type P4_Command_FStat_Result[]
   local result_list = {}
 
-  for index, file_stats in ipairs(vim.split(output, "\n\n")) do
+  for _, file_stats in ipairs(vim.split(output, "\n\n")) do
 
     -- Last iteration will be empty.
     if file_stats ~= '' then
 
-      --- @type P4_Command_FStat_Result
-      local result = {
-        clientFile = '',
-        depotFile = '',
-        action = '',
-        change = '',
-        haveRev = 0,
-        headRev = 0,
-        isMapped = false,
-        shelved = false,
-        workRev = 0,
-      }
+      if not string.find(file_stats, "file(s) not in client view", 1, true) then
 
-      for _, line in ipairs(vim.split(file_stats, "\n")) do
+        --- @type P4_Command_FStat_Result
+        local result = {
+          in_client_view = true,
+          clientFile = '',
+          depotFile = '',
+          action = '',
+          change = '',
+          haveRev = 0,
+          headRev = 0,
+          isMapped = false,
+          shelved = false,
+          workRev = 0,
+        }
 
-        local t = vim.split(line, ' ')
+        for _, line in ipairs(vim.split(file_stats, "\n")) do
 
-        if t[1] == "..." then
+          local t = vim.split(line, ' ')
 
-          -- Only store level one values for now.
-          if t[2] ~= "..." then
-            result[t[2]] = t[3]
+          if t[1] == "..." then
 
-            -- -- Make path relative to the CWD.
-            -- if t[2] == "clientFile" then
-            --   --- @diagnostic disable-next-line No annotation for cwd()
-            --   result[t[2]] = t[3]:gsub(vim.uv.cwd(), '.')
-            -- end
+            -- Only store level one values for now.
+            if t[2] ~= "..." then
+              result[t[2]] = t[3]
+
+              -- -- Make path relative to the CWD.
+              -- if t[2] == "clientFile" then
+              --   --- @diagnostic disable-next-line No annotation for cwd()
+              --   result[t[2]] = t[3]:gsub(vim.uv.cwd(), '.')
+              -- end
+            end
           end
         end
+
+        table.insert(result_list, result)
+      else
+
+        --- @type P4_Command_FStat_Result
+        local result = {
+          in_client_view = false,
+          clientFile = '',
+          depotFile = '',
+          action = '',
+          change = '',
+          haveRev = 0,
+          headRev = 0,
+          isMapped = false,
+          shelved = false,
+          workRev = 0,
+        }
+
+        table.insert(result_list, result)
       end
 
-      result_list[index] = result
     end
   end
 
@@ -80,7 +103,7 @@ end
 
 --- Creates the P4 command.
 ---
---- @param file_path_list P4_File_Spec[] One or more file paths.
+--- @param file_path_list File_Spec[] One or more file paths.
 --- @param opts? P4_Command_FStat_Options P4 command options.
 --- @return P4_Command_FStat P4_Command_FStat P4 command.
 function P4_Command_FStat:new(file_path_list, opts)

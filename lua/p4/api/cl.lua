@@ -7,9 +7,9 @@ local P4_CL_API = {}
 --- Creates a new CL.
 ---
 --- @async
+--- @nodiscard
 function P4_CL_API.new()
-
-  log.trace("P4_CL_API: new")
+  log.trace("P4_CL_API (new): Enter")
 
   local P4_Command_Change = require("p4.core.lib.command.change")
 
@@ -67,34 +67,48 @@ function P4_CL_API.new()
       end,
     })
   end
+
+  log.trace("P4_CL_API (new): Exit")
 end
 
 --- Reverts a CL.
 ---
 --- @async
+--- @nodiscard
 function P4_CL_API.revert()
-  log.trace("P4_CL_API: revert")
+  log.trace("P4_CL_API (revert): Enter")
+
+  log.trace("P4_CL_API (revert): Exit")
 end
 
 --- Shelves a CL's files.
 ---
 --- @async
+--- @nodiscard
 function P4_CL_API.shelve_files()
-  log.trace("P4_CL_API: shelve files")
+  log.trace("P4_CL_API (shelve_files): Enter")
+
+  log.trace("P4_CL_API (shelve_files): Exit")
 end
 
 --- Deletes a CLs shelved files.
 ---
 --- @async
+--- @nodiscard
 function P4_CL_API.delete_shelved_files()
-  log.trace("P4_CL_API: ")
+  log.trace("P4_CL_API (delete_shelve_files): Enter")
+
+  log.trace("P4_CL_API (delete_shelve_files): Exit")
 end
 
 --- Deletes a CL
 ---
 --- @async
+--- @nodiscard
 function P4_CL_API.delete()
-  log.trace("P4_CL_API: delete")
+  log.trace("P4_CL_API (delete): Enter")
+
+  log.trace("P4_CL_API (delete): Exit")
 end
 
 return P4_CL_API

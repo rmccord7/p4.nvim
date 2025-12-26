@@ -73,7 +73,7 @@ end
 --- Runs the P4 command.
 ---
 --- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Clients_Result[]|nil Result Holds the result if the function was successful.
+--- @return P4_Command_Clients_Result[]? Result Holds the result if the function was successful.
 --- @async
 function P4_Command_Clients:run()
 

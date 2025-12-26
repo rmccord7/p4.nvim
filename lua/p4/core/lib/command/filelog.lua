@@ -164,7 +164,7 @@ end
 
 --- Creates the P4 command.
 ---
---- @param file_spec_list P4_File_Spec[] One or more file paths.
+--- @param file_spec_list File_Spec[] One or more file paths.
 --- @param opts? P4_Command_Filelog_Options P4 command options.
 --- @return P4_Command_Filelog P4_Command_Filelog P4 command.
 function P4_Command_Filelog:new(file_spec_list, opts)

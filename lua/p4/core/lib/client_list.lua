@@ -1,7 +1,7 @@
 local log = require("p4.log")
 
 --- @class P4_Client_List : table
---- @field private list P4_Client[] P4 client list.
+--- @field protected list P4_Client[] P4 client list.
 local P4_Client_List = {}
 
 --- Creates a new P4 client list.

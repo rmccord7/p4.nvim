@@ -19,7 +19,7 @@ setmetatable(P4_Command_Shelve, {__index = P4_Command})
 
 --- Creates the P4 command.
 ---
---- @param file_spec_list P4_File_Spec[] One or more file paths.
+--- @param file_spec_list File_Spec[] One or more file paths.
 --- @param opts? P4_Command_Shelve_Options P4 command options.
 --- @return P4_Command_Shelve P4_Command_Shelve P4 command.
 function P4_Command_Shelve:new(file_spec_list, opts)

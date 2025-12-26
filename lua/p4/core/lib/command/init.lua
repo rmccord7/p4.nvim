@@ -113,29 +113,29 @@ function P4_Command:run()
 
                 future.set(result)
               else
-                log.error("Command %s: failed. See `:P4CLog` for more info.", self.command[2])
+                log.error("Command %s: failed. See `:P4 output` for more info.", self.command[2])
                 p4_log.error(result.stderr)
                 log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
 
-                notify("Command " .. self.command[2] .. " failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
+                notify("Command " .. self.command[2] .. " failed. See `:P4 output` for more info", vim.log.levels.ERROR)
 
                 future.set_error()
               end
             else
-              log.error("Command %s: failed. See `:P4CLog` for more info.", self.command[2])
+              log.error("Command %s: failed. See `:P4 output` for more info.", self.command[2])
               p4_log.error(result.stderr)
               log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
 
-              notify("Command " .. self.command[2] .. " failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
+              notify("Command " .. self.command[2] .. " failed. See `:P4 output` for more info", vim.log.levels.ERROR)
 
               future.set_error()
             end
           end
         else
-          log.error("Command %s: failed. See `:P4CLog` for more info", self.command[2])
+          log.error("Command %s: failed. See `:P4 output` for more info", self.command[2])
           p4_log.error(result.stderr)
           log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
-          notify("Command " .. self.command[2] .. " failed. See `:P4CLog` for more info", vim.log.levels.ERROR)
+          notify("Command " .. self.command[2] .. " failed. See `:P4 output` for more info", vim.log.levels.ERROR)
 
           future.set_error()
         end

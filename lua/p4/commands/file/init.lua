@@ -7,6 +7,7 @@ function M.get_parser(parent_sub_parser)
 
   require("p4.commands.file.add").add_parser(sub_parser)
   require("p4.commands.file.edit").add_parser(sub_parser)
+  require("p4.commands.file.diff").add_parser(sub_parser)
   require("p4.commands.file.revert").add_parser(sub_parser)
   require("p4.commands.file.history").add_parser(sub_parser)
 end

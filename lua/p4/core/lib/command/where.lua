@@ -7,7 +7,7 @@ local P4_Command = require("p4.core.lib.command")
 --- @class P4_Command_Where_Result : table
 --- @field depot P4_Depot_File_Path Depot path to the file
 --- @field client P4_Client_File_Path Client path to the file in local syntax
---- @field host P4_Host_File_Path Local path to the file
+--- @field host P4_Local_File_Path Local path to the file
 
 --- @class P4_Command_Where : P4_Command
 --- @field opts P4_Command_Where_Options Command options.
@@ -52,7 +52,7 @@ end
 
 --- Creates the P4 command.
 ---
---- @param file_spec_list P4_File_Spec[] One or more file paths.
+--- @param file_spec_list File_Spec[] One or more file paths.
 --- @param opts? P4_Command_Where_Options P4 command options.
 --- @return P4_Command_Where P4_Command_Where P4 command.
 function P4_Command_Where:new(file_spec_list, opts)
