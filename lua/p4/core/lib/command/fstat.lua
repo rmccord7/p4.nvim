@@ -12,7 +12,6 @@ end
 --- @class P4_Command_FStat_Options : table
 
 --- @class P4_Command_FStat_Result : table
---- @field valid boolean Indicates if the entry is valid.
 --- @field clientFile Client_File_Path? Local path to the file.
 --- @field depotFile Depot_File_Path? Depot path to the file.
 --- @field isMapped boolean? Indicates if file is mapped to the current client workspace.
@@ -42,93 +41,38 @@ function P4_Command_FStat:_process_response(output)
   --- @type P4_Command_FStat_Result[]
   local result_list = {}
 
-  -- Convert spec to table
-  local lines = vim.split(output, "\n", {trimempty = true})
+  -- Output is a list of json tables for each file.
+  local file_fstat_list = vim.split(output, "\n", {trimempty = true})
 
-  local index = 1
+  assert(#self.file_path_list == #file_fstat_list, "Unexpected number of output entries.")
 
-  while index < #lines do
+  for _, fstat in ipairs(file_fstat_list) do
 
-    ---@type P4_Command_FStat_Result
-    local result = {
-      valid = false
-    }
+    local result = vim.json.decode(fstat)
 
-    -- Handle files that are not in the depot or not opened in the client workspace.
-    if string.find(lines[index], "no such file(s)", 1, true) or
-      string.find(lines[index], "file(s) not in client view", 1, true)then
+    -- Make path relative to the current client root.
+    --TODO: Move this to caller for cases where we care about the current client
+    if result.clientFile and result.isMapped then
+      local P4_Context = require("p4.context")
 
-      table.insert(result_list, result)
+      local current_client = P4_Context.get_current_client()
 
-      index = index + 1
-    else
-      if string.find(lines[index], "... depotFile", 1, true) then
+      if current_client then
 
-        result.valid = true
+        local success, spec = current_client:get_spec()
 
-        local start_index = index
+        if success and spec then
+          --TODO: Handle alt root?
 
-        index = index + 1
-
-        -- End will be reached once the next change is found or we have
-        -- reached the end of the output.
-        while index < #lines and
-          not string.find(lines[index], "no such file(s)", 1, true) and
-          not string.find(lines[index], "file(s) not in client view", 1, true) and
-          not string.find(lines[index], "... depotFile", 1, true) do
-          index = index + 1
+          result.clientFile = vim.fs.relpath(spec.root, result.clientFile)
         end
-
-        local end_index = index - 1
-
-        -- selene: allow(incorrect_standard_library_use)
-        local current_lines = {table.unpack(lines, start_index, end_index)}
-
-        for _, line in ipairs(current_lines) do
-
-          local t = vim.split(line, ' ')
-
-          if t[1] == "..." then
-
-            -- Only store level one values for now.
-            if t[2] ~= "..." then
-              if t[3] ~= "" then
-                ---@diagnostic disable-next-line:assign-type-mismatch
-                result[t[2]] = t[3]
-              else
-                result[t[2]] = true
-              end
-            end
-          end
-        end
-
-        -- Make path relative to the current client root.
-        if result.isMapped and result.isMapped == true then
-          local P4_Context = require("p4.context")
-
-          local current_client = P4_Context.get_current_client()
-
-          if current_client then
-
-            local success, spec = current_client:get_spec()
-
-            if success and spec then
-              --TODO: Handle alt root if necessary
-
-              ---@diagnostic disable-next-line:param-type-mismatch
-              result.clientFile = vim.fs.relpath(spec.root, result.clientFile)
-            end
-          end
-        end
-      else
-        assert(false, "Invalid starting line")
       end
-
-      table.insert(result_list, result)
     end
+
+    table.insert(result_list, result)
   end
 
-  assert(#self.file_path_list == #result_list, "Incorrect number of expected results.")
+  assert(#self.file_path_list == #result_list, "Unexpected number of results.")
 
   return result_list
 end
@@ -145,6 +89,7 @@ function P4_Command_FStat:new(file_path_list, opts)
 
   local command = {
     "p4",
+    "-Mj", --Json output format
     "fstat",
   }
 
