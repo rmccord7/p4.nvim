@@ -115,6 +115,11 @@ function P4_Env.clear()
   P4_Env.host = nil
   P4_Env.port = nil
   P4_Env.client = nil
+
+  local ac = require("p4.core.ac")
+
+  -- Disable file autocmds
+  ac.disable_file_autocmds()
 end
 
 --- Gets the P4 environment information is valid.
