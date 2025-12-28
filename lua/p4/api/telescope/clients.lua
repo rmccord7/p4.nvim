@@ -28,17 +28,20 @@ function P4_Telescope_Clients_API.display()
 
         local client_list = {}
 
-        for _, client_info in ipairs(result_list) do
-          table.insert(client_list, client_info.client_name)
+        for _, result in ipairs(result_list) do
+          table.insert(client_list, result.client_name)
         end
 
         local P4_Client_List = require("p4.core.lib.client_list")
 
-        local p4_client_list = P4_Client_List:new(client_list)
+        local p4_client_list
+        success, p4_client_list = P4_Client_List:new(client_list)
 
-        vim.schedule(function()
-          require("telescope._extensions.p4.pickers.client").load("Clients", p4_client_list:get())
-        end)
+        if success and p4_client_list then
+          vim.schedule(function()
+            require("telescope._extensions.p4.pickers.client").load("Clients", p4_client_list:get_clients())
+          end)
+        end
       else
         log.fmt_error("Failed to receive the clients")
 

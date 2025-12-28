@@ -7,7 +7,7 @@ local P4_Client_API = {}
 --- @class P4_Client_API_New_Options
 --- @field template string Copies options and view from the specified template client.
 
---- Creates a new CL in the current client workspace.
+--- Creates a new P4 client.
 ---
 --- @param client_name string P4 client name.
 --- @param opts? P4_Client_API_New_Options Options.

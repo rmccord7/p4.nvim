@@ -6,7 +6,7 @@ local P4_Command = require("p4.core.lib.command")
 --- @field cl? string Only files in the specified changelist.
 
 --- @class P4_Command_Opened_Result : table
---- @field path P4_Depot_File_Path P4 depot file path.
+--- @field path Depot_File_Path P4 depot file path.
 --- @field cl string P4 CL.
 
 --- @class P4_Command_Opened : P4_Command
@@ -26,7 +26,7 @@ function P4_Command_Opened:_process_response(output)
   log.trace("P4_Command_Opened: process_response")
 
   --- @type P4_Command_Opened_Result[]
-  local result = {}
+  local result_list = {}
 
   for _, line in ipairs(vim.split(output, "\n", {trimempty = true})) do
 
@@ -36,20 +36,20 @@ function P4_Command_Opened:_process_response(output)
     end
 
     --- @type P4_Command_Opened_Result
-    local file_info = {
+    local result = {
       path = vim.split(chunks[1], '#')[1],
       cl = chunks[5],
     }
 
     -- Output swaps order 'default change' vs 'change XXXXXXXXX'
-    if chunks[5] == "default" then
-      file_info.cl = "default"
+    if chunks[5] == "change" then
+      result.cl = "default"
     end
 
-    table.insert(result, file_info)
+    table.insert(result_list, result)
   end
 
-  return result
+  return result_list
 end
 
 --- Creates the P4 command.

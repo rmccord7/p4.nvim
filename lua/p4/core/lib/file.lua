@@ -278,9 +278,19 @@ function P4_File:add()
 
   self:_check_instance()
 
-  local P4_Command_Add = require("p4.core.lib.command.add")
+  local success = false
 
-  local success = P4_Command_Add:new({self.path}):run()
+  -- Ensure file has not already been added to the depot.
+  if self:get_in_depot() then
+
+    if not self.in_depot then
+      local P4_Command_Add = require("p4.core.lib.command.add")
+
+      success = P4_Command_Add:new({self.path}):run()
+    else
+      log.error("P4_File (add): Can't add a file that is already in the depot")
+    end
+  end
 
   log.trace("P4_File (add): Exit")
 
@@ -298,9 +308,19 @@ function P4_File:edit()
 
   self:_check_instance()
 
-  local P4_Command_Edit = require("p4.core.lib.command.edit")
+  local success = false
 
-  local success = P4_Command_Edit:new({self.path}):run()
+  -- Ensure file has not already been added to the depot.
+  if self:get_in_depot() then
+
+    if self.in_depot then
+      local P4_Command_Edit = require("p4.core.lib.command.edit")
+
+      success = P4_Command_Edit:new({self.path}):run()
+    else
+      log.error("P4_File (add): Can't edit a file that is not in the depot")
+    end
+  end
 
   log.trace("P4_File (edit): Exit")
 

@@ -1,13 +1,9 @@
 local log = require("p4.log")
 
-local P4_File = require("p4.core.lib.file")
-
 --- @class P4_File_Depot : P4_File
 local P4_File_Depot = {}
 
 P4_File_Depot.__index = P4_File_Depot
-
-setmetatable(P4_File_Depot, {__index = P4_File})
 
 --- @class P4_File_Depot_New
 --- @field protected path Depot_File_Path P4 depot file path.
@@ -50,6 +46,10 @@ end
 --- @nodiscard
 function P4_File_Depot:new(new_depot_file)
   log.trace("P4_File_Depot (new): Enter")
+
+  local P4_File = require("p4.core.lib.file")
+
+  setmetatable(P4_File_Depot, {__index = P4_File})
 
   ---@type P4_File_New
   local new_file = {

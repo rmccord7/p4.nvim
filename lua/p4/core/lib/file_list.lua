@@ -3,8 +3,8 @@ local log = require("p4.log")
 --- @class P4_File_List : table
 --- @field protected file_paths File_Spec[] P4 files for efficient command usage.
 --- @field protected files P4_File[] P4 files.
---- @field protected client? P4_Client P4 Client for all files.
---- @field protected cl? P4_CL P4 CL for all files.
+--- @field protected client P4_Client? P4 Client for all files.
+--- @field protected cl P4_CL? P4 CL for all files. Only valid if all files have the same CL.
 local P4_File_List = {}
 
 P4_File_List.__index = P4_File_List
@@ -39,8 +39,8 @@ end
 --- @field convert_depot_paths boolean If the list of file paths are depot paths that need to be converted to local paths.
 --- @field check_in_depot boolean Check if the file is in the P4 depot.
 --- @field get_stats boolean Get file stats from P4 server.
---- @field client? P4_Client Optional P4 client for all files.
---- @field cls? P4_CL|P4_CL[] Optional P4 CL for all files or a list of a CLs for each new file.
+--- @field client P4_Client? Optional P4 client for all files.
+--- @field cls P4_CL|P4_CL[]? Optional P4 CL for all files or a list of a CLs for each new file.
 
 --- Creates a new P4 file list.
 ---
@@ -60,8 +60,9 @@ function P4_File_List:new(new_file_list)
   local P4_File = require("p4.core.lib.file")
 
   new.file_paths = new_file_list.paths
+  new.files = {}
 
-  if new_file_list.cl and type(new_file_list.cl) == table then
+  if new_file_list.cls and type(new_file_list.cls) == table then
     assert(#new_file_list.paths == #new_file_list.cls, "Path and CL lists must have the same length")
   end
 
@@ -77,7 +78,7 @@ function P4_File_List:new(new_file_list)
 
     -- All files may be the same CL or files may have different CLs.
     if new_file_list.cls then
-      if type() == table then
+      if type(new_file_list.cls) == "table" then
         new_file.cl = new_file_list.cls[index]
       else
         new_file.cl = new_file_list.cls
@@ -90,11 +91,29 @@ function P4_File_List:new(new_file_list)
 
     success, p4_file = P4_File:new(new_file)
 
-    if success then
+    if success and p4_file then
       table.insert(new.files, p4_file)
     else
       success = false
       break
+    end
+  end
+
+  if success then
+    if new_file_list.convert_depot_paths then
+      local P4_Where_Commands = require("p4.core.lib.command.where")
+
+      local results_list
+
+      success, results_list = P4_Where_Commands:new(new_file_list.paths):run()
+
+      if success and results_list then
+
+        ---@cast results_list P4_Command_Where_Result[]
+        for index, result in ipairs(results_list) do
+          new.files[index].path = result.host
+        end
+      end
     end
   end
 
@@ -111,7 +130,10 @@ function P4_File_List:new(new_file_list)
   end
 
   new.client = new_file_list.client
-  new.cl = new_file_list.cl
+
+  if new_file_list.cls and type(new_file_list) ~= "table" then
+    new.cl = new_file_list.cls
+  end
 
   log.trace("P4_File_List (new): Exit")
 
@@ -244,6 +266,19 @@ function P4_File_List:get_file_paths()
   return self.file_paths
 end
 
+--- Returns the list of files.
+---
+--- @return P4_File[] result Files.
+function P4_File_List:get_files()
+  log.trace("P4_File_List (get_files): Enter")
+
+  self:_check_instance()
+
+  log.trace("P4_File_List (get_files): Exit")
+
+  return self.files
+end
+
 --- Updates if the files are in the depot.
 ---
 --- @return boolean success True if this function is successful.
@@ -264,7 +299,7 @@ function P4_File_List:get_in_depot()
     --- @cast result_list P4_Command_Files_Result[]
 
     for index, result in ipairs(result_list) do
-      self.files[index].in_depot = result.in_depot
+      self.files[index].in_depot = result.valid
     end
   end
 
@@ -383,11 +418,13 @@ function P4_File_List:update_stats()
 
   self:_check_instance()
 
+  assert(#self.file_paths, "No file paths")
+
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-  local success, result_list = P4_Command_FStat:new(self):run()
+  local success, result_list = P4_Command_FStat:new(self.file_paths):run()
 
-  if success then
+  if success and result_list then
 
     --- @cast result_list P4_Command_FStat_Result[]
 

@@ -40,8 +40,10 @@ end
 --- Creates a new client
 ---
 --- @param client_name string P4 client name
+--- @return boolean success True if this function is successful.
 --- @return P4_Client client New client
 ---
+--- @async
 --- @nodiscard
 function P4_Client:new(client_name)
   log.trace("P4_Client (new): Enter")
@@ -52,7 +54,23 @@ function P4_Client:new(client_name)
 
   log.trace("P4_Client (new): Exit")
 
-  return new
+  return true, new
+end
+
+--- Reads the client spec
+---
+--- @return string name P4 client name
+---
+--- @async
+--- @nodiscard
+function P4_Client:get_name()
+  log.trace("P4_File (get_name): Enter")
+
+  self:_check_instance()
+
+  log.trace("P4_File (get_name): Exit")
+
+  return(self.name)
 end
 
 --- Reads the client spec
@@ -103,7 +121,6 @@ end
 --- @param buf integer Identifies the buffer that will used to store the client spec
 ---
 --- @async
---- @nodiscard
 function P4_Client:write_spec(buf)
   log.trace("P4_Client (write_spec): Enter")
 
@@ -192,9 +209,13 @@ function P4_Client:get_pending_cl_list()
           client = self,
         }
 
-        local p4_cl = P4_CL:new(new_cl)
+        success, p4_cl = P4_CL:new(new_cl)
 
-        table.insert(self.pending_cl_list, p4_cl)
+        if success then
+          table.insert(self.pending_cl_list, p4_cl)
+        else
+          break
+        end
       end
 
       log.fmt_debug("Successfully updated the client's cl list: %s", self.name)
@@ -228,67 +249,49 @@ function P4_Client:get_open_files()
 
   if success then
 
-    local P4_Command_Opened = require("p4.core.lib.command.opened")
+    if not self.open_files_list then
 
-    local result_list
-    success, result_list = P4_Command_Opened:new():run()
+      local P4_Command_Opened = require("p4.core.lib.command.opened")
 
-    if success then
+      local result_list
+      success, result_list = P4_Command_Opened:new():run()
 
-      --- @cast result_list P4_Command_Opened_Result[]
+      if success then
 
-      local paths ---@type string[]
-      local cls ---@type string[]
+        --- @cast result_list P4_Command_Opened_Result[]
 
-      for _, result in ipairs(result_list) do
-        table.insert(paths, result.path)
-        table.insert(cls, result.cl)
+        local paths = {} ---@type string[]
+        local cls = {} ---@type string[]
+
+        for _, result in ipairs(result_list) do
+          table.insert(paths, result.path)
+          table.insert(cls, result.cl)
+        end
+
+        local P4_File_List = require("p4.core.lib.file_list")
+
+        ---@type P4_File_List_New
+        local new_file_list = {
+          paths = paths,
+          convert_depot_paths = true, -- P4 opened output is depot path.
+          check_in_depot = true, -- Files for add may not be in depot so good to have this information
+          get_stats = true, -- More efficient to do this now
+          client = self, -- Should have same client
+          cls = cls, -- May have different CLs
+        }
+
+        success, self.open_files_list = P4_File_List:new(new_file_list)
+
+        if success then
+          log.fmt_debug("Successfully updated the client's file list: %s", self.name)
+        end
       end
-
-      local P4_File_List = require("p4.core.lib.file_list")
-      local P4_CL = require("p4.core.lib.cl")
-
-      ---@type P4_File_List_New
-      local new_file_list = {
-        paths = paths,
-        convert_depot_paths = true, -- P4 opened output is depot path.
-        check_in_depot = true,
-        get_stats = true,
-        client = self,
-        cls = cls, -- May have different CLs
-      }
-
-      success, self.open_files_list = P4_File_List:new(new_file_list)
-
-      --- @type P4_New_CL_Information
-      local new_cl = {
-        name = file_info.cl,
-        client = self,
-      }
-
-      --- @type P4_File_New
-      local new_file = {
-        client = self,
-        cl = P4_CL:new(new_cl),
-        path = {
-          type = P4_File_Path.type.DEPOT,
-          path = file_info.path,
-        },
-      }
-
-      table.insert(new_file_list, new_file)
-
-      self.open_files_list = P4_File_List:new(new_file_list)
-
-      log.fmt_debug("Successfully updated the client's file list: %s", self.name)
-
-      self.open_files_list:update_stats()
     end
   end
 
   log.trace("P4_Client (get_open_files): Exit")
 
-  return success, self.pending_cl_list
+  return success, self.open_files_list
 end
 
 --- Adds a P4 CL to the specified P4 client
@@ -297,7 +300,7 @@ end
 --- @return boolean result Returns true if the CL has been added to the client
 --- @async
 function P4_Client:add_cl(cl_num)
-  log.trace("P4_Client: add_cl")
+  log.trace("P4_Client (add_cl): Enter")
 
   self:_check_instance()
 
@@ -315,26 +318,9 @@ function P4_Client:add_cl(cl_num)
   --   end
   -- end
 
+  log.trace("P4_Client (add_cl): Exit")
+
   return false
-end
-
---- Finds a P4 CL in the specified P4 client
----
---- @param cl_num integer P4 CL number
---- @return P4_CL? cl P4 CL
---- @async
-function P4_Client:find_cl(cl_num)
-  log.trace("P4_Client: find_cl")
-
-  self:_check_instance()
-  -- for _, c in ipairs(self.cl_list) do
-  --   if c.num == cl_num then
-  --     log.fmt_info("Found CL: %s", cl_num)
-  --     return c
-  --   end
-  -- end
-
-  return nil
 end
 
 --- Removes a P4 cl
@@ -342,7 +328,7 @@ end
 --- @param cl_num integer P4 CL number
 --- @async
 function P4_Client:remove_cl(cl_num)
-  log.trace("P4_Client: remove_cl")
+  log.trace("P4_Client (remove_cl): Enter")
 
   self:_check_instance()
   -- log.tra  for i, cl in ipairs(P4_Client.cl_list) do
@@ -350,6 +336,8 @@ function P4_Client:remove_cl(cl_num)
   --     table.remove(self.cl_list, i)
   --   end
   -- end
+
+  log.trace("P4_Client (remove_cl): Exit")
 end
 
 return P4_Client

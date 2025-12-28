@@ -19,7 +19,7 @@ local P4_Telescope_File_Picker = {}
 function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
   opts = opts or {}
 
-  if vim.tbl_isempty(p4_file_list:get().files) then
+  if vim.tbl_isempty(p4_file_list:get_file_paths()) then
     notify("No files to display in picker", vim.log.levels.ERROR)
     return
   end
@@ -29,7 +29,7 @@ function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
   --- @param entry P4_File P4 File
   local function entry_maker(entry)
 
-    local file_stats = entry:get().fstat
+    local _, file_stats = entry:get_fstat()
 
     assert(file_stats, "File stats have not been read")
 
@@ -126,7 +126,7 @@ function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
       prompt_title = "P4 " .. prompt_title .. " Files",
       results_title = "Files",
       finder = finders.new_table({
-        results = p4_file_list:get().files,
+        results = p4_file_list:get_files(),
         entry_maker = entry_maker,
       }),
       sorter = config.generic_sorter(opts),

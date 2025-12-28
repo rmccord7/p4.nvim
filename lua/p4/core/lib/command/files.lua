@@ -5,10 +5,10 @@ local P4_Command = require("p4.core.lib.command")
 --- @class P4_Command_Files_Options : table
 
 --- @class P4_Command_Files_Result : table
---- @field in_client_view boolean Indicates if the file is in the client view.
---- @field path Depot_File_Path Depot path to the file.
---- @field head_rev string head revision.
---- @field submit_cl string Last P4 CL that corresponds to the head revision.
+--- @field valid boolean Indicates if the entry is valid.
+--- @field path Depot_File_Path? Depot path to the file.
+--- @field head_rev string? head revision.
+--- @field submit_cl string? Last P4 CL that corresponds to the head revision.
 
 --- @class P4_Command_Files : P4_Command
 --- @field opts P4_Command_Files_Options Command options.
@@ -23,7 +23,6 @@ setmetatable(P4_Command_Files, {__index = P4_Command})
 --- @param output string Command output.
 --- @return P4_Command_Files_Result[] result Hold's the parsed result from the command output.
 function P4_Command_Files:_process_response(output)
-
   log.trace("P4_Command_Files: process_response")
 
   --- @type P4_Command_Files_Result[]
@@ -31,7 +30,14 @@ function P4_Command_Files:_process_response(output)
 
   for _, line in ipairs(vim.split(output, "\n\n")) do
 
-    if not string.find(line, "file(s) not in client view", 1, true) then
+    --- @type P4_Command_Files_Result
+    local result = {
+      valid = false,
+    }
+
+    -- Handle files that are not in the depot or not opened in the client workspace.
+    if not string.find(line, "no such file(s)", 1, true) or
+       not string.find(line, "file(s) not in client view", 1, true) then
 
       local chunks = {}
 
@@ -41,26 +47,15 @@ function P4_Command_Files:_process_response(output)
       end
 
       --- @type P4_Command_Files_Result
-      local result = {
-        in_client_view = true,
+      result = {
+        valid = true,
         path = vim.split(chunks[1], '#')[1],
         head_rev = vim.split(chunks[1], '#')[2],
         submit_cl = chunks[5],
       }
-
-      table.insert(result_list, result)
-    else
-
-      --- @type P4_Command_Files_Result
-      local result = {
-        in_client_view = false,
-        path = '',
-        head_rev = "1",
-        submit_cl = 'Not in depot'
-      }
-
-      table.insert(result_list, result)
     end
+
+    table.insert(result_list, result)
   end
 
   return result_list

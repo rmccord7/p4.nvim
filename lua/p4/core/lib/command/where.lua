@@ -5,9 +5,13 @@ local P4_Command = require("p4.core.lib.command")
 --- @class P4_Command_Where_Options : table
 
 --- @class P4_Command_Where_Result : table
---- @field depot P4_Depot_File_Path Depot path to the file
---- @field client P4_Client_File_Path Client path to the file in local syntax
---- @field host P4_Local_File_Path Local path to the file
+--- @field valid boolean Indicates if the file's stats are valid.
+--- @field depot Depot_File_Path? Depot path to the file
+--- @field client Client_File_Path? Client path to the file in local syntax
+--- @field host Local_File_Path? Local path to the file
+local P4_Command_Where_Result = {
+  valid = false,
+}
 
 --- @class P4_Command_Where : P4_Command
 --- @field opts P4_Command_Where_Options Command options.
@@ -22,7 +26,6 @@ setmetatable(P4_Command_Where, {__index = P4_Command})
 --- @param output string Command output.
 --- @return P4_Command_Where_Result[] result Hold's the parsed result from the command output.
 function P4_Command_Where:_process_response(output)
-
   log.trace("P4_Command_Where: process_response")
 
   --- @type P4_Command_Where_Result[]
@@ -30,19 +33,26 @@ function P4_Command_Where:_process_response(output)
 
   for _, file_path_list in ipairs(vim.split(output, "\n")) do
 
-    local chunks = {}
-
-    -- Convert to table
-    for string in file_path_list:gmatch("%S+") do
-      table.insert(chunks, string)
-    end
-
     --- @type P4_Command_Where_Result
     local result = {
-      depot = chunks[1],
-      client = chunks[2],
-      host = chunks[3],
+      valid = false,
     }
+
+    -- Handle files that are not in the depot or not opened in the client workspace.
+    if not string.find(file_path_list, "no such file(s)", 1, true) or
+       not string.find(file_path_list, "file(s) not in client view", 1, true) then
+
+      local chunks = {}
+
+      for string in file_path_list:gmatch("%S+") do
+        table.insert(chunks, string)
+      end
+
+      result.valid = true
+      result.depot = chunks[1]
+      result.client = chunks[2]
+      result.host = chunks[3]
+    end
 
     table.insert(result_list, result)
   end

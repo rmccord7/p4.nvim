@@ -7,9 +7,12 @@ local P4_File_API = {}
 --- Creates a P4 file from the specified file.
 ---
 --- @param file string File.
---- @param is_add boolean True if we are adding the file.
+--- @return boolean success True if this function is successful.
 --- @return P4_File? result Function result.
-local function create_p4_file(file, is_add)
+---
+--- @async
+--- @nodiscard
+local function create_p4_file(file)
 
   local P4_File = require("p4.core.lib.file")
 
@@ -20,40 +23,17 @@ local function create_p4_file(file, is_add)
     get_stats = true,
   }
 
-  ---@type P4_File?
-  local p4_file = P4_File:new(new_p4_file)
-
-  local success, in_depot = p4_file:get_in_depot()
-
-  if success then
-
-    if in_depot then
-      log.fmt_debug("File in depot: %s", file)
-    else
-      log.fmt_error("File not in depot: %s", file)
-
-      -- Handle the case where the file instance is a file that is going to be added to the depot.
-      if not is_add then
-        return nil
-      end
-    end
-  end
-
-  if success then
-    success = p4_file:get_fstat()
-  end
-
-  if not success then
-    p4_file = nil
-  end
-
-  return p4_file
+  return P4_File:new(new_p4_file)
 end
 
 --- Creates a P4 file list from the specified files.
 ---
 --- @param files string[] One or more files.
+--- @return boolean success True if this function is successful.
 --- @return P4_File_List? result Function result.
+---
+--- @async
+--- @nodiscard
 local function create_p4_file_list(files)
 
   local P4_File_List = require("p4.core.lib.file_list")
@@ -61,6 +41,7 @@ local function create_p4_file_list(files)
   ---@type P4_File_List_New
   local new_file_list = {
     paths = files,
+    convert_depot_paths = false,
     check_in_depot = true,
     get_stats = true,
   }
@@ -82,9 +63,9 @@ function P4_File_API.add(file)
 
   if type(file) == "string" then
 
-    local p4_file = create_p4_file(file, true)
+    success, p4_file = create_p4_file(file)
 
-    if p4_file then
+    if success and p4_file then
 
       success = p4_file:add()
 
@@ -118,9 +99,10 @@ function P4_File_API.add_files(files)
 
   if type(files) == "table" then
 
-    local p4_file_list = create_p4_file_list(files)
+    local p4_file_list
+    success, p4_file_list = create_p4_file_list(files)
 
-    if p4_file_list then
+    if success and p4_file_list then
 
       local P4_Command_Add = require("p4.core.lib.command.add")
 
@@ -155,9 +137,10 @@ function P4_File_API.edit(file)
 
   if type(file) == "string" then
 
-    local p4_file = create_p4_file(file, false)
+    local p4_file
+    success, p4_file = create_p4_file(file)
 
-    if p4_file then
+    if success and p4_file then
 
       local P4_Command_Edit = require("p4.core.lib.command.edit")
 
@@ -187,19 +170,26 @@ end
 function P4_File_API.revert(file)
   log.trace("P4_File_API (revert): Enter")
 
-  local p4_file = create_p4_file(file, false)
+  local success = false
 
-  if p4_file then
+  if type(file) == "string" then
+    local p4_file
+    success, p4_file = create_p4_file(file)
 
-    local P4_Command_Revert = require("p4.core.lib.command.revert")
+    if success and p4_file then
 
-    local success = P4_Command_Revert:new({file}):run()
+      local P4_Command_Revert = require("p4.core.lib.command.revert")
 
-    if success then
-      notify("File reverted: " .. file)
+      success = P4_Command_Revert:new({file}):run()
 
-      log.fmt_debug("File reverted: %s", file)
+      if success then
+        notify("File reverted: " .. file)
+
+        log.fmt_debug("File reverted: %s", file)
+      end
     end
+  else
+    log.fmt_error("P4_File_API (revert): Invalid parameter")
   end
 
   log.trace("P4_File_API (revert): Exit")
@@ -214,19 +204,26 @@ end
 function P4_File_API.shelve(file)
   log.trace("P4_File_API (shelve): Enter")
 
-  local p4_file = create_p4_file(file, false)
+  local success = false
 
-  if p4_file then
+  if type(file) == "string" then
+    local p4_file
+    sucess, p4_file = create_p4_file(file)
 
-    local P4_Command_Shelve = require("p4.core.lib.command.shelve")
+    if success and p4_file then
 
-    local success = P4_Command_Shelve:new({file}):run()
+      local P4_Command_Shelve = require("p4.core.lib.command.shelve")
 
-    if success then
-      notify("File shelved: " .. file)
+      success = P4_Command_Shelve:new({file}):run()
 
-      log.fmt_debug("File shelved: %s", file)
+      if success then
+        notify("File shelved: " .. file)
+
+        log.fmt_debug("File shelved: %s", file)
+      end
     end
+  else
+    log.fmt_error("P4_File_API (shelve): Invalid parameter")
   end
 
   log.trace("P4_File_API (shelve): Exit")
@@ -241,10 +238,17 @@ end
 function P4_File_API.diff(file)
   log.trace("P4_File_API (diff): Enter")
 
-  local p4_file = create_p4_file(file, false)
+  local success = false
 
-  if p4_file then
-    --TODO:
+  if type(file) == "string" then
+    local p4_file
+    sucess, p4_file = create_p4_file(file)
+
+    if success and p4_file then
+
+    end
+  else
+    log.fmt_error("P4_File_API (diff): Invalid parameter")
   end
 
   log.trace("P4_File_API (diff): Exit")

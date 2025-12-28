@@ -20,12 +20,16 @@ local P4_Telescope_Client_Actions = {}
 
   if entry then
 
+    -- TODO: Implement deleting the client
+
+    notify("Not supported", vim.log.level.ERROR);
+
     -- local bufnr = require("telescope.state").get_global_key("last_preview_bufnr")
 
-    local P4_Client_API = require("p4.api.client")
-
-    --FIX: Use preview buffer
-    P4_Client_API.new(entry.name)
+    -- local P4_Client_API = require("p4.api.client")
+    --
+    -- --FIX: Use preview buffer
+    -- P4_Client_API.new(entry.name)
   end
 end
 

@@ -29,8 +29,8 @@ function P4_Telescope_Client_Picker.load(prompt_title, p4_client_list, opts)
 
     return {
       value = entry,
-      ordinal = entry.name,
-      display = entry.name,
+      ordinal = entry:get_name(),
+      display = entry:get_name(),
     }
   end
 
@@ -96,12 +96,12 @@ function P4_Telescope_Client_Picker.load(prompt_title, p4_client_list, opts)
       end
     end)
 
-    -- local p4_config = require("p4.config")
-    --
-    -- local cl_mappings = p4_config.opts.telescope.cl.mappings
-    -- local cl_actions  = require("telescope._extensions.p4.pickers.cl.actions")
-    --
-    -- map({ "n" }, cl_mappings.display_files, cl_actions.display_cl_files)
+    local p4_config = require("p4.config")
+
+    local cl_mappings = p4_config.opts.telescope.cl.mappings
+    local cl_actions  = require("telescope._extensions.p4.pickers.cl.actions")
+
+    map({ "n" }, cl_mappings.display_files, cl_actions.display_cl_files)
 
     return true
   end

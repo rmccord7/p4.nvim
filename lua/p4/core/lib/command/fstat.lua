@@ -2,21 +2,29 @@ local log = require("p4.log")
 
 local P4_Command = require("p4.core.lib.command")
 
+-- Lua 5.1 compatibility
+
+-- selene: allow(incorrect_standard_library_use)
+if not table.unpack then
+  table.unpack = unpack
+end
+
 --- @class P4_Command_FStat_Options : table
 
 --- @class P4_Command_FStat_Result : table
---- @field in_client_view boolean Indicates if the file is in the client view.
---- @field clientFile Client_File_Path Local path to the file.
---- @field depotFile Depot_File_Path Depot path to the file.
---- @field isMapped boolean Indicates if file is mapped to the current client workspace.
---- @field shelved boolean Indicates if file is shelved.
---- @field change string Open change list number if file is opened in client workspace.
---- @field headRev integer Head revision number if in depot.
---- @field haveRev integer Revision last synced to workpace.
---- @field workRev integer Revision if file is opened.
---- @field action string Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
+--- @field valid boolean Indicates if the entry is valid.
+--- @field clientFile Client_File_Path? Local path to the file.
+--- @field depotFile Depot_File_Path? Depot path to the file.
+--- @field isMapped boolean? Indicates if file is mapped to the current client workspace.
+--- @field shelved boolean? Indicates if file is shelved.
+--- @field change string? Open change list number if file is opened in client workspace.
+--- @field headRev integer? Head revision number if in depot.
+--- @field haveRev integer? Revision last synced to workpace.
+--- @field workRev integer? Revision if file is opened.
+--- @field action string? Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
 
 --- @class P4_Command_FStat : P4_Command
+--- @field file_path_list File_Spec[] File path list
 --- @field opts P4_Command_FStat_Options Command options.
 local P4_Command_FStat = {}
 
@@ -29,34 +37,54 @@ setmetatable(P4_Command_FStat, {__index = P4_Command})
 --- @param output string Command output.
 --- @return P4_Command_FStat_Result[] result Hold's the parsed result from the command output.
 function P4_Command_FStat:_process_response(output)
-
   log.trace("P4_Command_FStat: process_response")
 
   --- @type P4_Command_FStat_Result[]
   local result_list = {}
 
-  for _, file_stats in ipairs(vim.split(output, "\n\n")) do
+  -- Convert spec to table
+  local lines = vim.split(output, "\n", {trimempty = true})
 
-    -- Last iteration will be empty.
-    if file_stats ~= '' then
+  local index = 1
 
-      if not string.find(file_stats, "file(s) not in client view", 1, true) then
+  while index < #lines do
 
-        --- @type P4_Command_FStat_Result
-        local result = {
-          in_client_view = true,
-          clientFile = '',
-          depotFile = '',
-          action = '',
-          change = '',
-          haveRev = 0,
-          headRev = 0,
-          isMapped = false,
-          shelved = false,
-          workRev = 0,
-        }
+    ---@type P4_Command_FStat_Result
+    local result = {
+      valid = false
+    }
 
-        for _, line in ipairs(vim.split(file_stats, "\n")) do
+    -- Handle files that are not in the depot or not opened in the client workspace.
+    if string.find(lines[index], "no such file(s)", 1, true) or
+      string.find(lines[index], "file(s) not in client view", 1, true)then
+
+      table.insert(result_list, result)
+
+      index = index + 1
+    else
+      if string.find(lines[index], "... depotFile", 1, true) then
+
+        result.valid = true
+
+        local start_index = index
+
+        index = index + 1
+
+        -- End will be reached once the next change is found or we have
+        -- reached the end of the output.
+        while index < #lines and
+          not string.find(lines[index], "no such file(s)", 1, true) and
+          not string.find(lines[index], "file(s) not in client view", 1, true) and
+          not string.find(lines[index], "... depotFile", 1, true) do
+          index = index + 1
+        end
+
+        local end_index = index - 1
+
+        -- selene: allow(incorrect_standard_library_use)
+        local current_lines = {table.unpack(lines, start_index, end_index)}
+
+        for _, line in ipairs(current_lines) do
 
           local t = vim.split(line, ' ')
 
@@ -64,39 +92,43 @@ function P4_Command_FStat:_process_response(output)
 
             -- Only store level one values for now.
             if t[2] ~= "..." then
-              result[t[2]] = t[3]
-
-              -- -- Make path relative to the CWD.
-              -- if t[2] == "clientFile" then
-              --   --- @diagnostic disable-next-line No annotation for cwd()
-              --   result[t[2]] = t[3]:gsub(vim.uv.cwd(), '.')
-              -- end
+              if t[3] ~= "" then
+                ---@diagnostic disable-next-line:assign-type-mismatch
+                result[t[2]] = t[3]
+              else
+                result[t[2]] = true
+              end
             end
           end
         end
 
-        table.insert(result_list, result)
+        -- Make path relative to the current client root.
+        if result.isMapped and result.isMapped == true then
+          local P4_Context = require("p4.context")
+
+          local current_client = P4_Context.get_current_client()
+
+          if current_client then
+
+            local success, spec = current_client:get_spec()
+
+            if success and spec then
+              --TODO: Handle alt root if necessary
+
+              ---@diagnostic disable-next-line:param-type-mismatch
+              result.clientFile = vim.fs.relpath(spec.root, result.clientFile)
+            end
+          end
+        end
       else
-
-        --- @type P4_Command_FStat_Result
-        local result = {
-          in_client_view = false,
-          clientFile = '',
-          depotFile = '',
-          action = '',
-          change = '',
-          haveRev = 0,
-          headRev = 0,
-          isMapped = false,
-          shelved = false,
-          workRev = 0,
-        }
-
-        table.insert(result_list, result)
+        assert(false, "Invalid starting line")
       end
 
+      table.insert(result_list, result)
     end
   end
+
+  assert(#self.file_path_list == #result_list, "Incorrect number of expected results.")
 
   return result_list
 end
@@ -115,6 +147,8 @@ function P4_Command_FStat:new(file_path_list, opts)
     "p4",
     "fstat",
   }
+
+  self.file_path_list = file_path_list
 
   vim.list_extend(command, file_path_list)
 

@@ -62,6 +62,7 @@ end
 --- @return boolean success True if this function is successful.
 --- @return P4_CL CL New CL
 ---
+--- @async
 --- @nodiscard
 function P4_CL:new(cl)
   log.trace("P4_CL (new): Enter")
@@ -75,7 +76,7 @@ function P4_CL:new(cl)
   new.file_list = cl.file_list
 
   if success then
-    success = self:get_spec()
+    success = new:get_spec()
   end
 
   log.trace("P4_CL (new): Exit")
@@ -88,6 +89,22 @@ end
 local P4_CL_Get_Spec_Opts = {
   force = false,
 }
+
+--- Returns the CL's spec.
+---
+--- @return string change P4 CL name.
+---
+--- @async
+--- @nodiscard
+function P4_CL:get_change()
+  log.trace("P4_CL (get_change): Enter")
+
+  self:_check_instance()
+
+  log.trace("P4_CL (get_change): Exit")
+
+  return self.change
+end
 
 --- Returns the CL's spec.
 ---
@@ -140,7 +157,6 @@ end
 --- @param buf integer Identifies the buffer that will used to store the client spec
 ---
 --- @async
---- @nodiscard
 function P4_CL:write_spec(buf)
   log.trace("P4_CL (write_spec): Enter")
 
@@ -223,6 +239,7 @@ function P4_CL:get_file_list(opts)
       ---@type P4_File_List_New
       local new_file_list = {
         paths = self.spec.file_path_list,
+        convert_depot_paths = false,
         check_in_depot = true,
         get_stats = true,
         client = self.client,
