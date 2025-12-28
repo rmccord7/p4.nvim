@@ -73,42 +73,56 @@ function P4_Client:get_name()
   return(self.name)
 end
 
+--- @class P4_Client_Get_Spec_Opts : table
+--- @field force boolean Forces a read of the client spec.
+local P4_Client_Get_Spec_Opts = {
+  force = false,
+}
+
 --- Reads the client spec
 ---
+--- @param opts? P4_Client_Get_Spec_Opts Options.
 --- @return boolean success Indicates if the function was successful
 --- @return P4_Client_Spec client_spec P4 client spec
 ---
 --- @async
 --- @nodiscard
-function P4_Client:get_spec()
+function P4_Client:get_spec(opts)
   log.trace("P4_Client (get_spec): Enter")
 
   self:_check_instance()
 
-  local P4_Command_Client = require("p4.core.lib.command.client")
+  opts = vim.tbl_deep_extend("force", P4_Client_Get_Spec_Opts, opts or {})
 
-  --- @type P4_Command_Client_Options
-  local cmd_opts = {
-    type = P4_Command_Client.opts_type.READ,
-  }
+  local success = true
 
-  local success, result = P4_Command_Client:new(self.name, cmd_opts):run()
+  if not self.spec or opts.force then
+    local P4_Command_Client = require("p4.core.lib.command.client")
 
-  if success then
+    --- @type P4_Command_Client_Options
+    local cmd_opts = {
+      type = P4_Command_Client.opts_type.READ,
+    }
 
-    --- @cast result P4_Command_Client_Result
+    local result
+    success, result = P4_Command_Client:new(self.name, cmd_opts):run()
 
-    log.fmt_debug("Successfully read the client's spec: %s", self.name)
+    if success then
 
-    -- Build the spec table from the output.
-    self.spec = result
+      --- @cast result P4_Command_Client_Result
 
-    -- The workspace root may have changed.
-    self.root_file_spec = self.spec.root .. "/..."
+      log.fmt_debug("Successfully read the client's spec: %s", self.name)
 
-    log.fmt_info("Client root: %s", self.spec.root);
-  else
-    log.debug("Failed to read the client's spec: %s", self.name)
+      -- Build the spec table from the output.
+      self.spec = result
+
+      -- The workspace root may have changed.
+      self.root_file_spec = self.spec.root .. "/..."
+
+      log.fmt_info("Client root: %s", self.spec.root);
+    else
+      log.debug("Failed to read the client's spec: %s", self.name)
+    end
   end
 
   log.trace("P4_Client (get_spec): Exit")

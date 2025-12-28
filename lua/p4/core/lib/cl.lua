@@ -84,12 +84,6 @@ function P4_CL:new(cl)
   return success, new
 end
 
---- @class P4_CL_Get_Spec_Opts : table
---- @field force boolean Forces a read of the CL spec.
-local P4_CL_Get_Spec_Opts = {
-  force = false,
-}
-
 --- Returns the CL's spec.
 ---
 --- @return string change P4 CL name.
@@ -106,9 +100,15 @@ function P4_CL:get_change()
   return self.change
 end
 
+--- @class P4_CL_Get_Spec_Opts : table
+--- @field force boolean Forces a read of the CL spec.
+local P4_CL_Get_Spec_Opts = {
+  force = false,
+}
+
 --- Returns the CL's spec.
 ---
---- @param opts? P4_File_Get_In_Depot_Opts Options.
+--- @param opts? P4_CL_Get_Spec_Opts Options.
 --- @return boolean success True if this function is successful.
 --- @return P4_CL_Spec spec P4 CL spec.
 ---
