@@ -193,6 +193,8 @@ function P4_File_API.revert(file)
   end
 
   log.trace("P4_File_API (revert): Exit")
+
+  return success
 end
 
 --- Shelves the specified files in the current client workspace.

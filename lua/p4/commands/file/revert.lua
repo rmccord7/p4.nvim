@@ -10,8 +10,7 @@ function M.add_parser(parent_subparser)
     local success = file_api.revert(vim.fn.expand("%:p"))
 
     if success then
-      vim.api.nvim_set_option_value("readonly", true, { scope = "local" })
-      vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
+      vim.cmd("e!")
     end
   end)
 end

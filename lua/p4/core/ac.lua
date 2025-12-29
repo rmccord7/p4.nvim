@@ -23,6 +23,8 @@ local function prompt_file_open_for_edit(file_path)
   -- Prevent changing read only warning.
   vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
 
+  local success = false
+
   vim.fn.inputsave()
   local opts = { prompt = "[P4] Open file for edit (y/n): " }
   local _, result = pcall(vim.fn.input, opts)
@@ -31,13 +33,16 @@ local function prompt_file_open_for_edit(file_path)
   if result == "y" or result == "Y" then
     local P4_File_API = require("p4.api.file")
 
-    ---@diagnostic disable-next-line:discard-returns
-    P4_File_API.edit(file_path)
-  else
-    vim.api.nvim_set_option_value("modifiable", false, { scope = "local" })
+    success = P4_File_API.edit(file_path)
+  end
 
-    -- Exit insert mode
-    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<ESC>", true, false, true), "m", false)
+  -- Exit insert mode
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<ESC>", true, false, true), "m", false)
+
+  if not success then
+    vim.schedule(function()
+      vim.cmd("e!")
+    end)
   end
 end
 
@@ -52,17 +57,7 @@ function P4_AC.enable_file_autocmds()
     group = P4_AC.ac_group,
     pattern = "*",
     callback = function()
-      vim.api.nvim_set_option_value("autoread", false, { scope = "local" })
-    end,
-  })
-
-  -- If we create a new buffer, then check if the user wants to add it to the
-  -- workspace.
-  vim.api.nvim_create_autocmd("BufNewFile", {
-    group = P4_AC.ac_group,
-    pattern = "*",
-    callback = function()
-      prompt_file_open_for_add(vim.fn.expand("%:p"))
+      vim.api.nvim_set_option_value("autoread", true, { scope = "local" })
     end,
   })
 
