@@ -12,10 +12,10 @@ local P4_Command = require("p4.core.lib.command")
 --- @field depot_file P4_Depot_File_Path Depot path to the file.
 --- @field number string Revision number.
 --- @field action string CL Action.
---- @field cl string CL ID.
+--- @field id string CL ID.
 --- @field user string CL user.
 --- @field client string Name of the client associated with the CL.
---- @field date P4_Command_Describe_Result_Date_Time CL submission date/time.
+--- @field date P4_Command_Result_Result_Date_Time CL submission date/time.
 --- @field description string CL description.
 local P4_Command_Filelog_Revision = {
   depot_file = "",
@@ -51,8 +51,21 @@ setmetatable(P4_Command_Filelog, { __index = P4_Command })
 --- @return P4_Command_Filelog_Revision P4_Command_Filelog_Revision P4 file log revision.
 --- @return integer index Updated index.
 local function process_revision(depot_file, lines, index)
+  log.trace("P4_Command_Filelog: process_revision")
+
   --- @type P4_Command_Filelog_Revision
-  local revision = setmetatable({}, { __index = P4_Command_Filelog_Revision })
+  local revision = {
+    depot_file = "",
+    revision = "",
+    action = "",
+    client = "",
+    user = "",
+    id = "",
+    date = {
+      date = "",
+      time = "",
+    }
+  }
 
   -- Check if this is a revision.
   if string.match(lines[index], "^... #") then
@@ -64,8 +77,8 @@ local function process_revision(depot_file, lines, index)
 
     revision.depot_file = depot_file
     revision.revision = chunks[2]
-    revision.action = chunks[3]
     revision.id = chunks[4]
+    revision.action = chunks[5]
     revision.user = vim.split(chunks[10], "@")[1]
     revision.client = vim.split(chunks[10], "@")[2]
     revision.date.date = chunks[7]
@@ -77,7 +90,7 @@ local function process_revision(depot_file, lines, index)
 
     -- End will be reached once the next change is found or we have
     -- reached the end of the output.
-    while index < #lines and not string.match(lines[index], "^...") or string.match(lines[index], "^//") do
+    while index < #lines and not string.match(lines[index], "^... #" or string.match(lines[index], "^//"))do
       index = index + 1
     end
 
@@ -90,6 +103,8 @@ local function process_revision(depot_file, lines, index)
     end
 
     revision.description = table.concat(lines, '\n', start_index, end_index)
+  else
+    index = index + 1
   end
 
   return revision, index

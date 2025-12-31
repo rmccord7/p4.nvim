@@ -9,27 +9,32 @@ local entry_display = require("telescope.pickers.entry_display")
 local log = require("p4.log")
 local notify = require("p4.notify")
 
---- @class P4_Telescope_CL_Picker
-local P4_Telescope_CL_Picker = {}
+--- @class P4_Telescope_Revision_Picker
+local P4_Telescope_Revision_Picker = {}
 
 --- Telescope picker to display the list of P4 CLs.
 ---
 --- @param prompt_title string Telescope prompt title.
---- @param p4_cl_list P4_CL[] File list.
+--- @param p4_revision_list P4_Revision[] File list.
 --- @param opts table? Telescope picker options.
-function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
+function P4_Telescope_Revision_Picker.load(prompt_title, p4_revision_list, opts)
   opts = opts or {}
 
-  log.trace("Telescope_CL_Picker: picker")
+  log.trace("Telescope_Revision_Picker: picker")
+
+  -- log.fmt_debug("%s", vim.print(p4_revision_list))
 
   --- Processes results from the finder.
   ---
-  --- @param entry P4_CL P4 CL.
+  --- @param entry P4_Revision P4 Revision.
   local function entry_maker(entry)
 
     local displayer = entry_display.create({
-      separator = "",
+      separator = " ",
       items = {
+        { remaining = true },
+        { remaining = true },
+        { remaining = true },
         { remaining = true },
         { remaining = true },
       },
@@ -37,18 +42,21 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
 
     local make_display = function(_entry)
 
-      --- @type P4_CL
-      local p4_cl = _entry.value
+      --- @type P4_Revision
+      local p4_revision = _entry.value
 
       return displayer {
-        p4_cl:get_change() .. ": ",
-        p4_cl:get_formatted_description(),
+        p4_revision.number .. ":",
+        p4_revision.cl:get().name,
+        p4_revision.cl:get().user,
+        p4_revision.date,
+        p4_revision.action,
       }
     end
 
     return {
       value = entry,
-      ordinal = entry:get_change(),
+      ordinal = entry.cl:get().name,
       display = make_display,
     }
   end
@@ -60,23 +68,41 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
       title = "Change List Spec",
       get_buffer_by_name = function(_, entry)
 
-        --- @type P4_CL
-        local p4_cl = entry.value
+        --- @type P4_Revision
+        local p4_revision = entry.value
 
-        return p4_cl:get_change()
+        return p4_revision.cl:get().name
       end,
 
       define_preview = function(self, entry)
 
-        --- @type P4_CL
-        local p4_cl = entry.value
+        --- @type P4_Revision
+        local p4_revision = entry.value
 
         -- If we already have the spec, then load it into the
         -- buffer. Otherwise we need to query it.
-        local success, spec = p4_cl:get_spec()
+        local spec = p4_revision.cl:get_spec()
 
-        if success and spec then
+        if spec and spec.output then
           vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(spec.output, '\n'))
+        else
+          local utils = require("telescope.previewers.utils")
+
+          local P4_Command_Change = require("p4.core.lib.command.change")
+
+          --- @type P4_Command_Change_Options
+          local cmd_opts = {
+            cl = p4_revision.cl:get().name,
+            type = P4_Command_Change.opts_type.READ,
+            read = nil,
+          }
+
+          local cmd = P4_Command_Change:new(cmd_opts)
+
+          utils.job_maker(cmd:get(), self.state.bufnr, {
+            value = p4_revision.cl:get().name,
+            bufname = self.state.bufname,
+          })
         end
       end,
       keep_last_buf = true,
@@ -128,10 +154,10 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
 
   pickers
     .new(opts, {
-      prompt_title = "P4 " .. prompt_title .. " CLs",
-      results_title = "CLs",
+      prompt_title = "P4 " .. prompt_title .. " Revisions",
+      results_title = "Revisions",
       finder = finders.new_table({
-        results = p4_cl_list,
+        results = p4_revision_list,
         entry_maker = entry_maker,
       }),
       sorter = config.generic_sorter(opts),
@@ -141,4 +167,5 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
     :find()
 end
 
-return P4_Telescope_CL_Picker
+return P4_Telescope_Revision_Picker
+
