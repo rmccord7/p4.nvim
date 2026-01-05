@@ -12,7 +12,7 @@ function Task.complete(on_exit, success, ...)
   if not success then
     local error, trace = ...
 
-    notify("Task failed. See ':P4 Log' for more info.", vim.log.levels.ERROR)
+    notify("Task failed. See ':P4 log' for more info.", vim.log.levels.ERROR)
 
     log.error(error, trace)
 
