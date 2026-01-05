@@ -31,8 +31,6 @@ function P4_Command_Print:_process_response(output)
   -- Output is a list of json tables for each file.
   local json_table_list = vim.split(output, "\n", {trimempty = true})
 
-  assert(3 * #self.file_specs == #json_table_list, "Unexpected number of output entries.")
-
   for _, json_table in ipairs(json_table_list) do
 
     local output_table = vim.json.decode(json_table)
@@ -41,7 +39,11 @@ function P4_Command_Print:_process_response(output)
       table.insert(result.file_output_list, output_table)
     elseif output_table["data"] then
       if output_table["data"] ~= "" then
-        result.file_output_list[#result.file_output_list].output = output_table["data"]
+        if result.file_output_list[#result.file_output_list].output then
+          result.file_output_list[#result.file_output_list].output = result.file_output_list[#result.file_output_list].output .. output_table["data"]
+        else
+          result.file_output_list[#result.file_output_list].output = output_table["data"]
+        end
       end
     end
   end

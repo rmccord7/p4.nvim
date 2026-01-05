@@ -275,10 +275,18 @@ function P4_File_API.diff(file)
 
             vim.api.nvim_buf_set_name(new_buf, p4_file:get_file_path() .. "#Head")
 
-            vim.api.nvim_buf_set_lines(new_buf, 0, 1, true, vim.split(output, "\n", {trimempty = true}))
+            local lines = vim.split(output, "\n")
+
+            if lines[#lines] == "" then
+              table.remove(lines, #lines)
+            end
+
+            vim.api.nvim_buf_set_lines(new_buf, 0, 1, true, lines)
 
             vim.bo[new_buf].readonly = true
             vim.bo[new_buf].modifiable = false
+
+            cur_win = vim.api.nvim_get_current_win()
 
             local win = vim.api.nvim_open_win(new_buf, false, {
               split = "right",
@@ -286,6 +294,8 @@ function P4_File_API.diff(file)
 
             vim.cmd("wincmd =")
             vim.cmd('windo diffthis')
+
+            vim.api.nvim_set_current_win(cur_win)
 
             local buf_ac = vim.api.nvim_create_autocmd(
               {
