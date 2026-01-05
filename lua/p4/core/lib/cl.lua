@@ -241,7 +241,7 @@ function P4_CL:get_file_list(opts)
         paths = self.spec.file_path_list,
         convert_depot_paths = false,
         check_in_depot = true,
-        get_stats = true,
+        get_info = true,
         client = self.client,
         cl = self,
       }

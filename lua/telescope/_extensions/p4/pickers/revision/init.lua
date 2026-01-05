@@ -15,14 +15,12 @@ local P4_Telescope_Revision_Picker = {}
 --- Telescope picker to display the list of P4 CLs.
 ---
 --- @param prompt_title string Telescope prompt title.
---- @param p4_revision_list P4_Revision[] File list.
+--- @param revision_list P4_Revision[] File list.
 --- @param opts table? Telescope picker options.
-function P4_Telescope_Revision_Picker.load(prompt_title, p4_revision_list, opts)
+function P4_Telescope_Revision_Picker.load(prompt_title, revision_list, opts)
   opts = opts or {}
 
   log.trace("Telescope_Revision_Picker: picker")
-
-  -- log.fmt_debug("%s", vim.print(p4_revision_list))
 
   --- Processes results from the finder.
   ---
@@ -46,17 +44,17 @@ function P4_Telescope_Revision_Picker.load(prompt_title, p4_revision_list, opts)
       local p4_revision = _entry.value
 
       return displayer {
-        p4_revision.number .. ":",
-        p4_revision.cl:get().name,
-        p4_revision.cl:get().user,
-        p4_revision.date,
+        p4_revision.index .. ":",
         p4_revision.action,
+        p4_revision.change,
+        p4_revision.user,
+        vim.fn.strftime("%m-%d-%y %I:%M %p", tonumber(p4_revision.time)),
       }
     end
 
     return {
       value = entry,
-      ordinal = entry.cl:get().name,
+      ordinal = entry.index,
       display = make_display,
     }
   end
@@ -65,13 +63,13 @@ function P4_Telescope_Revision_Picker.load(prompt_title, p4_revision_list, opts)
   local function previewer()
 
     return previewers.new_buffer_previewer({
-      title = "Change List Spec",
+      title = "CL Description",
       get_buffer_by_name = function(_, entry)
 
         --- @type P4_Revision
         local p4_revision = entry.value
 
-        return p4_revision.cl:get().name
+        return p4_revision.change
       end,
 
       define_preview = function(self, entry)
@@ -79,31 +77,7 @@ function P4_Telescope_Revision_Picker.load(prompt_title, p4_revision_list, opts)
         --- @type P4_Revision
         local p4_revision = entry.value
 
-        -- If we already have the spec, then load it into the
-        -- buffer. Otherwise we need to query it.
-        local spec = p4_revision.cl:get_spec()
-
-        if spec and spec.output then
-          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(spec.output, '\n'))
-        else
-          local utils = require("telescope.previewers.utils")
-
-          local P4_Command_Change = require("p4.core.lib.command.change")
-
-          --- @type P4_Command_Change_Options
-          local cmd_opts = {
-            cl = p4_revision.cl:get().name,
-            type = P4_Command_Change.opts_type.READ,
-            read = nil,
-          }
-
-          local cmd = P4_Command_Change:new(cmd_opts)
-
-          utils.job_maker(cmd:get(), self.state.bufnr, {
-            value = p4_revision.cl:get().name,
-            bufname = self.state.bufname,
-          })
-        end
+        vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(p4_revision.description, '\n'))
       end,
       keep_last_buf = true,
     })
@@ -124,19 +98,7 @@ function P4_Telescope_Revision_Picker.load(prompt_title, p4_revision_list, opts)
       local entry = actions_state.get_selected_entry()
 
       if entry then
-
-        -- Use the last preview buffer since it displayed the P4 change
-        -- list spec.
-        local state = require("telescope.state")
-
-        local bufnr = state.get_global_key("last_preview_bufnr")
-
-        if bufnr then
-          --- @type P4_CL
-          local p4_cl = entry.value
-
-          p4_cl:write_spec(bufnr)
-        end
+        notify("Not supported", vim.log.level.ERROR);
       else
         notify("Please make a valid selection before performing the action.", vim.log.levels.WARN)
       end
@@ -144,10 +106,12 @@ function P4_Telescope_Revision_Picker.load(prompt_title, p4_revision_list, opts)
 
     local p4_config = require("p4.config")
 
-    local cl_mappings = p4_config.opts.telescope.cl.mappings
-    local cl_actions  = require("telescope._extensions.p4.pickers.cl.actions")
+    local revision_mappings = p4_config.opts.telescope.revision.mappings
+    local revision_actions  = require("telescope._extensions.p4.pickers.revision.actions")
 
-    map({ "n" }, cl_mappings.display_files, cl_actions.display_cl_files)
+    map({ "n" }, revision_mappings.diff_against_workspace_file, revision_actions.diff_against_workspace_file)
+    map({ "n" }, revision_mappings.diff_against_head_revision, revision_actions.diff_against_head_revision)
+    map({ "n" }, revision_mappings.diff_against_prev_revision, revision_actions.diff_against_previous_revision)
 
     return true
   end
@@ -157,7 +121,7 @@ function P4_Telescope_Revision_Picker.load(prompt_title, p4_revision_list, opts)
       prompt_title = "P4 " .. prompt_title .. " Revisions",
       results_title = "Revisions",
       finder = finders.new_table({
-        results = p4_revision_list,
+        results = revision_list,
         entry_maker = entry_maker,
       }),
       sorter = config.generic_sorter(opts),

@@ -1,40 +1,45 @@
-local nio = require("nio")
-
 local log = require("p4.log")
-local notify = require("p4.notify")
 
 --- @class P4_Telescope_History_API
 local P4_Telescope_History_API = {}
 
 --- Opens the telescope history picker.
 ---
---- @param file_path_list string[] One or more files.
---- @param opts? table Optional parameters. Not used.
+--- @param file string File.
+--- @return boolean success Result of the function.
 ---
+--- @nodiscard
 --- @async
-function P4_Telescope_History_API.display(file_path_list, opts)
+function P4_Telescope_History_API.display(file)
+  log.trace("P4_Telescope_History_API (display): Enter")
 
-  log.trace("P4_Telescope_History_API: display")
+  local success = false
 
   if require("p4.api.telescope").check() then
 
-    nio.run(function()
+    -- Issue P4 filelog command to request the specified file's history.
+    local P4_Command_FileLog = require("p4.core.lib.command.filelog")
 
-      local P4_Revision_List = require("p4.core.lib.revision_list")
+    local result_list
+    success, result_list = P4_Command_FileLog:new({file}):run()
 
-      local p4_revision_list = P4_Revision_List:new(file_path_list[1])
+    if success and result_list then
 
-      if #p4_revision_list:get() >= 1 then
-        vim.schedule(function()
-          require("telescope._extensions.p4.pickers.revision").load(vim.fs.basename(file_path_list[1]), p4_revision_list:get())
-        end)
+      --- @cast result_list P4_Command_Filelog_Result[]
+
+      if #result_list then
+        require("telescope._extensions.p4.pickers.revision").load(vim.fs.basename(file), result_list[1].revisions.list)
       else
         log.fmt_error("No revisions found for the specified file")
 
-        notify("Failed to receive revisions", vim.log.levels.ERROR)
+        success = false
       end
-    end)
+    end
   end
+
+  log.trace("P4_Telescope_History_API (display): Exit")
+
+  return success
 end
 
 return P4_Telescope_History_API

@@ -38,7 +38,7 @@ end
 --- @field paths File_Spec[] P4 file path for each new file.
 --- @field convert_depot_paths boolean If the list of file paths are depot paths that need to be converted to local paths.
 --- @field check_in_depot boolean Check if the file is in the P4 depot.
---- @field get_stats boolean Get file stats from P4 server.
+--- @field get_info boolean Get the file's inforamtion from P4 server.
 --- @field client P4_Client? Optional P4 client for all files.
 --- @field cls P4_CL|P4_CL[]? Optional P4 CL for all files or a list of a CLs for each new file.
 
@@ -124,8 +124,8 @@ function P4_File_List:new(new_file_list)
   end
 
   if success then
-    if new_file_list.get_stats then
-      success = new:update_stats()
+    if new_file_list.get_info then
+      success = new:update_info()
     end
   end
 
@@ -407,14 +407,14 @@ function P4_File_List:delete()
   return success
 end
 
---- Updates each file's stats.
+--- Updates each file's information.
 ---
 --- @return boolean success Result of the function.
 ---
 --- @async
 --- @nodiscard
-function P4_File_List:update_stats()
-  log.trace("P4_File_List (update_stats): Enter")
+function P4_File_List:update_info()
+  log.trace("P4_File_List (update_info): Enter")
 
   self:_check_instance()
 
@@ -422,18 +422,18 @@ function P4_File_List:update_stats()
 
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-  local success, result_list = P4_Command_FStat:new(self.file_paths):run()
+  local success, result = P4_Command_FStat:new(self.file_paths):run()
 
-  if success and result_list then
+  if success and result then
 
-    --- @cast result_list P4_Command_FStat_Result[]
+    --- @cast result P4_Command_FStat_Result
 
     for index, file in ipairs(self.files) do
-      file:set_fstat(result_list[index])
+      file:set_info(result.file_info_list[index])
     end
   end
 
-  log.trace("P4_File_List (update_stats): Exit")
+  log.trace("P4_File_List (update_info): Exit")
 
   return success
 end

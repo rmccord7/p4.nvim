@@ -289,7 +289,7 @@ function P4_Client:get_open_files()
           paths = paths,
           convert_depot_paths = true, -- P4 opened output is depot path.
           check_in_depot = true, -- Files for add may not be in depot so good to have this information
-          get_stats = true, -- More efficient to do this now
+          get_info = true, -- More efficient to do this now
           client = self, -- Should have same client
           cls = cls, -- May have different CLs
         }

@@ -6,6 +6,8 @@ local P4_CL_API = {}
 
 --- Creates a new CL.
 ---
+--- @return boolean success True if this function is successful.
+---
 --- @async
 --- @nodiscard
 function P4_CL_API.new()
@@ -60,55 +62,77 @@ function P4_CL_API.new()
         cmd = P4_Command_Change:new(cmd_opts)
 
         success, _ = P4_Command_Change:new(cmd_opts):run()
-
-        if success then
-          notify("New CL spec written")
-        end
       end,
     })
   end
 
   log.trace("P4_CL_API (new): Exit")
+
+  return success
 end
 
 --- Reverts a CL.
+---
+--- @return boolean success True if this function is successful.
 ---
 --- @async
 --- @nodiscard
 function P4_CL_API.revert()
   log.trace("P4_CL_API (revert): Enter")
 
+  notify("Not supported", vim.log.level.ERROR);
+
   log.trace("P4_CL_API (revert): Exit")
+
+  return false
 end
 
 --- Shelves a CL's files.
+---
+--- @return boolean success True if this function is successful.
 ---
 --- @async
 --- @nodiscard
 function P4_CL_API.shelve_files()
   log.trace("P4_CL_API (shelve_files): Enter")
 
+  notify("Not supported", vim.log.level.ERROR);
+
   log.trace("P4_CL_API (shelve_files): Exit")
+
+  return false
 end
 
 --- Deletes a CLs shelved files.
+---
+--- @return boolean success True if this function is successful.
 ---
 --- @async
 --- @nodiscard
 function P4_CL_API.delete_shelved_files()
   log.trace("P4_CL_API (delete_shelve_files): Enter")
 
+  notify("Not supported", vim.log.level.ERROR);
+
   log.trace("P4_CL_API (delete_shelve_files): Exit")
+
+  return false
 end
 
 --- Deletes a CL
+---
+--- @return boolean success True if this function is successful.
 ---
 --- @async
 --- @nodiscard
 function P4_CL_API.delete()
   log.trace("P4_CL_API (delete): Enter")
 
+  notify("Not supported", vim.log.level.ERROR);
+
   log.trace("P4_CL_API (delete): Exit")
+
+  return false
 end
 
 return P4_CL_API

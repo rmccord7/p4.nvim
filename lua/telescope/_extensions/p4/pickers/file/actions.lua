@@ -56,7 +56,7 @@ local function get_selected_files(prompt_bufnr)
       paths = p4_files,
       convert_depot_paths = false,
       check_in_depot = true,
-      get_stats = true,
+      get_info = true,
     }
 
     success, p4_file_list = P4_File_List:new(new_file_list)
@@ -249,7 +249,7 @@ function P4_Telescope_File_Actions.fstat(prompt_bufnr)
 
   if success and p4_file_list then
 
-    success = p4_file_list:update_stats()
+    success = p4_file_list:update_info()
 
     if not success then
       log.error("Telescope file action failed.")

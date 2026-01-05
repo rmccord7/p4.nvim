@@ -11,11 +11,13 @@ local P4_Client_API = {}
 ---
 --- @param client_name string P4 client name.
 --- @param opts? P4_Client_API_New_Options Options.
+---
 --- @async
+--- @nodiscard
 function P4_Client_API.new(client_name, opts)
   opts = opts or {}
 
-  log.trace("P4_Client_API: new")
+  log.trace("P4_Client_API (new): Enter")
 
   local P4_Command_Client = require("p4.core.lib.command.client")
 
@@ -74,6 +76,10 @@ function P4_Client_API.new(client_name, opts)
       end,
     })
   end
+
+  log.trace("P4_Client_API (new): Exit")
+
+  return success
 end
 
 return P4_Client_API

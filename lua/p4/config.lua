@@ -37,10 +37,19 @@ config.namespace = vim.api.nvim_create_namespace("P4")
 ---@field shelve string Key mapping to shelve the selected files from their CL
 ---@field unshelve string Key mapping to unshelve the selected files from their CL
 
+---@class P4_Telescope_Revision_Options : table
+---@field mappings P4_Telescope_Revision_Mapping_Options Key mappings for telescope revision picker
+
+---@class P4_Telescope_Revision_Mapping_Options : table
+---@field diff_head_revision string Key mapping to diff the selected revision against the head revision.
+---@field diff_previous_revision string Key mapping to diff the selected revision against the previous revision.
+---@field diff_have_revision string Key mapping to diff the selected revision against the workspace revision.
+
 ---@class P4_Telescope_Options : table
 ---@field client P4_Telescope_Client_Options Client options.
 ---@field cl P4_Telescope_CL_Options CL options.
 ---@field file P4_Telescope_File_Options CL options.
+---@field revision P4_Telescope_Revision_Options Revision options.
 
 ---@class P4_Options : table
 ---@field log_level integer Indicates the level of logging
@@ -85,6 +94,13 @@ local defaults = {
         unshelve = "<c-u>", -- Un-shelves all selected files.
       },
     },
+    revision = {
+      mappings = {
+        diff_against_workspace_file = "<c-d>", -- Diff the selected revision against the workspace file.
+        diff_against_head_revision = "<c-h>", -- Diff the selected revision against the head revision.
+        diff_against_prev_revision = "<c-p>", -- Diff the selected revision against the previous revision.
+      }
+    }
   }
 }
 

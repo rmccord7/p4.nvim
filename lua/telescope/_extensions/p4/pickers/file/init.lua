@@ -29,7 +29,7 @@ function P4_Telescope_File_Picker.load(prompt_title, p4_file_list, opts)
   --- @param entry P4_File P4 File
   local function entry_maker(entry)
 
-    local _, file_stats = entry:get_fstat()
+    local _, file_stats = entry:get_info()
 
     assert(file_stats, "File stats have not been read")
 

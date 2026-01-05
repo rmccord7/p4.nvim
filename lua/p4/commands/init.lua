@@ -4,7 +4,10 @@ local _PREFIX = "P4"
 
 ---@type mega.cmdparse.ParserCreator
 local _SUBCOMMANDS = function()
+  ---@type mega.cmdparse.ParameterParser
   local parser = cmdparse.ParameterParser.new({ name = _PREFIX, help = "The root of all P4 commands." })
+
+  ---@type mega.cmdparse.Subparsers
   local sub_parser = parser:add_subparsers({ destination = "commands" })
 
   require("p4.commands.file").get_parser(sub_parser)

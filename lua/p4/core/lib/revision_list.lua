@@ -1,20 +1,50 @@
 local log = require("p4.log")
 
 --- @class P4_Revision_List : table
---- @field private file_spec P4_File_Spec P4 file.
+--- @field private file_spec File_Spec P4 file.
 --- @field private list P4_Revision[] P4 client list.
 local P4_Revision_List = {}
 
 P4_Revision_List.__index = P4_Revision_List
 
---- Creates a new P4 client list.
+--- Wrapper function to check if a table is an instance of this class.
+function P4_Revision_List:_check_instance()
+  assert(P4_Revision_List.is_instance(self) == true, "Not a P4 revision list class instance")
+end
+
+--- Returns if the table is an instance of this class.
 ---
---- @param file_spec P4_File_Spec
+--- @return boolean is_instance True if this is a class instance.
+---
+--- @async
+--- @nodiscard
+function P4_Revision_List:is_instance()
+  local object = self
+
+  while object do
+    object = getmetatable(object)
+
+    if object == P4_Revision_List then
+      return true
+    end
+  end
+
+  return false
+end
+
+--- @class P4_New_Revision_List_Information
+--- @field numbers string[] Revision numbers.
+--- @field changes string[] Revision CLs.
+--- @field actions string[] Revision actions.
+--- @field dates string[] Revision dates.
+
+--- Creates a new P4 revision list.
+---
+--- @param file_spec File_Spec
 --- @return P4_Revision_List P4_Revision_List A new file revision.
 --- @nodiscard
 function P4_Revision_List:new(file_spec)
-
-  log.trace("P4_Revision_List: new")
+  log.trace("P4_Revision_List (new): Enter")
 
   ---@class P4_Revision_List
   local new = setmetatable({}, P4_Revision_List)
@@ -65,6 +95,8 @@ function P4_Revision_List:new(file_spec)
       table.insert(new.list, p4_revision)
     end
   end
+
+  log.trace("P4_Revision_List (new): Exit")
 
   return new
 end

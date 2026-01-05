@@ -6,6 +6,10 @@ local P4_Telescope_API = {}
 
 --- Performs common checks for all Telescope APIs to make sure that
 --- the plugin has been configured correctly for their use.
+---
+--- @return boolean success True if this function is successful.
+---
+--- @nodiscard
 function P4_Telescope_API.check()
   log.trace("P4_Telescope_API: check")
 

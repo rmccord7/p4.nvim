@@ -2,113 +2,19 @@ local log = require("p4.log")
 
 local P4_Command = require("p4.core.lib.command")
 
---- @class P4_Command_Filelog_Options : table
+--- @class P4_Command_Filelog_Options
 
---- @class P4_Command_Result_Result_Date_Time : table
---- @field date string Date
---- @field time string Time
-
---- @class P4_Command_Filelog_Revision : table
---- @field depot_file P4_Depot_File_Path Depot path to the file.
---- @field number string Revision number.
---- @field action string CL Action.
---- @field id string CL ID.
---- @field user string CL user.
---- @field client string Name of the client associated with the CL.
---- @field date P4_Command_Result_Result_Date_Time CL submission date/time.
---- @field description string CL description.
-local P4_Command_Filelog_Revision = {
-  depot_file = "",
-  revision = "",
-  action = "",
-  client = "",
-  user = "",
-  id = "",
-  date = {
-    date = "",
-    time = "",
-  }
-}
-
---- @class P4_Command_Filelog_Result : table
---- @field num_revisions integer Number of revisions.
---- @field revision_list P4_Command_Filelog_Revision[] Revision list.
---- @field next P4_Command_Filelog_Result? Next revision list for following branch history past revision #1.
+--- @class P4_Command_Filelog_Result
+--- @field revisions P4_Revisions
 
 --- @class P4_Command_Filelog : P4_Command
+--- @field file_specs File_Spec[] File specsj
 --- @field opts P4_Command_Filelog_Options Command options.
 local P4_Command_Filelog = {}
 
 P4_Command_Filelog.__index = P4_Command_Filelog
 
 setmetatable(P4_Command_Filelog, { __index = P4_Command })
-
---- Creates a new P4 revision.
----
---- @param depot_file string
---- @param lines string[]
---- @param index integer
---- @return P4_Command_Filelog_Revision P4_Command_Filelog_Revision P4 file log revision.
---- @return integer index Updated index.
-local function process_revision(depot_file, lines, index)
-  log.trace("P4_Command_Filelog: process_revision")
-
-  --- @type P4_Command_Filelog_Revision
-  local revision = {
-    depot_file = "",
-    revision = "",
-    action = "",
-    client = "",
-    user = "",
-    id = "",
-    date = {
-      date = "",
-      time = "",
-    }
-  }
-
-  -- Check if this is a revision.
-  if string.match(lines[index], "^... #") then
-    -- Read the current line
-    local chunks = {}
-    for substring in lines[index]:gmatch("%S+") do
-      table.insert(chunks, substring)
-    end
-
-    revision.depot_file = depot_file
-    revision.revision = chunks[2]
-    revision.id = chunks[4]
-    revision.action = chunks[5]
-    revision.user = vim.split(chunks[10], "@")[1]
-    revision.client = vim.split(chunks[10], "@")[2]
-    revision.date.date = chunks[7]
-    revision.date.time = chunks[8]
-
-    -- Start index will be the next line.
-    index = index + 1
-    local start_index = index
-
-    -- End will be reached once the next change is found or we have
-    -- reached the end of the output.
-    while index < #lines and not string.match(lines[index], "^... #" or string.match(lines[index], "^//"))do
-      index = index + 1
-    end
-
-    local end_index = index
-
-    -- If we found the next change, then the actual end index is the line
-    -- before.
-    if index ~= #lines then
-      end_index = end_index - 1
-    end
-
-    revision.description = table.concat(lines, '\n', start_index, end_index)
-  else
-    index = index + 1
-  end
-
-  return revision, index
-end
 
 --- Parses the output of the P4 command.
 ---
@@ -120,82 +26,126 @@ function P4_Command_Filelog:_process_response(output)
   --- @type P4_Command_Filelog_Result[]
   local result_list = {}
 
-  -- Convert spec to table
-  local lines = vim.split(output, "\n")
-  local index = 1
+  -- Output is a list of json tables for each file.
+  local file_filelog_list = vim.split(output, "\n", {trimempty = true})
 
-  -- Assume we will insert the result in the list of revisions for each file.
-  local insert_list = result_list
-
-  -- New file.
-  while index < #lines and string.match(lines[index], "^//") do
-    --- @type P4_Command_Filelog_Result
-    local result = {
-      num_revisions = 0,
-      revision_list = {},
-      next = nil,
+  --- @type P4_Command_Filelog_Result
+  local result = {
+    revisions = {
+      count = 0,
+      list = {},
     }
+  }
 
-    -- Name of file is the current line.
-    local depot_file = lines[index]
-    index = index + 1
+  -- If we are following a file's branch history, then there will be multiple filelogs JSON tables for a single file.
+  -- Each filelog corresponds to a revision list for each time the history branched.
+  for _, filelog in ipairs(file_filelog_list) do
 
-    local revision
+    local filelog_table = vim.json.decode(filelog)
 
-    -- Process all the revisions for this file.
-    while index < #lines do
-      --- @type P4_Command_Filelog_Revision
-      revision, index = process_revision(depot_file, lines, index)
+    local changes = {} ---@type string[]
+    local actions = {} ---@type string[]
+    local clients = {} ---@type string[]
+    local descriptions = {} ---@type string[]
+    local revisions = {} ---@type string[]
+    local times = {} ---@type string[]
+    local users = {} ---@type string[]
 
-      result.num_revisions = result.num_revisions + 1
-      table.insert(result.revision_list, revision)
+    for key, value in pairs(filelog_table) do
 
-      -- Last revision is 1.
-      if revision.number == "#1" then
-        break
+      if key:find("change", 1, true) then
+        table.insert(changes, value)
+      elseif key:find("^action") then
+        table.insert (actions, value)
+      elseif key:find("^client") then
+        table.insert (clients, value)
+      elseif key:find("^desc") then
+        table.insert (descriptions, value)
+      elseif key:find("^rev") then
+        table.insert (revisions, value)
+      elseif key:find("^time") then
+        table.insert (times, value)
+      elseif key:find("^user") then
+        table.insert (users, value)
       end
     end
 
-    table.insert(insert_list, result)
+    assert(#changes == #actions and
+           #changes == #clients and
+           #changes == #descriptions and
+           #changes == #revisions and
+           #changes == #times and
+           #changes == #users,
+         "Number of revisions should match the number of each field")
+
+    for index = 1, #revisions, 1 do
+
+      --- @type P4_Revision
+      local revision = {
+        index = result.revisions.count + 1,
+        number = revisions[index],
+        depot_file = filelog_table.depot_file,
+        action = actions[index],
+        change = changes[index],
+        user = users[index],
+        client = clients[index],
+        time = times[index],
+        description = descriptions[index],
+      }
+
+      result.revisions.count = result.revisions.count + 1
+
+      table.insert(result.revisions.list, revision)
+    end
+
 
     -- If the first revision didn't add the file, then we need to continue to follow the branch history.
-    if revision.revision == "#1" and revision.action == "add" then
-      -- Reset for a new file.
-      insert_list = result_list
-    else
-      -- This file branched from another file with additional revision history.
-      insert_list = result.next
+    local last_revision = result.revisions.list[#result.revisions.list]
 
+    -- Determine if this is the last revision for this file. If not an we are following the branch history, then the
+    -- next JSON table is the next revision list or branched history for this file and we need to insert it into the
+    -- current list.
+    if last_revision.action == "add" then
+      table.insert(result_list, result)
+
+      -- Next JSON table will be for a new file's history if it exists.
       result = {
-        num_revisions = 0,
-        revision_list = {},
-        next = nil,
-      }
+          revisions = {
+            count = 0,
+            list = {},
+          }
+        }
     end
   end
+
+  assert(#self.file_specs == #result_list, "Unexpected number of results.")
 
   return result_list
 end
 
 --- Creates the P4 command.
 ---
---- @param file_spec_list File_Spec[] One or more file paths.
+--- @param file_specs File_Spec[] File specs.
 --- @param opts? P4_Command_Filelog_Options P4 command options.
 --- @return P4_Command_Filelog P4_Command_Filelog P4 command.
-function P4_Command_Filelog:new(file_spec_list, opts)
+function P4_Command_Filelog:new(file_specs, opts)
   opts = opts or {}
 
   log.trace("P4_Command_Filelog: new")
 
   local command = {
     "p4",
+    "-Mj",
+    "-Ztag",
     "filelog",
     "-i", -- Follow history across branches.
     "-l", -- Full CL description.
     "-t", -- Display the time and date.
   }
 
-  vim.list_extend(command, file_spec_list)
+  self.file_specs = file_specs
+
+  vim.list_extend(command, file_specs)
 
   --- @type P4_Command_Filelog
   local new = P4_Command:new(command)

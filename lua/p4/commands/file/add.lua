@@ -1,17 +1,24 @@
+local notify = require("p4.notify")
+
 local M = {}
 
-function M.add_parser(parent_subparser)
+---@param parent_sub_parser mega.cmdparse.Subparsers
+function M.add_parser(parent_sub_parser)
 
-  local add_parser = parent_subparser:add_parser({ name="add", help = "Open the current buffer for add." })
+  local parser = parent_sub_parser:add_parser({ name="add", help = "Open the current buffer for add." })
 
-  add_parser:set_execute(function()
+  parser:set_execute(function()
     local file_api = require("p4.api.file")
 
-    local success = file_api.add(vim.fn.expand("%:p"))
+    local file = vim.fn.expand("%:p")
+
+    local success = file_api.add(file)
 
     if success then
       vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
       vim.api.nvim_set_option_value("modifiable", true, { scope = "local" })
+    else
+      notify(string.format("%s ", parser:get_names()) .. "command failed. See 'P4 log'.", vim.log.levels.ERROR)
     end
   end)
 end

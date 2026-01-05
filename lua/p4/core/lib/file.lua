@@ -1,28 +1,5 @@
 local log = require("p4.log")
 
---- Represents a path to a file.
----@alias Local_File_Path string Local path to the file.
----@alias Depot_File_Path string Depot path to the file.
----@alias Client_File_Path string Client path to the file.
----@alias File_Path Local_File_Path | Depot_File_Path | Client_File_Path Any file path.
-
---- Represents one or more files (wildcard).
----@alias Local_File_Spec string Local file syntax.
----@alias Depot_File_Spec string Depot file syntax.
----@alias Client_File_Spec string Client file syntax.
----@alias File_Spec Local_File_Spec | Depot_File_Spec | Client_File_Spec Any file syntax.
-
---- @class P4_File_Stats : table
---- @field clientFile Client_File_Path Local path to the file.
---- @field depotFile Depot_File_Path Depot path to the file.
---- @field isMapped boolean Indicates if file is mapped to the current client workspace.
---- @field shelved boolean Indicates if file is shelved.
---- @field change string Open change list number if file is opened in client workspace.
---- @field headRev integer Head revision number if in depot.
---- @field haveRev integer Revision last synced to workpace.
---- @field workRev integer Revision if file is opened.
---- @field action string Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
-
 --- @class P4_File_Revision : table
 --- @field depot_file Depot_File_Path Depot path to the file.
 --- @field number string Revision number.
@@ -36,7 +13,7 @@ local log = require("p4.log")
 --- @class P4_File : table
 --- @field protected path File_Path File spec.
 --- @field protected in_depot boolean Indicates if the file is in the P4 depot.
---- @field protected fstat? P4_File_Stats P4 file stats.
+--- @field protected info? P4_File_Info P4 file stats.
 --- @field protected client? P4_Client P4 client for the current file.
 --- @field protected cl? P4_CL P4 CL for the current file.
 local P4_File = {}
@@ -66,7 +43,7 @@ end
 --- @class P4_File_New
 --- @field path File_Path P4 file path.
 --- @field check_in_depot boolean Check if the file is in the P4 depot.
---- @field get_stats boolean Get file stats from P4 server.
+--- @field get_info boolean Get file stats from P4 server.
 --- @field client? P4_Client Optional P4 Client.
 --- @field cl? P4_CL Optional P4 CL.
 
@@ -88,7 +65,7 @@ function P4_File:new(new_file)
   local new = setmetatable({}, P4_File)
 
   new.path = new_file.path
-  new.fstat = nil
+  new.info = nil
   new.client = new_file.client or nil
   new.cl = new_file.cl or nil
 
@@ -99,19 +76,19 @@ function P4_File:new(new_file)
   end
 
   if success then
-    if new_file.get_stats then
-      success = new:get_fstat()
+    if new_file.get_info then
+      success = new:get_info()
     end
   end
 
-  log.trace("P4_File (new): Exit")
+  log.fmt_trace("P4_File (new): Exit, %s", tostring(success))
 
   return success, new
 end
 
 --- Gets the P4 file's path.
 ---
---- @return File_Path? P4 file path.
+--- @return File_Path P4 file path.
 ---
 --- @nodiscard
 function P4_File:get_file_path()
@@ -174,16 +151,16 @@ local P4_File_Get_FStat_Opts = {
   force = false,
 }
 
---- Get's the file's stats.
+--- Get's the file's information.
 ---
 --- @param opts? P4_File_Get_FStat_Opts Options.
 --- @return boolean success True if this function is successful.
---- @return P4_File_Stats? P4_File_Stats P4 files stats.
+--- @return P4_File_Info? P4_File_Info P4 file information.
 ---
 --- @async
 --- @nodiscard
-function P4_File:get_fstat(opts)
-  log.trace("P4_File (get_fstat): Enter")
+function P4_File:get_info(opts)
+  log.trace("P4_File (get_info): Enter")
 
   self:_check_instance()
 
@@ -191,26 +168,26 @@ function P4_File:get_fstat(opts)
 
   local success = true
 
-  if not self.fstat or opts.force  then
-    success = self:update_stats()
+  if not self.info or opts.force  then
+    success = self:update_info()
   end
 
-  log.trace("P4_File (get_fstat): Exit")
+  log.trace("P4_File (get_info): Exit")
 
-  return success, self.fstat
+  return success, self.info
 end
 
---- Set's the file's stats.
+--- Set's the file's information.
 ---
---- @param fstat P4_File_Stats P4 file stat.
-function P4_File:set_fstat(fstat)
-  log.trace("P4_File (set_fstat): Enter")
+--- @param info P4_File_Info P4 file info.
+function P4_File:set_info(info)
+  log.trace("P4_File (set_info): Enter")
 
   self:_check_instance()
 
-  log.trace("P4_File (set_fstat): Exit")
+  log.trace("P4_File (set_info): Exit")
 
-  self.fstat = fstat
+  self.info = info
 end
 
 --- Gets the P4 CL.
@@ -367,41 +344,76 @@ function P4_File:delete()
   return success
 end
 
---- Updates the file's stats.
+--- Updates the file's information.
 ---
 --- @return boolean success Result of the function.
 ---
 --- @async
 --- @nodiscard
-function P4_File:update_stats()
-  log.trace("P4_File (update_stats): Enter")
+function P4_File:update_info()
+  log.trace("P4_File (update_info): Enter")
 
   self:_check_instance()
 
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-  local success, result_list = P4_Command_FStat:new({self.path}):run()
+  local success, result = P4_Command_FStat:new({self.path}):run()
 
-  if success then
+  if success and result then
 
-    --- @cast result_list P4_Command_FStat_Result[]
-    self.fstat = {
-      clientFile = result_list[1].clientFile,
-      depotFile = result_list[1].depotFile,
-      isMapped = result_list[1].isMapped,
-      shelved = result_list[1].shelved,
-      change = result_list[1].change,
-      headRev = result_list[1].headRev,
-      haveRev = result_list[1].haveRev,
-      workRev = result_list[1].workRev,
-      action = result_list[1].action,
+    --- @cast result P4_Command_FStat_Result
+    self.info = {
+      clientFile = result.file_info_list[1].clientFile,
+      depotFile = result.file_info_list[1].depotFile,
+      isMapped = result.file_info_list[1].isMapped,
+      shelved = result.file_info_list[1].shelved,
+      change = result.file_info_list[1].change,
+      headRev = result.file_info_list[1].headRev,
+      haveRev = result.file_info_list[1].haveRev,
+      workRev = result.file_info_list[1].workRev,
+      action = result.file_info_list[1].action,
     }
 
   end
 
-  log.trace("P4_File (update_stats): Exit")
+  log.trace("P4_File (update_info): Exit")
 
   return success
+end
+
+--- Gets a diff for the head file revision.
+---
+--- @return boolean success Result of the function.
+--- @return string file_ouput Hold's the file output for the specified revision.
+---
+--- @async
+--- @nodiscard
+function P4_File:get_diff()
+  log.trace("P4_File (get_diff): Enter")
+
+  self:_check_instance()
+
+  local file_output
+
+  local success = self:update_info()
+
+  if success then
+    local P4_Command_Print = require("p4.core.lib.command.print")
+
+    local result
+    success, result = P4_Command_Print:new({self.path .. "#head"}):run()
+
+    if success then
+
+      --- @cast result P4_Command_Print_Result
+
+      file_output = result.file_output_list[1].output
+    end
+  end
+
+  log.trace("P4_File (get_diff): Exit")
+
+  return success, file_output
 end
 
 return P4_File
