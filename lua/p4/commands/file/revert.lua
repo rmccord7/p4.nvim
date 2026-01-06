@@ -17,7 +17,7 @@ function M.add_parser(parent_sub_parser)
     if success then
       vim.cmd("e!")
     else
-      notify(string.format("%s ", parser:get_names()) .. "command failed. See 'P4 log'.", vim.log.levels.ERROR)
+      notify(string.format("%s ", parser:get_names().name) .. "command failed. See 'P4 log'.", vim.log.levels.ERROR)
     end
   end)
 end

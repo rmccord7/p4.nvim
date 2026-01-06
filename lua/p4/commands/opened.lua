@@ -12,7 +12,7 @@ function M.add_parser(parent_subparser)
     local success = telescope_client_api.display_opened_files()
 
     if not success then
-      notify(string.format("%s ", parser:get_names()) .. "command failed. See 'P4 log'.", vim.log.levels.ERROR)
+      notify(string.format("%s ", parser:get_names().name) .. "command failed. See 'P4 log'.", vim.log.levels.ERROR)
     end
   end)
 end
