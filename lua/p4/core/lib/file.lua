@@ -101,6 +101,36 @@ function P4_File:get_file_path()
   return self.path
 end
 
+--- Checks if a file is open for edit
+---
+--- @return boolean success Indicates the result of the function.
+--- @return boolean is_open_for_edit True if the file is open for edit.
+---
+--- @nodiscard
+function P4_File:is_open_for_edit()
+  log.trace("P4_File (is_open_for_edit): Enter")
+
+  self:_check_instance()
+
+  local is_open_for_edit = false
+
+  local success, _ = self:get_info()
+
+  if success then
+
+    if self.info.isMapped and
+      self.info.action and
+      self.info.action == "edit" then
+
+      is_open_for_edit = true
+    end
+  end
+
+  log.trace("P4_File (is_open_for_edit): Exit")
+
+  return success, is_open_for_edit
+end
+
 --- @class P4_File_Get_In_Depot_Opts : table
 --- @field force boolean Forces an fstat update for the P4 file before returning the value.
 local P4_File_Get_In_Depot_Opts = {
@@ -362,17 +392,7 @@ function P4_File:update_info()
   if success and result then
 
     --- @cast result P4_Command_FStat_Result
-    self.info = {
-      clientFile = result.file_info_list[1].clientFile,
-      depotFile = result.file_info_list[1].depotFile,
-      isMapped = result.file_info_list[1].isMapped,
-      shelved = result.file_info_list[1].shelved,
-      change = result.file_info_list[1].change,
-      headRev = result.file_info_list[1].headRev,
-      haveRev = result.file_info_list[1].haveRev,
-      workRev = result.file_info_list[1].workRev,
-      action = result.file_info_list[1].action,
-    }
+    self.info = result.file_info_list[1]
 
   end
 
@@ -381,14 +401,14 @@ function P4_File:update_info()
   return success
 end
 
---- Gets a diff for the head file revision.
+--- Returns the file as output for the specified file revision.
 ---
 --- @return boolean success Result of the function.
 --- @return string file_ouput Hold's the file output for the specified revision.
 ---
 --- @async
 --- @nodiscard
-function P4_File:get_diff()
+function P4_File:get_file_revision()
   log.trace("P4_File (get_diff): Enter")
 
   self:_check_instance()

@@ -260,84 +260,92 @@ function P4_File_API.diff(file)
 
         if success and p4_file then
 
-          local output
-          success, output = p4_file:get_diff()
+          success, is_open_for_edit = p4_file:is_open_for_edit()
 
-          if success and output then
+          if success and is_open_for_edit then
 
-            local new_buf = vim.api.nvim_create_buf(false, true)
+            local output
+            success, output = p4_file:get_file_revision()
 
-            vim.bo[new_buf].filetype = vim.bo[buf].filetype
-            vim.bo[new_buf].buftype = "nofile"
-            vim.bo[new_buf].bufhidden = "hide"
-            vim.bo[new_buf].modeline = false
-            vim.bo[new_buf].swapfile = false
+            if success and output then
 
-            vim.api.nvim_buf_set_name(new_buf, p4_file:get_file_path() .. "#Head")
+              local new_buf = vim.api.nvim_create_buf(false, true)
 
-            local lines = vim.split(output, "\n")
+              vim.bo[new_buf].filetype = vim.bo[buf].filetype
+              vim.bo[new_buf].buftype = "nofile"
+              vim.bo[new_buf].bufhidden = "hide"
+              vim.bo[new_buf].modeline = false
+              vim.bo[new_buf].swapfile = false
 
-            if lines[#lines] == "" then
-              table.remove(lines, #lines)
+              vim.api.nvim_buf_set_name(new_buf, p4_file:get_file_path() .. "#Head")
+
+              local lines = vim.split(output, "\n")
+
+              if lines[#lines] == "" then
+                table.remove(lines, #lines)
+              end
+
+              vim.api.nvim_buf_set_lines(new_buf, 0, 1, true, lines)
+
+              vim.bo[new_buf].readonly = true
+              vim.bo[new_buf].modifiable = false
+
+              cur_win = vim.api.nvim_get_current_win()
+
+              local win = vim.api.nvim_open_win(new_buf, false, {
+                split = "right",
+              })
+
+              vim.cmd("wincmd =")
+              vim.cmd('windo diffthis')
+
+              vim.api.nvim_set_current_win(cur_win)
+
+              local buf_ac = vim.api.nvim_create_autocmd(
+                {
+                  "WinClosed",
+              }, {
+                buffer = buf,
+                once = true,
+                callback = function()
+                  vim.cmd('diffoff!')
+
+                  local clients = vim.lsp.get_clients({bufnr = new_buf})
+
+                  for _, client in ipairs(clients) do
+                    vim.lsp.buf_detach_client(new_buf, client.id)
+                  end
+
+                  vim.api.nvim_buf_delete(new_buf, { force = true })
+                  vim.api.nvim_win_close(win, true)
+                end
+              })
+
+              vim.api.nvim_create_autocmd(
+                {
+                  "WinClosed",
+              }, {
+                buffer = new_buf,
+                once = true,
+                callback = function()
+                  vim.cmd('diffoff!')
+
+                  local clients = vim.lsp.get_clients({bufnr = new_buf})
+
+                  for _, client in ipairs(clients) do
+                    vim.lsp.buf_detach_client(new_buf, client.id)
+                  end
+
+                  vim.api.nvim_buf_delete(new_buf, { force = true })
+
+                  vim.api.nvim_del_autocmd(buf_ac)
+                end
+              })
             end
-
-            vim.api.nvim_buf_set_lines(new_buf, 0, 1, true, lines)
-
-            vim.bo[new_buf].readonly = true
-            vim.bo[new_buf].modifiable = false
-
-            cur_win = vim.api.nvim_get_current_win()
-
-            local win = vim.api.nvim_open_win(new_buf, false, {
-              split = "right",
-            })
-
-            vim.cmd("wincmd =")
-            vim.cmd('windo diffthis')
-
-            vim.api.nvim_set_current_win(cur_win)
-
-            local buf_ac = vim.api.nvim_create_autocmd(
-              {
-                "WinClosed",
-            }, {
-              buffer = buf,
-              once = true,
-              callback = function()
-                vim.cmd('diffoff!')
-
-                local clients = vim.lsp.get_clients({bufnr = new_buf})
-
-                for _, client in ipairs(clients) do
-                  vim.lsp.buf_detach_client(new_buf, client.id)
-                end
-
-                vim.api.nvim_buf_delete(new_buf, { force = true })
-                vim.api.nvim_win_close(win, true)
-              end
-            })
-
-            vim.api.nvim_create_autocmd(
-              {
-                "WinClosed",
-            }, {
-              buffer = new_buf,
-              once = true,
-              callback = function()
-                vim.cmd('diffoff!')
-
-                local clients = vim.lsp.get_clients({bufnr = new_buf})
-
-                for _, client in ipairs(clients) do
-                  vim.lsp.buf_detach_client(new_buf, client.id)
-                end
-
-                vim.api.nvim_buf_delete(new_buf, { force = true })
-
-                vim.api.nvim_del_autocmd(buf_ac)
-              end
-            })
-
+          else
+            if success then
+              notify("File not open for edit")
+            end
           end
         end
       end
