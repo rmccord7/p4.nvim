@@ -292,15 +292,19 @@ function P4_File_List:get_in_depot()
 
   local P4_Command_Files = require("p4.core.lib.command.files")
 
-  local success, result_list = P4_Command_Files:new(self.file_paths):run()
+  local success, result = P4_Command_Files:new(self.file_paths):run()
 
   if success then
 
-    --- @cast result_list P4_Command_Files_Result[]
-
-    for index, result in ipairs(result_list) do
-      self.files[index].in_depot = result.valid
+    -- If we didn't get a result for every file then fail.
+    if not vim.tbl_isempty(result.list) and vim.tbl_isempty(result.errors) then
+      for index, _ in ipairs(result.list) do
+        self.files[index].in_depot = true
+      end
+    else
+      success = false
     end
+
   end
 
   log.trace("P4_File_List (get_in_depot): Exit")

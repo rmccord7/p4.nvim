@@ -16,6 +16,11 @@
 ---@field date string Date
 ---@field time string Time
 
+---@class P4_Command_Output_Error_Result
+---@field data string Command output
+---@field generic integer Command output
+---@field severity integer Severity of the error
+
 ---@class P4_File_Info
 ---@field clientFile Client_File_Path? Local path to the file.
 ---@field depotFile Depot_File_Path? Depot path to the file.

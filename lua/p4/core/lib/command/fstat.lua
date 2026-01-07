@@ -44,44 +44,59 @@ function P4_Command_FStat:_process_response(output)
 
     local file_info = vim.json.decode(fstat)
 
-    -- Make path relative to the current client root if we are mapped.
-    --TODO: Move this to caller for cases where we care about the current client
-    if file_info.clientFile and file_info.isMapped then
-      local P4_Context = require("p4.context")
+    -- Need to handle P4 server errors for each file.
+    local process = true
 
-      local current_client = P4_Context.get_current_client()
+    -- Files that have errors will have the following keys in its table.
+    for key, _ in pairs(file_info) do
+      if key:find("data", 1, true) or
+        key:find("generic", 1, true) or
+        key:find("severity", 1, true)then
 
-      if current_client then
+        process = false
+        break
+      end
+    end
 
-        local success, spec = current_client:get_spec()
+    if process then
 
-        if success and spec then
+      -- Make path relative to the current client root if we are mapped.
+      --TODO: Move this to caller for cases where we care about the current client
+      if file_info.clientFile and file_info.isMapped then
+        local P4_Context = require("p4.context")
 
-          -- Try client root.
-          local path = vim.fs.relpath(spec.root, file_info.clientFile)
+        local current_client = P4_Context.get_current_client()
 
-          if path then
-            file_info.clientFile = path
-          else
-            -- If that fails try alternate roots for a match.
-            for _, root in ipairs(spec.alt_root) do
+        if current_client then
 
-              path = vim.fs.relpath(root, file_info.clientFile)
+          local success, spec = current_client:get_spec()
 
-              if path then
-                file_info.clientFile = path
-                break
+          if success and spec then
+
+            -- Try client root.
+            local path = vim.fs.relpath(spec.root, file_info.clientFile)
+
+            if path then
+              file_info.clientFile = path
+            else
+              -- If that fails try alternate roots for a match.
+              for _, root in ipairs(spec.alt_root) do
+
+                path = vim.fs.relpath(root, file_info.clientFile)
+
+                if path then
+                  file_info.clientFile = path
+                  break
+                end
               end
             end
           end
         end
       end
+
+      table.insert(result.file_info_list, file_info)
     end
-
-    table.insert(result.file_info_list, file_info)
   end
-
-  assert(#self.file_specs == #result.file_info_list, "Unexpected number of results.")
 
   return result
 end
@@ -99,6 +114,7 @@ function P4_Command_FStat:new(file_specs, opts)
   local command = {
     "p4",
     "-Mj", --Json output format
+    "-ztag", -- No effect but keeps commands in sync
     "fstat",
   }
 

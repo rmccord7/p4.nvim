@@ -65,6 +65,7 @@ function P4_File:new(new_file)
   local new = setmetatable({}, P4_File)
 
   new.path = new_file.path
+  new.in_depot = nil
   new.info = nil
   new.client = new_file.client or nil
   new.cl = new_file.cl or nil
@@ -158,14 +159,20 @@ function P4_File:get_in_depot(opts)
 
     local P4_Command_Files = require("p4.core.lib.command.files")
 
-    success, result_list = P4_Command_Files:new({self.path}):run()
+    success, result = P4_Command_Files:new({self.path}):run()
 
     if success then
 
-      if #result_list then
-        self.in_depot = true
+      if #result.errors then
+
+        -- Entry not found means the file is not in depot.
+        if result.errors[1].generic == 17 then
+          self.in_depot = false
+        else
+          success = false
+        end
       else
-        self.in_depot = false
+        self.in_depot = true
       end
     end
   end
