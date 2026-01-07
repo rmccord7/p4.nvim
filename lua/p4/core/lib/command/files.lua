@@ -58,7 +58,7 @@ setmetatable(P4_Command_Files, {__index = P4_Command})
 --- Parses the output of the P4 command.
 ---
 --- @param output string Command output.
---- @return P4_Command_Files_Result[] result Hold's the parsed result from the command output.
+--- @return P4_Command_Files_Result result Hold's the parsed result from the command output.
 function P4_Command_Files:_process_response(output)
   log.trace("P4_Command_Files: process_response")
 
@@ -127,7 +127,7 @@ end
 --- Runs the P4 command.
 ---
 --- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Files_Result result Holds the result if the function was successful.
+--- @return P4_Command_Files_Result? result Holds the result if the function was successful.
 --- @async
 function P4_Command_Files:run()
 

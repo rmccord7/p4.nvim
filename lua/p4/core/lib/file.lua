@@ -163,7 +163,7 @@ function P4_File:get_in_depot(opts)
 
     if success then
 
-      if #result.errors then
+      if not vim.tbl_isempty(result.errors) then
 
         -- Entry not found means the file is not in depot.
         if result.errors[1].generic == 17 then
