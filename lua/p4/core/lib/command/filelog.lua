@@ -136,7 +136,7 @@ function P4_Command_Filelog:new(file_specs, opts)
   local command = {
     "p4",
     "-Mj",
-    "-Ztag",
+    "-ztag",
     "filelog",
     "-i", -- Follow history across branches.
     "-l", -- Full CL description.

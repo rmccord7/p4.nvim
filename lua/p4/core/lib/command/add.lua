@@ -26,6 +26,8 @@ function P4_Command_Add:new(file_path_list, opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "add",
   }
 

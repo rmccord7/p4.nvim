@@ -214,6 +214,8 @@ function P4_Command_Client:new(client, opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "client",
   }
 

@@ -31,6 +31,8 @@ function P4_Command_Reopen:new(file_spec_list, opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "reopen",
   }
 

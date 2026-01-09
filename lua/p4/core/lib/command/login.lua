@@ -29,6 +29,8 @@ function P4_Command_Login:new(opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "login",
   }
 
@@ -65,6 +67,8 @@ function P4_Command_Login:run()
 
   if success then
     notify("Login success")
+  else
+    notify("Login failed")
   end
 
   return success

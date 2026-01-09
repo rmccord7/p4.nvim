@@ -97,6 +97,8 @@ function P4_Command_Changes:new(opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "changes",
     "--me", -- Current user
     "-l", -- Long output

@@ -29,6 +29,8 @@ function P4_Command_Shelve:new(file_spec_list, opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "shelve",
   }
 

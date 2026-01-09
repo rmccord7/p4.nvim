@@ -57,6 +57,8 @@ function P4_Command_Clients:new(opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "clients",
     "--me", -- Current user
     "-a", -- Get all clients (not just the ones on the connected p4 server)

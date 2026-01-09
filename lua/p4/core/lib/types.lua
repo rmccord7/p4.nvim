@@ -16,11 +16,6 @@
 ---@field date string Date
 ---@field time string Time
 
----@class P4_Command_Output_Error_Result
----@field data string Command output
----@field generic integer Command output
----@field severity integer Severity of the error
-
 ---@class P4_File_Info
 ---@field clientFile Client_File_Path? Local path to the file.
 ---@field depotFile Depot_File_Path? Depot path to the file.
@@ -31,15 +26,6 @@
 ---@field haveRev integer? Revision last synced to workpace.
 ---@field workRev integer? Revision if file is opened.
 ---@field action string? Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
-
----@class P4_File_Output
----@field output string File output.
----@field action string Action.
----@field change string Identifies the CL.
----@field depot_file Depot_File_Path Name of the file in the depot for this file.
----@field file_size string Size of the file.
----@field rev string Revision number.
----@field time string Time/date revision was integrated.
 
 ---@class P4_Revision
 ---@field index integer Identifies the revision across branch history (Head revision is 1).

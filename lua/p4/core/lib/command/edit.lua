@@ -27,6 +27,8 @@ function P4_Command_Edit:new(file_spec_list, opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "edit",
   }
 

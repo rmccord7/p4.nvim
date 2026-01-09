@@ -2,14 +2,24 @@ local log = require("p4.log")
 
 local P4_Command = require("p4.core.lib.command")
 
---- @class P4_Command_Print_Options : table
+--- @class P4_Command_Print_Result_Success
+--- @field action string Action
+--- @field change string Identifies the CL
+--- @field depot_file Depot_File_Path Name of the file in the depot for this file
+--- @field file_size string Size of the file
+--- @field rev string Revision number
+--- @field time string Time/date revision was integrated
+--- @field output string File output
+
+--- @class P4_Command_Print_Result_Error
+--- @field error P4_Command_Result_Error Hold's error information.
 
 --- @class P4_Command_Print_Result
---- @field file_output_list P4_File_Output[] Each file's output that has been queried from the P4 server.
+--- @field success boolean Indicates if the result is success.
+--- @field data P4_Command_Print_Result_Success | P4_Command_Print_Result_Error Hold's information about the result.
 
 --- @class P4_Command_Print : P4_Command
---- @field file_specs File_Spec[] File path list
---- @field opts P4_Command_Print_Options Command options.
+--- @field file_specs File_Spec[] File specs
 local P4_Command_Print = {}
 
 P4_Command_Print.__index = P4_Command_Print
@@ -18,47 +28,96 @@ setmetatable(P4_Command_Print, {__index = P4_Command})
 
 --- Parses the output of the P4 command.
 ---
---- @param output string Command output.
---- @return P4_Command_Print_Result result Hold's the parsed result from the command output.
-function P4_Command_Print:_process_response(output)
+--- @param sc vim.SystemCompleted Parsed command result.
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Print_Result[] results Hold's the formatted command result.
+function P4_Command_Print:_process_response(sc)
   log.trace("P4_Command_Print: process_response")
 
-  --- @type P4_Command_Print_Result
-  local result = {
-    file_output_list = {}
-  }
+  --- @type P4_Command_Print_Result[]
+  local results = {}
 
-  -- Output is a list of json tables for each file.
-  local json_table_list = vim.split(output, "\n", {trimempty = true})
+  -- Convert command result which consists of  multiple JSONS entries into lua tables.
+  local success, parsed_output = P4_Command._process_response(self, sc)
 
-  for _, json_table in ipairs(json_table_list) do
+  if success then
 
-    local output_table = vim.json.decode(json_table)
+    -- Can't determine actual number of results until we have parsed the tables due to how P4 outputs results for the
+    -- print command.
+    assert(#parsed_output.tables, "Unexpected number of results")
 
-    if output_table["action"] then
-      table.insert(result.file_output_list, output_table)
-    elseif output_table["data"] then
-      if output_table["data"] ~= "" then
-        if result.file_output_list[#result.file_output_list].output then
-          result.file_output_list[#result.file_output_list].output = result.file_output_list[#result.file_output_list].output .. output_table["data"]
-        else
-          result.file_output_list[#result.file_output_list].output = output_table["data"]
+    -- For each successful file spec this command outputs
+    -- "Table with action key (file information)n
+    -- "Table with data key (file output)"
+    -- "Table with data key (empty string)"
+    for _, t in ipairs(parsed_output.tables) do
+
+      local error = false
+
+      for key, _ in pairs(t) do
+        if key:find("generic", 1, true) or
+          key:find("severity", 1, true)then
+
+          error = true
+
+          local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
+
+          ---@type P4_Command_Print_Result_Error
+          local new_error_result = {
+            error = P4_Command_Result_Error:new(t)
+          }
+
+          ---@type P4_Command_Print_Result
+          local new_result = {
+            success = false,
+            data = new_error_result
+          }
+
+          table.insert(results, new_result)
+          break
+        end
+      end
+
+      if not error then
+
+        -- Start of a file spec result
+        if t["action"] then
+
+          -- Start a new entry with information about the current file spec.
+          ---@type P4_Command_Print_Result
+          local new_result = {
+            success = true,
+            data = t
+          }
+
+          table.insert(results, new_result)
+        elseif t["data"] then
+          -- Sometimes multiple success tables are present with data that needs to be concatenated.
+          if t["data"] ~= "" then
+            current = results[#results].data
+
+            if current.output then
+              current.output = current .. t["data"]
+            else
+              current.output = t["data"]
+            end
+          end
         end
       end
     end
+
+    -- Now we can make sure the exact number of results are correct.
+    assert(#self.file_specs == #results, "Unexpected number of results.")
   end
 
-  assert(#self.file_specs == #result.file_output_list, "Unexpected number of results.")
-
-  return result
+  return success, result
 end
 
 --- Creates the P4 command.
 ---
---- @param file_specs File_Spec[] One or more file paths.
---- @param opts? P4_Command_Print_Options P4 command options.
+--- @param file_specs File_Spec[] File specs.
 --- @return P4_Command_Print P4_Command_Print P4 command.
-function P4_Command_Print:new(file_specs, opts)
+function P4_Command_Print:new(file_specs)
   opts = opts or {}
 
   log.trace("P4_Command_Print: new")
@@ -66,11 +125,12 @@ function P4_Command_Print:new(file_specs, opts)
   local command = {
     "p4",
     "-Mj",
-    "-Ztag",
+    "-ztag",
     "print",
-    "-q", --Suppress the one line header added by perforce.
+    "-q", --Suppress the one line file header added to the file output by perforce.
   }
 
+  -- Save so we can verify the number of results.
   self.file_specs = file_specs
 
   vim.list_extend(command, file_specs)
@@ -97,7 +157,7 @@ function P4_Command_Print:run()
   local success, sc = pcall(P4_Command.run(self).wait)
 
   if success then
-    result = P4_Command_Print:_process_response(sc.stdout)
+    success, result = P4_Command_Print:_process_response(sc)
   end
 
   return success, result

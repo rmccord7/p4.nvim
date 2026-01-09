@@ -63,6 +63,8 @@ function P4_Command_Opened:new(opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "opened",
   }
 

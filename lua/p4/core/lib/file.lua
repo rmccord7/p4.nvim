@@ -159,20 +159,30 @@ function P4_File:get_in_depot(opts)
 
     local P4_Command_Files = require("p4.core.lib.command.files")
 
-    success, result = P4_Command_Files:new({self.path}):run()
+    success, results = P4_Command_Files:new({self.path}):run()
 
-    if success then
+    if success and results then
 
-      if not vim.tbl_isempty(result.errors) then
+      assert(#results == 1, "Unexpected number of results")
 
-        -- Entry not found means the file is not in depot.
-        if result.errors[1].generic == 17 then
+      ---@type P4_Command_Files_Result
+      local result = results[1]
+
+      if result.success then
+
+        --TODO: Could update some file information here.
+
+        self.in_depot = true
+      else
+        local error = result.data.error
+
+        -- If file doens't exist on the P4 server, then it is not in the depot.
+        if error:is_file_does_not_exist() then
           self.in_depot = false
         else
+          -- Any other error is fatal.
           success = false
         end
-      else
-        self.in_depot = true
       end
     end
   end
@@ -434,7 +444,7 @@ function P4_File:get_file_revision()
 
       --- @cast result P4_Command_Print_Result
 
-      file_output = result.file_output_list[1].output
+      file_output = result.results[1].output
     end
   end
 

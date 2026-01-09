@@ -2,53 +2,22 @@ local log = require("p4.log")
 
 local P4_Command = require("p4.core.lib.command")
 
+--- @class P4_Command_Files_Result_Success
+--- @field action string Action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
+--- @field change string Change list number.
+--- @field depotFile Depot_File_Path Depot path.
+--- @field rev string Head revision number.
+--- @field time string Indicates if file is shelved.
 
--- Generic errors
-local P4_GENERIC_NONE = 0
-
--- Generic user errors
-local P4_GENERIC_USAGE   = 1 -- request not consistent with dox
-local P4_GENERIC_UNKNOWN = 2 -- using unknown entity
-local P4_GENERIC_CONTEXT = 3 -- using entity in wrong context
-local P4_GENERIC_ILLEGAL = 4 -- trying to do something you can't
-local P4_GENERIC_NOT_YET = 5 -- something must be corrected first
-local P4_GENERIC_PROJECT = 6 -- protections prevented operation
-
---Generic errors
-local P4_GENERIC_EMTPY = 17 -- action returned empty results
-
---Generic server errors
-local P4_GENERIC_FAULT   = 33 -- inexplicable program fault
-local P4_GENERIC_CLIENT  = 34 -- client side program errors
-local P4_GENERIC_ADMIN   = 35 -- server administrative action required
-local P4_GENERIC_CONFIG  = 36 -- client configuration inadequate
-local P4_GENERIC_UPGRADE = 37 -- client or server too old to interact
-local P4_GENERIC_COMM    = 38 -- communications error
-local P4_GENERIC_TOO_BIG = 39 -- not even Perforce can handle this much
-
--- Severify errors
-local P4_SEVERITY_NONE   = 0
-local P4_SEVERITY_IFNO   = 1
-local P4_SEVERITY_WARN   = 2
-local P4_SEVERITY_FAILED = 3
-local P4_SEVERITY_FATAL  = 4
-
---- @class P4_Command_Files_Options : table
-
----@class P4_Command_Files_Output_Result
----@field action string Action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
----@field change string Change list number.
----@field depotFile Depot_File_Path Depot path.
----@field rev string Head revision number.
----@field time string Indicates if file is shelved.
+--- @class P4_Command_Files_Result_Error
+--- @field error P4_Command_Result_Error Hold's error information.
 
 --- @class P4_Command_Files_Result
---- @field list P4_Command_Files_Output_Result[]
---- @field errors P4_Command_Output_Error_Result[]
+--- @field success boolean Indicates if the result is success.
+--- @field data P4_Command_Files_Result_Success | P4_Command_Files_Result_Error Hold's information about the result.
 
 --- @class P4_Command_Files : P4_Command
 --- @field file_specs File_Spec[] File specs.
---- @field opts P4_Command_Files_Options Command options.
 local P4_Command_Files = {}
 
 P4_Command_Files.__index = P4_Command_Files
@@ -57,51 +26,72 @@ setmetatable(P4_Command_Files, {__index = P4_Command})
 
 --- Parses the output of the P4 command.
 ---
---- @param output string Command output.
---- @return P4_Command_Files_Result result Hold's the parsed result from the command output.
-function P4_Command_Files:_process_response(output)
+--- @param sc vim.SystemCompleted Parsed command result.
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Files_Result[] results Hold's the formatted command result.
+function P4_Command_Files:_process_response(sc)
   log.trace("P4_Command_Files: process_response")
 
-  --- @type P4_Command_Files_Result
-  local result = {
-    list = {},
-    errors = {}
-  }
+  --- @type P4_Command_Files_Result[]
+  local results = {}
 
-  local files_list = vim.split(output, "\n", {trimempty = true})
+  -- Convert command result which consists of  multiple JSONS entries into lua tables.
+  local success, parsed_output = P4_Command._process_response(self, sc)
 
-  for _, file in ipairs(files_list) do
+  if success then
 
-    local info = vim.json.decode(file)
+    -- This command can take multiple file specs so we should have a table for each file spec.
+    assert(#parsed_output.tables == #self.file_specs, "Incorrect number of results")
 
-    -- Files that have errors will have the following keys in its table.
-    for key, _ in pairs(info) do
-      if key:find("data", 1, true) or
-        key:find("generic", 1, true) or
-        key:find("severity", 1, true)then
+    for _, t in ipairs(parsed_output.tables) do
 
-        table.insert(result.errors, info)
-        break
-      else
-        table.insert(result.list, info)
-        break
+      local error = false
+
+      for key, _ in pairs(t) do
+        if key:find("generic", 1, true) or
+          key:find("severity", 1, true)then
+
+          error = true
+
+          local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
+
+          ---@type P4_Command_Files_Result_Error
+          local new_error_result = {
+            error = P4_Command_Result_Error:new(t)
+          }
+
+          ---@type P4_Command_Files_Result
+          local new_result = {
+            success = false,
+            data = new_error_result
+          }
+
+          table.insert(results, new_result)
+          break
+        end
+      end
+
+      if not error then
+
+          ---@type P4_Command_Files_Result
+          local new_result = {
+            success = true,
+            data = t
+          }
+
+        table.insert(results, new_result)
       end
     end
   end
 
-  assert(#result.list + #result.errors == #self.file_specs)
-
-  return result
+  return success, results
 end
 
 --- Creates the P4 command.
 ---
 --- @param file_specs File_Spec[] File specs.
---- @param opts? P4_Command_Files_Options P4 command options.
 --- @return P4_Command_Files P4_Command_Files P4 command.
-function P4_Command_Files:new(file_specs, opts)
-  opts = opts or {}
-
+function P4_Command_Files:new(file_specs)
   log.trace("P4_Command_Files: new")
 
   local command = {
@@ -112,6 +102,7 @@ function P4_Command_Files:new(file_specs, opts)
     "-e", -- Exclude deleted files.
   }
 
+  -- Save so we can verify the number of results.
   self.file_specs = file_specs
 
   vim.list_extend(command, file_specs)
@@ -127,19 +118,21 @@ end
 --- Runs the P4 command.
 ---
 --- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Files_Result? result Holds the result if the function was successful.
+--- @return P4_Command_Files_Result[]? result Holds the result if the function was successful.
+---
+--- @nodiscard
 --- @async
 function P4_Command_Files:run()
 
-  local result = nil
+  local results = nil
 
   local success, sc = pcall(P4_Command.run(self).wait)
 
   if success then
-    result = P4_Command_Files:_process_response(sc.stdout)
+    success, results = P4_Command_Files:_process_response(sc)
   end
 
-  return success, result
+  return success, results
 end
 
 return P4_Command_Files

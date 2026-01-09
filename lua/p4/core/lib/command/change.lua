@@ -194,6 +194,8 @@ function P4_Command_Change:new(opts)
 
   local command = {
     "p4",
+    "-Mj",
+    "-ztag",
     "change",
   }
 
