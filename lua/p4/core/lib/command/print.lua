@@ -12,7 +12,7 @@ local P4_Command = require("p4.core.lib.command")
 --- @field output string File output
 
 --- @class P4_Command_Print_Result_Error
---- @field error P4_Command_Result_Error Hold's error information.
+--- @field error P4_Command_Result_Error Hold's the error information.
 
 --- @class P4_Command_Print_Result
 --- @field success boolean Indicates if the result is success.
@@ -26,11 +26,20 @@ P4_Command_Print.__index = P4_Command_Print
 
 setmetatable(P4_Command_Print, {__index = P4_Command})
 
+--- Wrapper function to check if a table is an instance of this class.
+---
+--- @package
+function P4_Command_Print:_check_instance()
+  assert(P4_Command_Print.is_instance(self) == true, "Not a class instance")
+end
+
 --- Parses the output of the P4 command.
 ---
 --- @param sc vim.SystemCompleted Parsed command result.
 --- @return boolean success Indicates if the function was succesful.
 --- @return P4_Command_Print_Result[] results Hold's the formatted command result.
+---
+--- @nodiscard
 function P4_Command_Print:_process_response(sc)
   log.trace("P4_Command_Print: process_response")
 
@@ -110,17 +119,23 @@ function P4_Command_Print:_process_response(sc)
     assert(#self.file_specs == #results, "Unexpected number of results.")
   end
 
-  return success, result
+  return success, results
 end
 
 --- Creates the P4 command.
 ---
 --- @param file_specs File_Spec[] File specs.
 --- @return P4_Command_Print P4_Command_Print P4 command.
+---
+--- @nodiscard
 function P4_Command_Print:new(file_specs)
   opts = opts or {}
 
   log.trace("P4_Command_Print: new")
+
+  -- Save so we can verify the number of results.
+  self.file_specs = file_specs
+
 
   local command = {
     "p4",
@@ -129,9 +144,6 @@ function P4_Command_Print:new(file_specs)
     "print",
     "-q", --Suppress the one line file header added to the file output by perforce.
   }
-
-  -- Save so we can verify the number of results.
-  self.file_specs = file_specs
 
   vim.list_extend(command, file_specs)
 
@@ -143,24 +155,49 @@ function P4_Command_Print:new(file_specs)
   return new
 end
 
+--- Returns if the table is an instance of this class.
+---
+--- @return boolean is_instance True if this is a class instance.
+---
+--- @nodiscard
+function P4_Command_Print:is_instance()
+  local object = self
+
+  while object do
+    object = getmetatable(object)
+
+    if object.__index == P4_Command_Print then
+      return true
+    end
+  end
+
+  return false
+end
+
 --- Runs the P4 command.
 ---
 --- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Print_Result? result Holds the result if the function was successful.
+--- @return P4_Command_Print_Result[]? results Holds the result if the function was successful.
 ---
 --- @nodiscard
 --- @async
 function P4_Command_Print:run()
+  self:_check_instance()
 
-  local result = nil
+  local results = nil
 
   local success, sc = pcall(P4_Command.run(self).wait)
 
   if success then
-    success, result = P4_Command_Print:_process_response(sc)
+    if sc then
+      success, results = P4_Command_Print:_process_response(sc)
+    else
+      success = false
+    end
   end
 
-  return success, result
+  return success, results
 end
+
 
 return P4_Command_Print

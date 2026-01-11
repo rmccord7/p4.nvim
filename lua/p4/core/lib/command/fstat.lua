@@ -138,13 +138,16 @@ end
 --- @nodiscard
 --- @async
 function P4_Command_FStat:run()
-
   local result = nil
 
   local success, sc = pcall(P4_Command.run(self).wait)
 
   if success then
-    result = P4_Command_FStat:_process_response(sc.stdout)
+    if sc then
+      result = P4_Command_FStat:_process_response(sc.stdout)
+    else
+      success = false
+    end
   end
 
   return success, result

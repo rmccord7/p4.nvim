@@ -14,61 +14,41 @@ local P4_Command = {}
 
 P4_Command.__index = P4_Command
 
---- Creates a new P4 command.
----
---- @param command string[] P4 command
---- @return P4_Command P4_Command A new P4 command
-function P4_Command:new(command)
-
-  log.trace("P4_Command: new")
-
-  local new = setmetatable({}, P4_Command)
-
-  new.command = command
-
-  new.sys_opts = {
-    detach = false,
-    text = true,
-  }
-
-  return new
-end
-
---- Gets the command.
----
---- @return string[] command P4 command
-function P4_Command:get()
-  return self.command
-end
-
 --- Logs information for a command success.
 ---
---- @param result vim.SystemCompleted
+--- @param sc vim.SystemCompleted
 --- @param command string
 --- @param start_time integer
 ---
 --- @async
-local function log_command_success(result, command, start_time)
+local function log_command_success(sc, command, start_time)
   log.fmt_debug("Command %s: success", command)
   log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
 
-  p4_log.output(result.stdout)
+  p4_log.output(sc.stdout)
 end
 
 --- Logs information for a command failure.
 ---
---- @param result vim.SystemCompleted
+--- @param sc vim.SystemCompleted
 --- @param command string
 --- @param start_time integer
 ---
 --- @async
-local function log_command_failed(result, command, start_time)
+local function log_command_failed(sc, command, start_time)
   log.fmt_error("Command %s: failed. See `:P4 output` for more info", command)
   log.debug("Command elasped time: ", (vim.uv.hrtime() - start_time) / 1e6 .. " ms")
 
-  p4_log.error(result.stderr)
+  p4_log.error(sc.stderr)
 
   notify("Command " .. command .. " failed. See `:P4 output` for more info", vim.log.levels.ERROR)
+end
+
+--- Wrapper function to check if a table is an instance of this class.
+---
+--- @package
+function P4_Command:_check_instance()
+  assert(P4_Command.is_instance(self) == true, "Not a class instance")
 end
 
 --- Parses the output of the P4 command.
@@ -89,60 +69,133 @@ end
 
 --- Logs information for a command failure.
 ---
---- @param result vim.SystemCompleted
+--- @param sc vim.SystemCompleted
 --- @param command string
 --- @param start_time integer
---- @return vim.SystemCompleted result
+--- @return vim.SystemCompleted sc
 ---
+--- @package
 --- @async
-function P4_Command:_handle_login_failure(result, command, start_time)
+function P4_Command:_handle_login_failure(sc, command, start_time)
 
-  -- If we failed because we are not logged in.
-  if string.find(result.stderr, "Your session has expired, please login again.", 1, true) or
-    string.find(result.stderr, "Perforce password (P4PASSWD) invalid or unset.", 1, true) then
+  log.trace("P4_Command: *_handle_login_failure): Enter")
 
-    log.debug("Not logged into P4 server.")
+  ---@type P4_Command_Result_Error[]
+  local results = {}
 
-    -- Get user password
-    nio.fn.inputsave()
-    local password = nio.fn.inputsecret("Password: ")
-    nio.fn.inputrestore()
+  local success, parsed_output = P4_Command._process_response(self, sc)
 
-    --- @type P4_Command_Login_Options
-    local cmd_opts = {
-      password = password,
-    }
+  if success then
 
-    local P4_Command_Login = require("p4.core.lib.command.login")
+    assert(#parsed_output.tables >= 1)
 
-    -- Login to the P4 server.
-    local cmd = P4_Command_Login:new(cmd_opts)
+    for _, t in ipairs(parsed_output.tables) do
 
-    local success = cmd:run()
+      -- First table should have the login error and we don't need to parse any more json tables from the output.
+      for key, _ in pairs(t) do
+        if key:find("generic", 1, true) or
+          key:find("severity", 1, true)then
 
-    -- Re-run the previous command.
-    if success then
-
-      log.debug("Re-trying previous command.")
-
-      -- Reset start time.
-      start_time = vim.uv.hrtime()
-
-      result = vim.system(self.command, self.sys_opts):wait()
-
-      if result.code == 0 then
-
-        log_command_success(result, command, start_time)
-      else
-        log_command_failed(result, command, start_time)
+          local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
+          P4_Command_Result_Error:new(t)
+          break
+        end
       end
     end
-  else
-    log_command_failed(result, command, start_time)
+
+    if not vim.tbl_isempty(results) then
+
+      if results[1]:is_not_logged_in() then
+
+        log.debug("Not logged into P4 server.")
+
+        -- Get user password
+        nio.fn.inputsave()
+        local password = nio.fn.inputsecret("Password: ")
+        nio.fn.inputrestore()
+
+        --- @type P4_Command_Login_Options
+        local cmd_opts = {
+          password = password,
+        }
+
+        local P4_Command_Login = require("p4.core.lib.command.login")
+
+        -- Login to the P4 server.
+        local cmd = P4_Command_Login:new(cmd_opts)
+
+        success, result = cmd:run()
+
+        -- Re-run the previous command.
+        if success then
+
+          log.debug("Re-trying previous command.")
+
+          -- Reset start time.
+          start_time = vim.uv.hrtime()
+
+          sc = vim.system(self.command, self.sys_opts):wait()
+
+          if sc.code == 0 then
+            log_command_success(sc, command, start_time)
+          else
+            log_command_failed(sc, command, start_time)
+          end
+        end
+      else
+        log_command_failed(sc, command, start_time)
+      end
+    end
   end
 
   -- If we re-ran the command, then the previous result has changed.
-  return result
+  return sc
+end
+
+--- Returns if the table is an instance of this class.
+---
+--- @return boolean is_instance True if this is a class instance.
+function P4_Command:is_instance()
+  local object = self
+
+  while object do
+    object = getmetatable(object)
+
+    if object.__index == P4_Command then
+      return true
+    end
+  end
+
+  return false
+end
+
+--- Creates a new P4 command.
+---
+--- @param command string[] P4 command
+--- @return P4_Command P4_Command A new P4 command
+function P4_Command:new(command)
+
+  log.trace("P4_Command: new")
+
+  local new = setmetatable({}, P4_Command)
+
+  new.command = command
+
+  new.sys_opts = {
+    detach = false,
+    text = true,
+  }
+
+  return new
+end
+
+--TODO: Does need to be removed
+
+--- Gets the command.
+---
+--- @return string[] command P4 command
+function P4_Command:get()
+  return self.command
 end
 
 --- Runs the P4 command asynchronously.
@@ -151,6 +204,7 @@ end
 --- @see vim.system
 --- @async
 function P4_Command:run()
+  self:_check_instance()
 
   log.trace("P4_Command: run")
 
@@ -160,34 +214,36 @@ function P4_Command:run()
 
   if p4_env.check() then
 
+    -- Actual command string is fourth element.
+    local command = self.command[4]
+
     nio.run(function()
 
-      p4_log.command(self.command)
+      local sc = vim.system(self.command, self.sys_opts):wait()
 
-      local result = vim.system(self.command, self.sys_opts):wait()
+      log.fmt_debug("System Complete: %s", sc)
 
-      -- Actual command string is fourth element.
-      local command = self.command[4]
-
-      if result.code == 0 then
-        log_command_success(result, command, start_time)
+      if sc.code == 0 then
+        log_command_success(sc, command, start_time)
       else
+        -- Make sure we do not infinitely loop if user fails to enter the correct password.
         local P4_Command_Login = require("p4.core.lib.command.login")
 
-        -- Make sure we do not infinitely loop if user fails to enter the correct password.
-        if getmetatable(self) ~= P4_Command_Login then
+        if not P4_Command_Login.is_instance(self) then
 
-          -- Try to login and then re-run the current command.
-          result = self:_handle_login_failure(result, command, start_time)
-        else
-          log_command_failed(result, command, start_time)
-        end
+          -- Try to login and then re-run the current command. This will override the current result.
+          sc = self:_handle_login_failure(sc, command, start_time)
 
-        if result.code == 0 then
-          future.set(result)
+          log.fmt_debug("System Complete: %s", sc)
         else
-          future.set_error()
+          log_command_failed(sc, command, start_time)
         end
+      end
+
+      if sc.code == 0 then
+        future.set(sc)
+      else
+        future.set_error(sc)
       end
     end, function(success, ...)
       task.complete(nil, success, ...)

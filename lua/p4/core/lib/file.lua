@@ -437,14 +437,22 @@ function P4_File:get_file_revision()
   if success then
     local P4_Command_Print = require("p4.core.lib.command.print")
 
-    local result
-    success, result = P4_Command_Print:new({self.path .. "#head"}):run()
+    local results
+    success, results = P4_Command_Print:new({self.path .. "#head"}):run()
 
-    if success then
+    if success and results then
 
-      --- @cast result P4_Command_Print_Result
+      assert(#results == 1, "Unexpected number of results")
 
-      file_output = result.results[1].output
+      ---@type P4_Command_Print_Result
+      local result = results[1]
+
+      if result.success then
+        file_output = result.data.output
+      else
+        -- All errors are fatal.
+        success = false
+      end
     end
   end
 

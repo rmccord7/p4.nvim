@@ -38,6 +38,8 @@ function P4_Command_Result:new(sc)
 
   local new = setmetatable({}, P4_Command_Result)
 
+  new.tables = {}
+
   -- Output may contain multiple JSON entries separated by newlines.
   local json_output_list = vim.split(sc.stdout, "\n", {trimempty = true})
 

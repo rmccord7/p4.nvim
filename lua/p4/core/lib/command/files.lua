@@ -10,7 +10,7 @@ local P4_Command = require("p4.core.lib.command")
 --- @field time string Indicates if file is shelved.
 
 --- @class P4_Command_Files_Result_Error
---- @field error P4_Command_Result_Error Hold's error information.
+--- @field error P4_Command_Result_Error Hold's the error information.
 
 --- @class P4_Command_Files_Result
 --- @field success boolean Indicates if the result is success.
@@ -24,11 +24,18 @@ P4_Command_Files.__index = P4_Command_Files
 
 setmetatable(P4_Command_Files, {__index = P4_Command})
 
+--- Wrapper function to check if a table is an instance of this class.
+function P4_Command_Files:_check_instance()
+  assert(P4_Command_Files.is_instance(self) == true, "Not a class instance")
+end
+
 --- Parses the output of the P4 command.
 ---
 --- @param sc vim.SystemCompleted Parsed command result.
 --- @return boolean success Indicates if the function was succesful.
 --- @return P4_Command_Files_Result[] results Hold's the formatted command result.
+---
+--- @nodiscard
 function P4_Command_Files:_process_response(sc)
   log.trace("P4_Command_Files: process_response")
 
@@ -91,8 +98,13 @@ end
 ---
 --- @param file_specs File_Spec[] File specs.
 --- @return P4_Command_Files P4_Command_Files P4 command.
+---
+--- @nodiscard
 function P4_Command_Files:new(file_specs)
   log.trace("P4_Command_Files: new")
+
+  -- Save so we can verify the number of results.
+  self.file_specs = file_specs
 
   local command = {
     "p4",
@@ -101,9 +113,6 @@ function P4_Command_Files:new(file_specs)
     "files",
     "-e", -- Exclude deleted files.
   }
-
-  -- Save so we can verify the number of results.
-  self.file_specs = file_specs
 
   vim.list_extend(command, file_specs)
 
@@ -115,21 +124,45 @@ function P4_Command_Files:new(file_specs)
   return new
 end
 
+--- Returns if the table is an instance of this class.
+---
+--- @return boolean is_instance True if this is a class instance.
+---
+--- @nodiscard
+function P4_Command_Files:is_instance()
+  local object = self
+
+  while object do
+    object = getmetatable(object)
+
+    if object.__index == P4_Command_Files then
+      return true
+    end
+  end
+
+  return false
+end
+
 --- Runs the P4 command.
 ---
 --- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Files_Result[]? result Holds the result if the function was successful.
+--- @return P4_Command_Files_Result[]? results Holds the result if the function was successful.
 ---
 --- @nodiscard
 --- @async
 function P4_Command_Files:run()
+  self:_check_instance()
 
   local results = nil
 
   local success, sc = pcall(P4_Command.run(self).wait)
 
   if success then
-    success, results = P4_Command_Files:_process_response(sc)
+    if sc then
+      success, results = P4_Command_Files:_process_response(sc)
+    else
+      success = false
+    end
   end
 
   return success, results

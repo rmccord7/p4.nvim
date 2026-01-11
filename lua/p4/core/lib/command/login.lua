@@ -1,5 +1,4 @@
 local log = require("p4.log")
-local notify = require("p4.notify")
 
 local P4_Command = require("p4.core.lib.command")
 
@@ -7,16 +6,120 @@ local P4_Command = require("p4.core.lib.command")
 --- @field check? boolean Checks if a user is logged in.
 --- @field password? string Password for login. Required if check is nil or false.
 
---- @class P4_Command_Login_Result : boolean
+--- @class P4_Command_Login_Result_Check_Success
+--- @field TicketExperation string Ticket expiration time.
+--- @field User string P4 user.
+--- @field AuthedBy string Type of ticket.
+
+--- @class P4_Command_Login_Result_Pass_Success
+--- @field TicketExperation string Ticket expiration time.
+--- @field User string P4 user.
+
+--- Depends on input options.
+--- @alias P4_Command_Login_Result_Success P4_Command_Login_Result_Check_Success | P4_Command_Login_Result_Pass_Success
+
+--- @class P4_Command_Login_Result_Error
+--- @field error P4_Command_Result_Error Hold's error information.
+
+--- @class P4_Command_Login_Result
+--- @field success boolean Indicates if the result is success.
+--- @field data P4_Command_Login_Result_Success | P4_Command_Login_Result_Error Hold's information about the result.
 
 --- @class P4_Command_Login : P4_Command
 --- @field opts P4_Command_Login_Options Command options.
---- @field result P4_Command_Login_Result[] Parsed result list.
 local P4_Command_Login = {}
 
 P4_Command_Login.__index = P4_Command_Login
 
 setmetatable(P4_Command_Login, {__index = P4_Command})
+
+--- Wrapper function to check if a table is an instance of this class.
+---
+--- @package
+function P4_Command_Login:_check_instance()
+  assert(P4_Command_Login.is_instance(self) == true, "Not a P4 CL class instance")
+end
+
+--- Parses the output of the P4 command.
+---
+--- @param sc vim.SystemCompleted Parsed command result.
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Login_Result[] results Hold's the formatted command result.
+---
+--- @package
+function P4_Command_Login:_process_response(sc)
+  log.trace("P4_Command_Login: process_response")
+
+  --- @type P4_Command_Login_Result[]
+  local results = {}
+
+  -- Convert command result which consists of  multiple JSONS entries into lua tables.
+  local success, parsed_output = P4_Command._process_response(self, sc)
+
+  if success then
+
+    assert(#parsed_output.tables == 1, "Incorrect number of results")
+
+    for _, t in ipairs(parsed_output.tables) do
+
+      local error = false
+
+      for key, _ in pairs(t) do
+        if key:find("generic", 1, true) or
+          key:find("severity", 1, true)then
+
+          error = true
+
+          local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
+
+          ---@type P4_Command_Login_Result_Error
+          local new_error_result = {
+            error = P4_Command_Result_Error:new(t)
+          }
+
+          ---@type P4_Command_Login_Result
+          local new_result = {
+            success = false,
+            data = new_error_result
+          }
+
+          table.insert(results, new_result)
+          break
+        end
+      end
+
+      if not error then
+
+          ---@type P4_Command_Login_Result
+          local new_result = {
+            success = true,
+            data = t
+          }
+
+        table.insert(results, new_result)
+      end
+    end
+  end
+
+  return success, results
+end
+
+--- Returns if the table is an instance of this class.
+---
+--- @return boolean is_instance True if this is a class instance.
+function P4_Command_Login:is_instance()
+  local object = self
+
+  while object do
+    object = getmetatable(object)
+
+    if object == P4_Command_Login then
+      return true
+    end
+  end
+
+  return false
+end
 
 --- Creates the P4 command.
 ---
@@ -59,19 +162,23 @@ end
 
 --- Runs the P4 command.
 ---
---- @return P4_Command_Login_Result Result Indicates if the function was successful.
+--- @return boolean success Indicates if the function was succesful.
+--- @return P4_Command_Login_Result? result Holds the result if the function was successful.
+---
+--- @nodiscard
 --- @async
 function P4_Command_Login:run()
+  self:_check_instance()
 
-  local success, _ = pcall(P4_Command.run(self).wait)
+  local result = nil
+
+  local success, sc = pcall(P4_Command.run(self).wait)
 
   if success then
-    notify("Login success")
-  else
-    notify("Login failed")
+    success, results = P4_Command_Login:_process_response(sc)
   end
 
-  return success
+  return success, result
 end
 
 return P4_Command_Login
