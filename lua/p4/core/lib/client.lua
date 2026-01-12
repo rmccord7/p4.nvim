@@ -267,37 +267,46 @@ function P4_Client:get_open_files()
 
       local P4_Command_Opened = require("p4.core.lib.command.opened")
 
-      local result_list
-      success, result_list = P4_Command_Opened:new():run()
+      local results
+      success, results = P4_Command_Opened:new():run()
 
-      if success then
+      if success and results then
 
-        --- @cast result_list P4_Command_Opened_Result[]
+        assert(#results, "Unepxected number of results")
 
         local paths = {} ---@type string[]
         local cls = {} ---@type string[]
 
-        for _, result in ipairs(result_list) do
-          table.insert(paths, result.path)
-          table.insert(cls, result.cl)
+        for _, result in ipairs(results) do
+          if result.success then
+            table.insert(paths, result.data.clientFile)
+            table.insert(cls, result.data.change)
+          else
+            -- There will only be one error result if we were unable to get the clients.
+            success = false
+            break
+          end
         end
 
-        local P4_File_List = require("p4.core.lib.file_list")
-
-        ---@type P4_File_List_New
-        local new_file_list = {
-          paths = paths,
-          convert_depot_paths = true, -- P4 opened output is depot path.
-          check_in_depot = true, -- Files for add may not be in depot so good to have this information
-          get_info = true, -- More efficient to do this now
-          client = self, -- Should have same client
-          cls = cls, -- May have different CLs
-        }
-
-        success, self.open_files_list = P4_File_List:new(new_file_list)
-
         if success then
-          log.fmt_debug("Successfully updated the client's file list: %s", self.name)
+
+          local P4_File_List = require("p4.core.lib.file_list")
+
+          ---@type P4_File_List_New
+          local new_file_list = {
+            paths = paths,
+            convert_depot_paths = true, -- P4 opened output is depot path.
+            check_in_depot = true, -- Files for add may not be in depot so good to have this information
+            get_info = true, -- More efficient to do this now
+            client = self, -- Should have same client
+            cls = cls, -- May have different CLs
+          }
+
+          success, self.open_files_list = P4_File_List:new(new_file_list)
+
+          if success then
+            log.fmt_debug("Successfully updated the client's file list: %s", self.name)
+          end
         end
       end
     end

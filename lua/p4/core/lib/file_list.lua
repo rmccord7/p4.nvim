@@ -1,7 +1,7 @@
 local log = require("p4.log")
 
 --- @class P4_File_List : table
---- @field protected file_paths File_Spec[] P4 files for efficient command usage.
+--- @field protected file_paths File_Path[] P4 files for efficient command usage.
 --- @field protected files P4_File[] P4 files.
 --- @field protected client P4_Client? P4 Client for all files.
 --- @field protected cl P4_CL? P4 CL for all files. Only valid if all files have the same CL.
@@ -72,7 +72,7 @@ function P4_File_List:new(new_file_list)
     local new_file = {
       path = path,
       check_in_depot = false, -- More efficient to query for all files at once.
-      get_stats = false, -- More efficient to query for all files at once.
+      get_info = false, -- More efficient to query for all files at once.
       client = new_file_list.client,
     }
 
@@ -103,15 +103,21 @@ function P4_File_List:new(new_file_list)
     if new_file_list.convert_depot_paths then
       local P4_Where_Commands = require("p4.core.lib.command.where")
 
-      local results_list
+      local results
 
-      success, results_list = P4_Where_Commands:new(new_file_list.paths):run()
+      success, results = P4_Where_Commands:new(new_file_list.paths):run()
 
-      if success and results_list then
+      if success and results then
 
-        ---@cast results_list P4_Command_Where_Result[]
-        for index, result in ipairs(results_list) do
-          new.files[index].path = result.host
+        ---@cast results P4_Command_Where_Result[]
+        for index, result in ipairs(results) do
+          if result.success then
+            new.files[index].path = result.data.path
+          else
+            -- Only one error needs to be processed.
+            success = false
+            break
+          end
         end
       end
     end
@@ -292,19 +298,30 @@ function P4_File_List:get_in_depot()
 
   local P4_Command_Files = require("p4.core.lib.command.files")
 
-  local success, result = P4_Command_Files:new(self.file_paths):run()
+  local success, results = P4_Command_Files:new(self.file_paths):run()
 
-  if success then
+  if success and results then
 
-    -- If we didn't get a result for every file then fail.
-    if not vim.tbl_isempty(result.list) and vim.tbl_isempty(result.errors) then
-      for index, _ in ipairs(result.list) do
-        self.files[index].in_depot = true
+    assert(#results == #self.file_paths, "Unexpected number of results")
+
+    for _, result in ipairs(results) do
+      if result.success then
+
+        --TODO: Could update some file information here.
+        self.in_depot = true
+      else
+        local error = result.data.error
+
+        -- If file doens't exist on the P4 server, then it is not in the depot.
+        if error:is_file_does_not_exist() then
+          self.in_depot = false
+        else
+          -- Any other error is fatal.
+          success = false
+        end
+        break
       end
-    else
-      success = false
     end
-
   end
 
   log.trace("P4_File_List (get_in_depot): Exit")
@@ -426,14 +443,22 @@ function P4_File_List:update_info()
 
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-  local success, result = P4_Command_FStat:new(self.file_paths):run()
+  local success, results = P4_Command_FStat:new(self.file_paths):run()
 
-  if success and result then
+  if success and results then
 
-    --- @cast result P4_Command_FStat_Result
+    assert(#results == #self.file_paths, "Unexpected number of results")
 
-    for index, file in ipairs(self.files) do
-      file:set_info(result.file_info_list[index])
+    for index, result in ipairs(results) do
+      if result.success then
+        local file = self.files[index]
+
+        file:set_info(result.data)
+      else
+        -- Any other error is fatal.
+        success = false
+        break
+      end
     end
   end
 

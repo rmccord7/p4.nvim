@@ -89,10 +89,11 @@ end
 ---
 --- @return boolean result If this is the error that occured.
 function P4_Command_Result_Error:is_not_logged_in()
-  return self.severity == P4_SEVERITY_FAILED and self.generic == P4_GENERIC_CONFIG
+  return (self.severity == P4_SEVERITY_FAILED and self.generic == P4_GENERIC_ILLEGAL) or
+         (self.severity == P4_SEVERITY_FAILED and self.generic == P4_GENERIC_CONFIG)
 end
 
---- Returns if the error occured because the user was not logged in.
+--- Returns if the user entered an invalid password.
 ---
 --- @return boolean result If this is the error that occured.
 function P4_Command_Result_Error:is_invalid_password()
@@ -111,6 +112,20 @@ end
 --- @return boolean result If this is the error that occured.
 function P4_Command_Result_Error:is_not_in_client_view()
   return self.severity == P4_SEVERITY_WARN and self.generic == P4_GENERIC_EMTPY
+end
+
+--- Returns if the error occured because the file is already shelved.
+---
+--- @return boolean result If this is the error that occured.
+function P4_Command_Result_Error:is_already_shelved()
+  return self.severity == P4_SEVERITY_FAILED and self.generic == P4_GENERIC_USAGE
+end
+
+--- Returns if the error occured because the file is not opened in a CL.
+---
+--- @return boolean result If this is the error that occured.
+function P4_Command_Result_Error:is_not_ooened_in_cl()
+  return self.severity == P4_SEVERITY_WARN and self.generic ==P4_GENERIC_EMTPY
 end
 
 return P4_Command_Result_Error

@@ -56,7 +56,7 @@ function P4_Telescope_Client_Picker.load(prompt_title, p4_client_list, opts)
 
         --- Issues shell command to read an entries P4 change list spec
         --- into a buffer so it can be displayed as a preview.
-        utils.job_maker(cmd:get(), self.state.bufnr, {
+        utils.job_maker(cmd:get_command(), self.state.bufnr, {
           value = entry.value.name,
           bufname = self.state.bufname,
         })

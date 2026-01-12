@@ -213,9 +213,6 @@ function P4_Command_Client:new(client, opts)
   log.trace("P4_Command_Client: new")
 
   local command = {
-    "p4",
-    "-Mj",
-    "-ztag",
     "client",
   }
 
@@ -249,8 +246,17 @@ function P4_Command_Client:new(client, opts)
 
   table.insert(command, client)
 
+  ---@type P4_Command_New
+  local info = {
+    command = command,
+    name = command[1],
+    global_opts = {
+      json = false,
+    }
+  }
+
   --- @type P4_Command_Client
-  local new = P4_Command:new(command)
+  local new = P4_Command:new(info)
 
   setmetatable(new, P4_Command_Client)
 

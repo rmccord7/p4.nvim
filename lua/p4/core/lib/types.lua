@@ -27,17 +27,3 @@
 ---@field workRev integer? Revision if file is opened.
 ---@field action string? Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
 
----@class P4_Revision
----@field index integer Identifies the revision across branch history (Head revision is 1).
----@field number string Identifies the revision for this branch (Tail revision is 1). P4 branch history will re-use revision numbers for each branch.
----@field depot_file Depot_File_Path Name of the file in the depot for this revision.
----@field action string Action.
----@field change string Identifies the CL.
----@field user string Identifies the user.
----@field client string Identifies the client.
----@field time string Time/date revision was integrated.
----@field description string Description from associated CL.
-
----@class P4_Revisions
----@field count integer Number of revisions.
----@field list P4_Revision[] List of revisions.

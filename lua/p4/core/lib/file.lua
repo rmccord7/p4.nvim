@@ -404,13 +404,21 @@ function P4_File:update_info()
 
   local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-  local success, result = P4_Command_FStat:new({self.path}):run()
+  local success, results = P4_Command_FStat:new({self.path}):run()
 
-  if success and result then
+  if success and results then
 
-    --- @cast result P4_Command_FStat_Result
-    self.info = result.file_info_list[1]
+    assert(#results == 1, "Unexpected number of results")
 
+    ---@type P4_Command_FStat_Result
+    local result = results[1]
+
+    if result.success then
+      self.info = result.data
+    else
+      -- All errors are fatal.
+      success = false
+    end
   end
 
   log.trace("P4_File (update_info): Exit")

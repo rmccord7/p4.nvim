@@ -39,56 +39,13 @@ end
 function P4_Command_Files:_process_response(sc)
   log.trace("P4_Command_Files: process_response")
 
-  --- @type P4_Command_Files_Result[]
-  local results = {}
+  -- Call base to process the response since we should have one JSON table per file spec.
+  local success, results = P4_Command._process_response(self, sc)
 
-  -- Convert command result which consists of  multiple JSONS entries into lua tables.
-  local success, parsed_output = P4_Command._process_response(self, sc)
+  --- @cast results P4_Command_Files_Result[]
 
   if success then
-
-    -- This command can take multiple file specs so we should have a table for each file spec.
-    assert(#parsed_output.tables == #self.file_specs, "Incorrect number of results")
-
-    for _, t in ipairs(parsed_output.tables) do
-
-      local error = false
-
-      for key, _ in pairs(t) do
-        if key:find("generic", 1, true) or
-          key:find("severity", 1, true)then
-
-          error = true
-
-          local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
-
-          ---@type P4_Command_Files_Result_Error
-          local new_error_result = {
-            error = P4_Command_Result_Error:new(t)
-          }
-
-          ---@type P4_Command_Files_Result
-          local new_result = {
-            success = false,
-            data = new_error_result
-          }
-
-          table.insert(results, new_result)
-          break
-        end
-      end
-
-      if not error then
-
-          ---@type P4_Command_Files_Result
-          local new_result = {
-            success = true,
-            data = t
-          }
-
-        table.insert(results, new_result)
-      end
-    end
+    assert(#results == #self.file_specs, "Unexpected number of results")
   end
 
   return success, results
@@ -107,17 +64,20 @@ function P4_Command_Files:new(file_specs)
   self.file_specs = file_specs
 
   local command = {
-    "p4",
-    "-Mj",
-    "-ztag",
     "files",
     "-e", -- Exclude deleted files.
   }
 
   vim.list_extend(command, file_specs)
 
+  ---@type P4_Command_New
+  local info = {
+    command = command,
+    name = command[1],
+  }
+
   --- @type P4_Command_Files
-  local new = P4_Command:new(command)
+  local new = P4_Command:new(info)
 
   setmetatable(new, P4_Command_Files)
 
@@ -148,8 +108,6 @@ end
 --- @return boolean success Indicates if the function was succesful.
 --- @return P4_Command_Files_Result[]? results Holds the result if the function was successful.
 ---
---- @nodiscard
---- @async
 function P4_Command_Files:run()
   self:_check_instance()
 

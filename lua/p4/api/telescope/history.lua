@@ -20,15 +20,17 @@ function P4_Telescope_History_API.display(file)
     -- Issue P4 filelog command to request the specified file's history.
     local P4_Command_FileLog = require("p4.core.lib.command.filelog")
 
-    local result_list
-    success, result_list = P4_Command_FileLog:new({file}):run()
+    local results
+    success, results = P4_Command_FileLog:new({file}):run()
 
-    if success and result_list then
+    if success and results then
 
-      --- @cast result_list P4_Command_Filelog_Result[]
+      assert(#results == 1, "Unexpected number of results")
 
-      if #result_list then
-        require("telescope._extensions.p4.pickers.revision").load(vim.fs.basename(file), result_list[1].revisions.list)
+      --- @cast results P4_Command_Filelog_Result[]
+
+      if #results then
+        require("telescope._extensions.p4.pickers.revision").load(vim.fs.basename(file), results[1].data.rev_list)
       else
         log.fmt_error("No revisions found for the specified file")
 

@@ -46,80 +46,80 @@ function P4_Command_Print:_process_response(sc)
   --- @type P4_Command_Print_Result[]
   local results = {}
 
-  -- Convert command result which consists of  multiple JSONS entries into lua tables.
-  local success, parsed_output = P4_Command._process_response(self, sc)
+  --- Decode the JSON output into lua tables
+  local P4_Command_Result = require("p4.core.lib.command.result")
 
-  if success then
+  ---@type P4_Command_Result
+  local parsed_output = P4_Command_Result:new(sc)
 
-    -- Can't determine actual number of results until we have parsed the tables due to how P4 outputs results for the
-    -- print command.
-    assert(#parsed_output.tables, "Unexpected number of results")
+  -- Can't determine actual number of results until we have parsed the tables due to how P4 outputs results for this
+  -- command.
+  assert(#parsed_output.tables, "Unexpected number of results")
 
-    -- For each successful file spec this command outputs
-    -- "Table with action key (file information)n
-    -- "Table with data key (file output)"
-    -- "Table with data key (empty string)"
-    for _, t in ipairs(parsed_output.tables) do
+  -- For each successful file spec this command outputs
+  -- "Table with action key (file information)n
+  -- "Table with data key (file output)"
+  -- "Table with data key (empty string)"
+  for _, t in ipairs(parsed_output.tables) do
 
-      local error = false
+    local error = false
 
-      for key, _ in pairs(t) do
-        if key:find("generic", 1, true) or
-          key:find("severity", 1, true)then
+    for key, _ in pairs(t) do
+      if key:find("generic", 1, true) or
+        key:find("severity", 1, true)then
 
-          error = true
+        error = true
 
-          local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
+        local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
 
-          ---@type P4_Command_Print_Result_Error
-          local new_error_result = {
-            error = P4_Command_Result_Error:new(t)
-          }
+        ---@type P4_Command_Print_Result_Error
+        local new_error_result = {
+          error = P4_Command_Result_Error:new(t)
+        }
 
-          ---@type P4_Command_Print_Result
-          local new_result = {
-            success = false,
-            data = new_error_result
-          }
+        ---@type P4_Command_Print_Result
+        local new_result = {
+          success = false,
+          data = new_error_result
+        }
 
-          table.insert(results, new_result)
-          break
-        end
+        table.insert(results, new_result)
+        break
       end
+    end
 
-      if not error then
+    if not error then
 
-        -- Start of a file spec result
-        if t["action"] then
+      -- Start of a file spec result
+      if t["action"] then
 
-          -- Start a new entry with information about the current file spec.
-          ---@type P4_Command_Print_Result
-          local new_result = {
-            success = true,
-            data = t
-          }
+        -- Start a new entry with information about the current file spec.
+        ---@type P4_Command_Print_Result
+        local new_result = {
+          success = true,
+          data = t
+        }
 
-          table.insert(results, new_result)
-        elseif t["data"] then
-          -- Sometimes multiple success tables are present with data that needs to be concatenated.
-          if t["data"] ~= "" then
-            current = results[#results].data
+        table.insert(results, new_result)
+      elseif t["data"] then
+        -- Sometimes multiple success tables are present with data that needs to be concatenated.
+        if t["data"] ~= "" then
+          current = results[#results].data
 
-            if current.output then
-              current.output = current .. t["data"]
-            else
-              current.output = t["data"]
-            end
+          if current.output then
+            current.output = current .. t["data"]
+          else
+            current.output = t["data"]
           end
         end
       end
     end
-
-    -- Now we can make sure the exact number of results are correct.
-    assert(#self.file_specs == #results, "Unexpected number of results.")
   end
 
-  return success, results
+  -- Now we can make sure the exact number of results are correct.
+  assert(#self.file_specs == #results, "Unexpected number of results.")
+
+  return true, results
 end
 
 --- Creates the P4 command.
@@ -138,17 +138,20 @@ function P4_Command_Print:new(file_specs)
 
 
   local command = {
-    "p4",
-    "-Mj",
-    "-ztag",
     "print",
     "-q", --Suppress the one line file header added to the file output by perforce.
   }
 
   vim.list_extend(command, file_specs)
 
+  ---@type P4_Command_New
+  local info = {
+    command = command,
+    name = command[1],
+  }
+
   --- @type P4_Command_Print
-  local new = P4_Command:new(command)
+  local new = P4_Command:new(info)
 
   setmetatable(new, P4_Command_Print)
 
