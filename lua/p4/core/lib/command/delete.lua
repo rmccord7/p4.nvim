@@ -1,3 +1,5 @@
+---@module "nio"
+
 local log = require("p4.log")
 local notify = require("p4.notify")
 

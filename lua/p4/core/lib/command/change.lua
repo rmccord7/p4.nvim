@@ -1,3 +1,5 @@
+---@module "nio"
+
 local log = require("p4.log")
 
 local P4_Command = require("p4.core.lib.command")

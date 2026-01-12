@@ -1,3 +1,5 @@
+---@module "nio"
+
 local log = require("p4.log")
 
 local P4_Command = require("p4.core.lib.command")
@@ -104,7 +106,7 @@ end
 --- Runs the P4 command.
 ---
 --- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Edit[]? results Holds the result if the function was successful.
+--- @return P4_Command_Edit_Result[]? results Holds the result if the function was successful.
 ---
 --- @nodiscard
 --- @async
