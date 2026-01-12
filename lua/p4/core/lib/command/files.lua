@@ -24,7 +24,7 @@ local P4_Command_Files = {}
 
 P4_Command_Files.__index = P4_Command_Files
 
-setmetatable(P4_Command_Files, {__index = P4_Command})
+setmetatable(P4_Command_Files, { __index = P4_Command })
 
 --- Wrapper function to check if a table is an instance of this class.
 function P4_Command_Files:_check_instance()

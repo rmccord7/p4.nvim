@@ -1,3 +1,5 @@
+---@module "mega.cmdparser"
+
 local notify = require("p4.notify")
 
 local M = {}
@@ -15,7 +17,7 @@ function M.add_parser(parent_sub_parser)
     local success = telescope_file_api.display(file)
 
     if not success then
-      notify(string.format("%s ", parser:get_names().name) .. "command failed. See 'P4 log'.", vim.log.levels.ERROR)
+      notify(string.format("%s ", parser:get_names()[1]) .. "command failed. See 'P4 log'.", vim.log.levels.ERROR)
     end
   end)
 end

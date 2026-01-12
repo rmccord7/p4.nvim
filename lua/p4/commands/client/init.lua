@@ -1,3 +1,5 @@
+---@module "mega.cmdparser"
+
 local M = {}
 
 ---@param parent_sub_parser mega.cmdparse.Subparsers
