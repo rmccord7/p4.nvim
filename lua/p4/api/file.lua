@@ -70,8 +70,6 @@ function P4_File_API.add(file)
       success = p4_file:add()
 
       if success then
-        notify("File opened for add: " .. file)
-
         log.fmt_debug("File opened for add: %s", file)
       end
     end

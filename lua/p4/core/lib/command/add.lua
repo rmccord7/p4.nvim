@@ -47,10 +47,6 @@ function P4_Command_Add:_process_response(sc)
 
   --- @cast results P4_Command_Add_Result[]
 
-  if success then
-    assert(#results == #self.file_specs, "Unexpected number of results")
-  end
-
   return success, results
 end
 

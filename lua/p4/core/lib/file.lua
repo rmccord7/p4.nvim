@@ -77,7 +77,7 @@ function P4_File:new(new_file)
   end
 
   if success then
-    if new_file.get_info then
+    if new_file.get_info and new:get_in_depot() then
       success = new:get_info()
     end
   end
@@ -402,22 +402,28 @@ function P4_File:update_info()
 
   self:_check_instance()
 
-  local P4_Command_FStat = require("p4.core.lib.command.fstat")
+  local success, in_depot = self:get_in_depot()
 
-  local success, results = P4_Command_FStat:new({self.path}):run()
+  if success and in_depot then
 
-  if success and results then
+    local P4_Command_FStat = require("p4.core.lib.command.fstat")
 
-    assert(#results == 1, "Unexpected number of results")
+    local results
+    success, results = P4_Command_FStat:new({self.path}):run()
 
-    ---@type P4_Command_FStat_Result
-    local result = results[1]
+    if success and results then
 
-    if result.success then
-      self.info = result.data
-    else
-      -- All errors are fatal.
-      success = false
+      assert(#results == 1, "Unexpected number of results")
+
+      ---@type P4_Command_FStat_Result
+      local result = results[1]
+
+      if result.success then
+        self.info = result.data
+      else
+        -- All errors are fatal.
+        success = false
+      end
     end
   end
 

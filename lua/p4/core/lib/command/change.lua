@@ -195,9 +195,6 @@ function P4_Command_Change:new(opts)
   log.trace("P4_Command_Change: new")
 
   local command = {
-    "p4",
-    "-Mj",
-    "-ztag",
     "change",
   }
 

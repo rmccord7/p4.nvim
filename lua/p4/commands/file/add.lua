@@ -17,6 +17,8 @@ function M.add_parser(parent_sub_parser)
     local success = file_api.add(file)
 
     if success then
+      notify("File opened for add: " .. file)
+
       vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
       vim.api.nvim_set_option_value("modifiable", true, { scope = "local" })
     else
