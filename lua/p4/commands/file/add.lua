@@ -1,6 +1,9 @@
----@module "mega.cmdparser"
+require("mega.cmdparse")
 
 local notify = require("p4.notify")
+
+local file_api = require("p4.api.file")
+local error_handler_api = require("p4.api.error_handler")
 
 local M = {}
 
@@ -10,19 +13,33 @@ function M.add_parser(parent_sub_parser)
   local parser = parent_sub_parser:add_parser({ name="add", help = "Open the current buffer for add." })
 
   parser:set_execute(function()
-    local file_api = require("p4.api.file")
+    local buf = vim.api.nvim_get_current_buf()
 
-    local file = vim.fn.expand("%:p")
+    if vim.api.nvim_buf_is_valid(buf) then
+      local file_name = vim.api.nvim_buf_get_name(buf)
 
-    local success = file_api.add(file)
+      local success, file_list, file_error_list = xpcall(file_api.add, error_handler_api.process, file_name)
 
-    if success then
-      notify("File opened for add: " .. file)
+      if success then
 
-      vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
-      vim.api.nvim_set_option_value("modifiable", true, { scope = "local" })
-    else
-      notify(string.format("%s ", parser:get_names()[1]) .. "command failed. See 'P4 log'.", vim.log.levels.ERROR)
+        local files = file_list:get_files()
+        local file_errors = file_error_list:get_files()
+
+        assert(#files + #file_errors == 1, "Unexpedted number of files")
+
+        if #files > 0 then
+          local file = files[1]
+
+          notify(string.format("%s opened for add", file:get_info().path))
+
+          vim.api.nvim_set_option_value("readonly", false, { buf = buf })
+          vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+        else
+          local error_file = file_errors[1]
+
+          notify(string.format("%s: %s", error_file:get_info().path, error_file:get_info().reason), vim.log.levels.WARN)
+        end
+      end
     end
   end)
 end

@@ -1,29 +1,23 @@
 ---@meta
 
 --- Represents a file path.
----@alias Local_File_Path string Local path to the file.
----@alias Depot_File_Path string Depot path to the file.
----@alias Client_File_Path string Client path to the file.
----@alias File_Path Local_File_Path | Depot_File_Path | Client_File_Path Any file path.
+--- @alias Local_File_Path string Local path to the file.
+--- @alias Depot_File_Path string Depot path to the file.
+--- @alias Client_File_Path string Client path to the file.
+--- @alias File_Path Local_File_Path | Depot_File_Path | Client_File_Path Any file path.
 
 --- Represents a file path or multiple file paths using wildcards.
----@alias Local_File_Spec string Local file syntax.
----@alias Depot_File_Spec string Depot file syntax.
----@alias Client_File_Spec string Client file syntax.
----@alias File_Spec Local_File_Spec | Depot_File_Spec | Client_File_Spec Any file syntax.
+--- @alias Local_File_Spec string Local file syntax.
+--- @alias Depot_File_Spec string Depot file syntax.
+--- @alias Client_File_Spec string Client file syntax.
+--- @alias File_Spec Local_File_Spec | Depot_File_Spec | Client_File_Spec Any file syntax.
+
+--- @class P4_File_Depot_Path
+--- @field depot_path Depot_File_Path Depot path to the file.
+--- @field local_path Local_File_Path? Optional local path to the file.
 
 ---@class P4_Date_Time
 ---@field date string Date
 ---@field time string Time
 
----@class P4_File_Info
----@field clientFile Client_File_Path? Local path to the file.
----@field depotFile Depot_File_Path? Depot path to the file.
----@field isMapped boolean? Indicates if file is mapped to the current client workspace.
----@field shelved boolean? Indicates if file is shelved.
----@field change string? Open change list number if file is opened in client workspace.
----@field headRev integer? Head revision number if in depot.
----@field haveRev integer? Revision last synced to workpace.
----@field workRev integer? Revision if file is opened.
----@field action string? Open action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
 

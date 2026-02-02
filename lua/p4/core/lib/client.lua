@@ -204,35 +204,41 @@ function P4_Client:get_pending_cl_list()
       client = self.name
     }
 
-    local result_list
-    success, result_list = P4_Command_Changes:new(cmd_opts):run()
+    local results
+    success, results = P4_Command_Changes:new(nil, cmd_opts):run()
 
-    if success then
-
-      --- @cast result_list P4_Command_Changes_Result[]
+    if success and results then
 
       local P4_CL = require("p4.core.lib.cl")
 
       self.pending_cl_list = {}
 
-      for _, result in ipairs(result_list) do
+      for _, result in ipairs(results) do
 
-        --- @type P4_New_CL_Information
-        local new_cl = {
-          change = result.name,
-          client = self,
-        }
+        if result.success then
 
-        success, p4_cl = P4_CL:new(new_cl)
+          --- @type P4_New_CL_Information
+          local new_cl = {
+            change = result.data.change,
+            client = self,
+          }
 
-        if success then
-          table.insert(self.pending_cl_list, p4_cl)
+          success, p4_cl = P4_CL:new(new_cl)
+
+          if success then
+            table.insert(self.pending_cl_list, p4_cl)
+          else
+            break
+          end
         else
+          success = false
           break
         end
       end
 
-      log.fmt_debug("Successfully updated the client's cl list: %s", self.name)
+      if success then
+        log.fmt_debug("Successfully updated the client's cl list: %s", self.name)
+      end
     else
       log.fmt_debug("Failed to read the client's file list: %s", self.name)
 
@@ -253,8 +259,6 @@ end
 --- @async
 --- @nodiscard
 function P4_Client:get_open_files()
-  log.trace("P4_Client (get_open_files): Enter")
-
   self:_check_instance()
 
   -- Read the current client's spec so we can get the client's

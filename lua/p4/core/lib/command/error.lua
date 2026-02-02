@@ -1,36 +1,32 @@
----@diagnostic disable:unused-local
-
 -- Generic errors
-local P4_GENERIC_NONE = 0
+P4_GENERIC_NONE = 0
 
 -- Generic user errors
-local P4_GENERIC_USAGE   = 1 -- request not consistent with dox
-local P4_GENERIC_UNKNOWN = 2 -- using unknown entity
-local P4_GENERIC_CONTEXT = 3 -- using entity in wrong context
-local P4_GENERIC_ILLEGAL = 4 -- trying to do something you can't
-local P4_GENERIC_NOT_YET = 5 -- something must be corrected first
-local P4_GENERIC_PROJECT = 6 -- protections prevented operation
+P4_GENERIC_USAGE   = 1 -- request not consistent with dox
+P4_GENERIC_UNKNOWN = 2 -- using unknown entity
+P4_GENERIC_CONTEXT = 3 -- using entity in wrong context
+P4_GENERIC_ILLEGAL = 4 -- trying to do something you can't
+P4_GENERIC_NOT_YET = 5 -- something must be corrected first
+P4_GENERIC_PROJECT = 6 -- protections prevented operation
 
 --Generic errors
-local P4_GENERIC_EMTPY = 17 -- action returned empty results
+P4_GENERIC_EMTPY = 17 -- action returned empty results
 
 --Generic server errors
-local P4_GENERIC_FAULT   = 33 -- inexplicable program fault
-local P4_GENERIC_CLIENT  = 34 -- client side program errors
-local P4_GENERIC_ADMIN   = 35 -- server administrative action required
-local P4_GENERIC_CONFIG  = 36 -- client configuration inadequate
-local P4_GENERIC_UPGRADE = 37 -- client or server too old to interact
-local P4_GENERIC_COMM    = 38 -- communications error
-local P4_GENERIC_TOO_BIG = 39 -- not even Perforce can handle this much
+P4_GENERIC_FAULT   = 33 -- inexplicable program fault
+P4_GENERIC_CLIENT  = 34 -- client side program errors
+P4_GENERIC_ADMIN   = 35 -- server administrative action required
+P4_GENERIC_CONFIG  = 36 -- client configuration inadequate
+P4_GENERIC_UPGRADE = 37 -- client or server too old to interact
+P4_GENERIC_COMM    = 38 -- communications error
+P4_GENERIC_TOO_BIG = 39 -- not even Perforce can handle this much
 
 -- Severify errors
-local P4_SEVERITY_NONE   = 0
-local P4_SEVERITY_IFNO   = 1
-local P4_SEVERITY_WARN   = 2
-local P4_SEVERITY_FAILED = 3
-local P4_SEVERITY_FATAL  = 4
-
----@diagnostic enable:unused-local
+P4_SEVERITY_NONE   = 0
+P4_SEVERITY_INFO   = 1
+P4_SEVERITY_WARN   = 2
+P4_SEVERITY_FAILED = 3
+P4_SEVERITY_FATAL  = 4
 
 ---@class P4_JSON_Error_Table
 ---@field data string Command output
@@ -59,7 +55,7 @@ function P4_Command_Result_Error:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object == P4_Command_Result_Error then
+    if object.__index == P4_Command_Result_Error then
       return true
     end
   end
@@ -76,6 +72,20 @@ function P4_Command_Result_Error:new(table)
 
   ---@cast new P4_Command_Result_Error
   return new
+end
+
+--- Returns the P4 severity level for the error.
+---
+--- @return integer severity Severity level for the error.
+function P4_Command_Result_Error:get_severity()
+  return self.severity
+end
+
+--- Returns the P4 generic level for the error.
+---
+--- @return integer generic Generic level for the error.
+function P4_Command_Result_Error:get_generic()
+  return self.generic
 end
 
 --- Returns the P4 server output for error.
@@ -114,6 +124,13 @@ function P4_Command_Result_Error:is_not_in_client_view()
   return self.severity == P4_SEVERITY_WARN and self.generic == P4_GENERIC_EMTPY
 end
 
+--- Returns if the error occured because the file is not in the client view.
+---
+--- @return boolean result If this is the error that occured.
+function P4_Command_Result_Error:is_not_open_in_client_view()
+  return self.severity == P4_SEVERITY_WARN and self.generic == P4_GENERIC_EMTPY
+end
+
 --- Returns if the error occured because the file is already shelved.
 ---
 --- @return boolean result If this is the error that occured.
@@ -124,7 +141,7 @@ end
 --- Returns if the error occured because the file is not opened in a CL.
 ---
 --- @return boolean result If this is the error that occured.
-function P4_Command_Result_Error:is_not_ooened_in_cl()
+function P4_Command_Result_Error:is_not_opened_in_cl()
   return self.severity == P4_SEVERITY_WARN and self.generic ==P4_GENERIC_EMTPY
 end
 

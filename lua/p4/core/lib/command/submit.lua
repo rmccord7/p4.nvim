@@ -1,7 +1,8 @@
 ---@module "nio"
 
-local log = require("p4.log")
-local P4_Command = require("p4.core.lib.command")
+local cmd_lib = require("p4.core.lib.command")
+
+local error_api = require("p4.api.error")
 
 --- @class P4_Command_Submit_Options : table
 --- @field cl string Only files in the specified changelist.
@@ -14,7 +15,7 @@ local P4_Command_Submit = {}
 
 P4_Command_Submit.__index = P4_Command_Submit
 
-setmetatable(P4_Command_Submit, {__index = P4_Command})
+setmetatable(P4_Command_Submit, {__index = cmd_lib})
 
 --- Parses the output of the P4 command.
 function P4_Command_Submit:_process_response()
@@ -29,12 +30,7 @@ end
 function P4_Command_Submit:new(file_spec_list, opts)
   opts = opts or {}
 
-  log.trace("P4_Command_Submit: new")
-
   local command = {
-    "p4",
-    "-Mj",
-    "-ztag",
     "submit",
   }
 
@@ -51,7 +47,7 @@ function P4_Command_Submit:new(file_spec_list, opts)
   table.insert(command, file_spec_list)
 
   --- @type P4_Command_Submit
-  local new = P4_Command:new(command)
+  local new = cmd_lib:new(command)
 
   setmetatable(new, P4_Command_Submit)
 
@@ -64,7 +60,7 @@ end
 --- @async
 function P4_Command_Submit:run()
 
-  local success, _ = pcall(P4_Command.run(self).wait)
+  local success, _ = pcall(cmd_lib.run(self).wait)
 
   return success
 end

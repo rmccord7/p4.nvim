@@ -1,6 +1,9 @@
 local log = require("p4.log")
 local notify = require("p4.notify")
 
+local file_api = require("p4.api.file")
+local error_handler_api = require("p4.api.error_handler")
+
 --- @class P4_Telescope_Client_API
 local P4_Telescope_Client_API = {}
 

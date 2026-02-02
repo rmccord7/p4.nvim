@@ -1,199 +1,232 @@
 local log = require("p4.log")
 local notify = require("p4.notify")
 
+local error_api = require("p4.api.error")
+
+local file_list_lib = require("p4.core.lib.file_list")
+local file_lib = require("p4.core.lib.file")
+local file_error_list_lib = require("p4.core.lib.file_error_list")
+local file_error_lib = require("p4.core.lib.file_error")
+
 --- @class P4_File_API
 local P4_File_API = {}
 
---- Creates a P4 file from the specified file.
+--- Opens one or more files for add.
 ---
---- @param file string File.
---- @return boolean success True if this function is successful.
---- @return P4_File? result Function result.
+--- Files that are not mapped to the client worksapce or do not exist in the depot will be excluded from the list of
+--- depot paths that are returned from this function.
 ---
---- @async
---- @nodiscard
-local function create_p4_file(file)
-
-  local P4_File = require("p4.core.lib.file")
-
-  ---@type P4_File_New
-  local new_p4_file = {
-    path = file,
-    check_in_depot = true,
-    get_info = true,
-  }
-
-  return P4_File:new(new_p4_file)
-end
-
---- Creates a P4 file list from the specified files.
+--- A file that is already open for edit will be included in the list of depot paths that are returned by this function.
 ---
---- @param files string[] One or more files.
---- @return boolean success True if this function is successful.
---- @return P4_File_List? result Function result.
+--- @param file_specs File_Spec | File_Spec[] One or more file specs.
+--- @return P4_File_List result List of P4 files that are opened for add.
+--- @return P4_File_Error_List error_result List of P4 files that could not be opened for add.
 ---
 --- @async
 --- @nodiscard
-local function create_p4_file_list(files)
+function P4_File_API.add(file_specs)
+  vim.validate("file_specs", file_specs, {"string", "table"})
 
-  local P4_File_List = require("p4.core.lib.file_list")
-
-  ---@type P4_File_List_New
-  local new_file_list = {
-    paths = files,
-    convert_depot_paths = false,
-    check_in_depot = true,
-    get_info = true,
-  }
-
-  return P4_File_List:new(new_file_list)
-end
-
---- Adds the specified file to the current client workspace.
----
---- @param file string File.
---- @return boolean success Result of the function.
----
---- @async
---- @nodiscard
-function P4_File_API.add(file)
-  log.trace("P4_File_API (add): Enter")
-
-  local success = false
-
-  if type(file) == "string" then
-
-    success, p4_file = create_p4_file(file)
-
-    if success and p4_file then
-
-      success = p4_file:add()
-
-      if success then
-        log.fmt_debug("File opened for add: %s", file)
-      end
+  if type(file_specs) == "string" then
+    file_specs = {file_specs}
+  elseif type(file_specs) == "table" then
+    for _, v in ipairs(file_specs) do
+      vim.validate(v, "v", "string")
     end
-  else
-    log.fmt_error("P4_File_API (add): Invalid parameter")
   end
 
-  log.trace("P4_File_API (add): Exit")
+  local add_cmd = require("p4.core.lib.command.add")
 
-  return success
+  local new_file_list = file_list_lib:new()
+  local new_error_file_list = file_error_list_lib:new()
+
+  local cmd = add_cmd:new(file_specs)
+  local cmd_results = cmd:run()
+
+  for _, cmd_result in ipairs(cmd_results) do
+
+    if cmd_result.success then
+
+      local file_info = cmd_result.data
+
+      ---@cast file_info P4_Command_Add_Result_Success
+
+      --- @type P4_File_Info
+      local new_file_params = {
+        path = {
+          host = file_info.clientFile, -- clientFile returned in local syntax for some reason.
+          depot = file_info.depotFile,
+        },
+        action = file_info.action,
+        work_rev = file_info.workRev,
+      }
+
+      local new_file = file_lib:new(new_file_params)
+
+      new_file_list:add_file(new_file)
+    else
+
+      local file_info = cmd_result.data
+
+      ---@cast file_info P4_Command_Add_Result_Error
+
+      --- @type P4_File_Error_Info
+      local new_file_error_params = {
+        path = file_info.depotFile,
+        reason = file_info.reason,
+      }
+
+      local new_file_error = file_error_lib:new(new_file_error_params)
+
+      new_error_file_list:add_file(new_file_error)
+    end
+  end
+
+  return new_file_list, new_error_file_list
 end
 
---- Adds the specified files to the current client workspace.
+--- Opens one or more files for edit.
 ---
---- @param files string File.
---- @return boolean success Result of the function.
+--- Files that are not mapped to the client worksapce or do not exist in the depot will be excluded from the list of
+--- depot paths that are returned from this function.
+---
+--- A file that is already open for edit will be included in the list of depot paths that are returned by this function.
+---
+--- @param file_specs File_Spec | File_Spec[] One or more file specs.
+--- @return P4_File_List result List of P4 files that are opened for edit.
+--- @return P4_File_Error_List error_result List of P4 files that could not be opened for add.
 ---
 --- @async
 --- @nodiscard
-function P4_File_API.add_files(files)
+function P4_File_API.edit(file_specs)
+  vim.validate("file_specs", file_specs, {"string", "table"})
 
-  log.trace("P4_File_API (add_files): Enter")
-
-  local success = false
-
-  if type(files) == "table" then
-
-    local p4_file_list
-    success, p4_file_list = create_p4_file_list(files)
-
-    if success and p4_file_list then
-
-      local P4_Command_Add = require("p4.core.lib.command.add")
-
-      success = P4_Command_Add:new(p4_file_list:get_file_paths()):run()
-
-      if success then
-        notify("Files opened for add")
-
-        log.fmt_debug("Files opened for add: %s", vim.join(files, ' '))
-      end
+  if type(file_specs) == "string" then
+    file_specs = {file_specs}
+  elseif type(file_specs) == "table" then
+    for _, v in ipairs(file_specs) do
+      vim.validate(v, "v", "string")
     end
-  else
-    log.fmt_error("P4_File_API (add_files): Invalid parameter")
   end
 
-  log.trace("P4_File_API (add_files): Exit")
+  local edit_cmd = require("p4.core.lib.command.edit")
 
-  return success
+  local new_file_list = file_list_lib:new()
+  local new_error_file_list = file_error_list_lib:new()
+
+  local cmd = edit_cmd:new(file_specs)
+  local cmd_results = cmd:run()
+
+  for _, cmd_result in ipairs(cmd_results) do
+
+    if cmd_result.success then
+
+      local file_info = cmd_result.data
+
+      ---@cast file_info P4_Command_Edit_Result_Success
+
+      --- @type P4_File_Info
+      local new_file_params = {
+        path = {
+          host = file_info.clientFile, -- clientFile returned in local syntax for some reason.
+          depot = file_info.depotFile,
+        },
+        action = file_info.action,
+        work_rev = file_info.workRev,
+      }
+
+      local new_file = file_lib:new(new_file_params)
+
+      new_file_list:add_file(new_file)
+    else
+
+      local file_info = cmd_result.data
+
+      ---@cast file_info P4_Command_Edit_Result_Error
+
+      --- @type P4_File_Error_Info
+      local new_file_error_params = {
+        path = file_info.depotFile,
+        reason = file_info.reason,
+      }
+
+      local new_file_error = file_error_lib:new(new_file_error_params)
+
+      new_error_file_list:add_file(new_file_error)
+    end
+  end
+
+  return new_file_list, new_error_file_list
 end
 
---- Checks out the specified file in the current client workspace.
+--- Reverts one or more files.
 ---
---- @param file string File.
---- @return boolean success Result of the function.
+--- @param file_specs File_Spec | File_Spec[] One or more file specs.
+--- @return P4_File_List result List of P4 files that were reverted.
+--- @return P4_File_Error_List error_result List of P4 files that could not be reverted.
 ---
 --- @async
 --- @nodiscard
-function P4_File_API.edit(file)
-  log.trace("P4_File_API (edit): Enter")
+function P4_File_API.revert(file_specs)
+  vim.validate("file_specs", file_specs, {"string", "table"})
 
-  local success = false
-
-  if type(file) == "string" then
-
-    local p4_file
-    success, p4_file = create_p4_file(file)
-
-    if success and p4_file then
-
-      local P4_Command_Edit = require("p4.core.lib.command.edit")
-
-      success = P4_Command_Edit:new({file}):run()
-
-      if success then
-        notify("File opened for edit: " .. file)
-
-        log.fmt_debug("File opened for edit: %s", file)
-      end
+  if type(file_specs) == "string" then
+    file_specs = {file_specs}
+  elseif type(file_specs) == "table" then
+    for _, v in ipairs(file_specs) do
+      vim.validate(v, "v", "string")
     end
-  else
-    log.fmt_error("P4_File_API (edit): Invalid parameter")
   end
 
-  log.trace("P4_File_API (edit): Exit")
+  local new_file_list = file_list_lib:new()
+  local new_error_file_list = file_error_list_lib:new()
 
-  return success
-end
+  local revert_cmd = require("p4.core.lib.command.revert")
 
---- Reverts the specified files in the current client workspace.
----
---- @param file string File.
---- @return boolean success True if this function is successful.
----
---- @async
---- @nodiscard
-function P4_File_API.revert(file)
-  log.trace("P4_File_API (revert): Enter")
+  local cmd = revert_cmd:new(file_specs)
+  local cmd_results = cmd:run()
 
-  local success = false
+  for _, cmd_result in ipairs(cmd_results) do
 
-  if type(file) == "string" then
-    local p4_file
-    success, p4_file = create_p4_file(file)
+    if cmd_result.success then
 
-    if success and p4_file then
+      local file_info = cmd_result.data
 
-      local P4_Command_Revert = require("p4.core.lib.command.revert")
+      ---@cast file_info P4_Command_Revert_Result_Success
 
-      success = P4_Command_Revert:new({file}):run()
+      --- @type P4_File_Info
+      local new_file_params = {
+        path = {
+          host = file_info.clientFile, -- clientFile returned in local syntax for some reason.
+          depot = file_info.depotFile,
+        },
+        action = file_info.action,
+        have_rev = file_info.haveRev,
+        -- old_action = file_info.oldAction -- Not currently used
+      }
 
-      if success then
-        notify("File reverted: " .. file)
+      local new_file = file_lib:new(new_file_params)
 
-        log.fmt_debug("File reverted: %s", file)
-      end
+      new_file_list:add_file(new_file)
+    else
+
+      local file_info = cmd_result.data
+
+      ---@cast file_info P4_Command_Revert_Result_Error
+
+      --- @type P4_File_Error_Info
+      local new_file_error_params = {
+        path = file_info.depotFile,
+        reason = file_info.reason,
+      }
+
+      local new_file_error = file_error_lib:new(new_file_error_params)
+
+      new_error_file_list:add_file(new_file_error)
     end
-  else
-    log.fmt_error("P4_File_API (revert): Invalid parameter")
   end
 
-  log.trace("P4_File_API (revert): Exit")
-
-  return success
+  return new_file_list, new_error_file_list
 end
 
 --- Shelves the specified files in the current client workspace.
@@ -233,128 +266,137 @@ function P4_File_API.shelve(file)
   return success
 end
 
---- Diffs the specified files in the current client workspace.
+--TODO: Diff something other than head.
+
+--- Enters diffmode with the specified file diff-ed against the head revision.
 ---
---- @param file string File.
---- @return boolean success True if this function is successful.
+--- @param path Local_File_Path File path.
+---
+--- @return P4_File_List result List of P4 files that were reverted.
+--- @return P4_File_Error_List error_result List of P4 files that could not be reverted.
 ---
 --- @async
 --- @nodiscard
-function P4_File_API.diff(file)
-  log.trace("P4_File_API (diff): Enter")
+function P4_File_API.diff(path)
+  vim.validate("path", path, "string")
 
-  local success = false
+  local print_cmd = require("p4.core.lib.command.print")
 
-  if type(file) == "string" then
+  local new_file_list = file_list_lib:new()
+  local new_error_file_list = file_error_list_lib:new()
 
-    local buf = vim.api.nvim_get_current_buf()
+  local cmd = print_cmd:new({path})
+  local cmd_results = cmd:run()
 
-    if buf then
+  for _, cmd_result in ipairs(cmd_results) do
 
-      if vim.api.nvim_buf_get_name(buf) == file then
+    if cmd_result.success then
 
-        local p4_file
-        success, p4_file = create_p4_file(file)
+      local file_info = cmd_result.data
 
-        if success and p4_file then
+      ---@cast file_info P4_Command_Print_Result_Success
 
-          success, is_open_for_edit = p4_file:is_open_for_edit()
+      --- @type P4_File_Info
+      local new_file_params = {
+        path = {
+          depot = file_info.depotFile,
+        },
+        action = file_info.action,
+        change = file_info.change,
+        file_size = file_info.fileSize,
+        rev = file_info.rev,
+        time = file_info.time,
+        output = file_info.output
+      }
 
-          if success and is_open_for_edit then
+      local new_file = file_lib:new(new_file_params)
 
-            local output
-            success, output = p4_file:get_file_revision()
+      new_file_list:add_file(new_file)
+    else
 
-            if success and output then
+      local file_info = cmd_result.data
 
-              local new_buf = vim.api.nvim_create_buf(false, true)
+      ---@cast file_info P4_Command_Print_Result_Error
 
-              vim.bo[new_buf].filetype = vim.bo[buf].filetype
-              vim.bo[new_buf].buftype = "nofile"
-              vim.bo[new_buf].bufhidden = "hide"
-              vim.bo[new_buf].modeline = false
-              vim.bo[new_buf].swapfile = false
+      --- @type P4_File_Error_Info
+      local new_file_error_params = {
+        path = file_info.depotFile,
+        reason = file_info.reason,
+      }
 
-              vim.api.nvim_buf_set_name(new_buf, p4_file:get_file_path() .. "#Head")
+      local new_file_error = file_error_lib:new(new_file_error_params)
 
-              local lines = vim.split(output, "\n")
-
-              if lines[#lines] == "" then
-                table.remove(lines, #lines)
-              end
-
-              vim.api.nvim_buf_set_lines(new_buf, 0, 1, true, lines)
-
-              vim.bo[new_buf].readonly = true
-              vim.bo[new_buf].modifiable = false
-
-              cur_win = vim.api.nvim_get_current_win()
-
-              local win = vim.api.nvim_open_win(new_buf, false, {
-                split = "right",
-              })
-
-              vim.cmd("wincmd =")
-              vim.cmd('windo diffthis')
-
-              vim.api.nvim_set_current_win(cur_win)
-
-              local buf_ac = vim.api.nvim_create_autocmd(
-                {
-                  "WinClosed",
-              }, {
-                buffer = buf,
-                once = true,
-                callback = function()
-                  vim.cmd('diffoff!')
-
-                  local clients = vim.lsp.get_clients({bufnr = new_buf})
-
-                  for _, client in ipairs(clients) do
-                    vim.lsp.buf_detach_client(new_buf, client.id)
-                  end
-
-                  vim.api.nvim_buf_delete(new_buf, { force = true })
-                  vim.api.nvim_win_close(win, true)
-                end
-              })
-
-              vim.api.nvim_create_autocmd(
-                {
-                  "WinClosed",
-              }, {
-                buffer = new_buf,
-                once = true,
-                callback = function()
-                  vim.cmd('diffoff!')
-
-                  local clients = vim.lsp.get_clients({bufnr = new_buf})
-
-                  for _, client in ipairs(clients) do
-                    vim.lsp.buf_detach_client(new_buf, client.id)
-                  end
-
-                  vim.api.nvim_buf_delete(new_buf, { force = true })
-
-                  vim.api.nvim_del_autocmd(buf_ac)
-                end
-              })
-            end
-          else
-            if success then
-              notify("File not open for edit")
-            end
-          end
-        end
-      end
+      new_error_file_list:add_file(new_file_error)
     end
-  else
-    log.error("P4_File_API (diff): Invalid parameter")
   end
 
-  log.trace("P4_File_API (diff): Exit")
-
-  return success
+  return new_file_list, new_error_file_list
 end
+
+--- Returns a list of open files.
+---
+--- @param file_specs (File_Spec | File_Spec[])? One or more file specs.
+--- @param change string? Restrict results to files open in the specified CL.
+--- @return P4_File_List result Returns a list of open files. If no files are open, then the file list will be empty.
+---
+--- @async
+--- @nodiscard
+function P4_File_API.get_open_files(file_specs, change)
+  vim.validate("file_specs", file_specs, {"string", "table"}, true)
+  vim.validate("change", change, "string", true)
+
+  if file_specs then
+    if type(file_specs) == "string" then
+      file_specs = {file_specs}
+    elseif type(file_specs) == "table" then
+      for _, v in ipairs(file_specs) do
+        vim.validate(v, "v", "string")
+      end
+    end
+  end
+  local opened_cmd = require("p4.core.lib.command.opened")
+
+  local new_file_list = file_list_lib:new()
+
+  local cmd = opened_cmd:new()
+  local cmd_results = cmd:run()
+
+  if cmd_results then
+    for _, cmd_result in ipairs(cmd_results) do
+
+      if cmd_result.success then
+
+        local file_info = cmd_result.data
+
+        ---@cast file_info P4_Command_Opened_Result_Success
+
+        --- @type P4_File_Info
+        local new_file_params = {
+          path = {
+            host = file_info.clientFile:gsub("//" .. file_info.client .. "/", "", 1), -- We have the client so we can just convert.
+            client = file_info.clientFile,
+            depot = file_info.depotFile,
+          },
+          action = file_info.action,
+          have_rev = file_info.haveRev,
+          rev = file_info.rev,
+          user = file_info.user,
+          change = file_info.change,
+        }
+
+        local new_file = file_lib:new(new_file_params)
+
+        new_file_list:add_file(new_file)
+      else
+
+        -- This command doesn't support error results.
+        error(error_api:new(P4_RESULT_CODE_UNLIKELY))
+      end
+    end
+  end
+
+  return new_file_list
+end
+
 
 return P4_File_API

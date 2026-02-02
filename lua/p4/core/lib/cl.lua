@@ -5,26 +5,14 @@ local notify = require("p4.notify")
 --- @field date string Date
 --- @field time string Time
 
---- @class P4_CL_Spec : table
---- @field output string Read change spec output.
---- @field change string CL change number
---- @field date P4_CL_Spec_Date_Time Last modified date
---- @field client string Name of client that owns the CL
---- @field user string User that owns the CL
---- @field status string Either 'pending' or 'submitted'
---- @field type string Either 'public' or 'restricted'
---- @field description string CL description
---- @field imported_by string CL description
---- @field identity string CL description
---- @field jobs string CL description
---- @field stream string CL description
---- @field file_path_list File_Path[] List of files checked out for this CL
+--- @alias P4_CL_Spec P4_Command_Change_Result_Success
 
 --- @class P4_CL : table
 --- @field protected change string P4 CL name
 --- @field protected spec P4_CL_Spec CL spec
 --- @field protected client? P4_Client CL Client
 --- @field protected file_list? P4_File_List List of P4 files that are open for the CL
+--- @field file_path_list File_Path[] List of files checked out for this CL
 local P4_CL = {}
 
 P4_CL.__index = P4_CL
@@ -100,7 +88,7 @@ function P4_CL:get_change()
   return self.change
 end
 
---- @class P4_CL_Get_Spec_Opts : table
+--- @class P4_CL_Get_Spec_Opts
 --- @field force boolean Forces a read of the CL spec.
 local P4_CL_Get_Spec_Opts = {
   force = false,
@@ -131,19 +119,22 @@ function P4_CL:get_spec(opts)
     local cmd_opts = {
       cl = self.change,
       type = P4_Command_Change.opts_type.READ,
-      read = nil,
+      read = {
+        raw_output = false,
+      },
     }
 
     local result
     success, result = P4_Command_Change:new(cmd_opts):run()
 
-    if success then
+    if success and result then
 
-      --- @cast result P4_Command_Change_Result
-
-      -- Build the spec table from the output.
-      --FIX: Currently types align, but are different
-      self.spec = result
+      if result.success then
+        self.spec = result.data
+      else
+        -- There will only be one error.
+        success = false
+      end
     end
   end
 
@@ -232,13 +223,13 @@ function P4_CL:get_file_list(opts)
   local success = self:get_spec()
 
   if success then
-    if not vim.tbl_isempty(self.spec.file_path_list) then
+    if not vim.tbl_isempty(self.file_path_list) then
 
       local P4_File_List = require("p4.core.lib.file_list")
 
       ---@type P4_File_List_New
       local new_file_list = {
-        paths = self.spec.file_path_list,
+        paths = self.file_path_list,
         convert_depot_paths = false,
         check_in_depot = true,
         get_info = true,
@@ -269,7 +260,7 @@ function P4_CL:get_formatted_description()
 
   self:_check_instance()
 
-  local description = self.spec.description
+  local description = self.spec.Description
 
   description = description:gsub("\n", " ")
   description = description:gsub("[\t\r]", "")

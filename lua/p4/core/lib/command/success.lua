@@ -1,6 +1,8 @@
 ---@alias P4_JSON_Success_Table table<string, any>
 
----@class P4_Command_Result_Success
+--- @class P4_Command_Result_Success
+--- @field data string? Information about the message.
+--- @field level string? Indentation level.
 local P4_Command_Result_Success = {}
 
 P4_Command_Result_Success.__index = P4_Command_Result_Success
@@ -19,7 +21,7 @@ function P4_Command_Result_Success:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object == P4_Command_Result_Success then
+    if object.__index == P4_Command_Result_Success then
       return true
     end
   end

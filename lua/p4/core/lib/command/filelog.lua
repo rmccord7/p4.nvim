@@ -1,13 +1,13 @@
 ---@module "nio"
 
-local log = require("p4.log")
+local cmd_lib = require("p4.core.lib.command")
 
-local P4_Command = require("p4.core.lib.command")
+local error_api = require("p4.api.error")
 
 --- @class P4_Revision
 --- @field index integer Identifies the revision across branch history (Head revision is 1).
 --- @field number string Identifies the revision for this branch (Tail revision is 1). P4 branch history will re-use revision numbers for each branch.
---- @field depot_file Depot_File_Path Name of the file in the depot for this revision.
+--- @field depotFile Depot_File_Path Name of the file in the depot for this revision.
 --- @field action string Action.
 --- @field change string Identifies the CL.
 --- @field user string Identifies the user.
@@ -15,172 +15,208 @@ local P4_Command = require("p4.core.lib.command")
 --- @field time string Time/date revision was integrated.
 --- @field description string Description from associated CL.
 
---- @class P4_Command_Filelog_Result_Success
+--- @class P4_Command_Filelog_Result_Success : P4_Command_Common_Result_Success, P4_Revision
 --- @field rev_list P4_Revision[] List of revisions.
 
 --- @class P4_Command_Filelog_Result_Error
---- @field error P4_Command_Result_Error Hold's the error information.
+--- @field reason string? Error reason.
 
---- @class P4_Command_Filelog_Result
+--- @class P4_Command_Filelog_Result : P4_Command_Common_Result
 --- @field success boolean Indicates if the result is success.
 --- @field data P4_Command_Filelog_Result_Success | P4_Command_Filelog_Result_Error Hold's information about the result.
 
 --- @class P4_Command_Filelog : P4_Command
---- @field file_specs File_Spec[] File specs
 local P4_Command_Filelog = {}
 
 P4_Command_Filelog.__index = P4_Command_Filelog
 
-setmetatable(P4_Command_Filelog, { __index = P4_Command })
+setmetatable(P4_Command_Filelog, { __index = cmd_lib })
 
 --- Wrapper function to check if a table is an instance of this class.
 ---
 --- @package
 function P4_Command_Filelog:_check_instance()
-  assert(P4_Command.is_instance(self) == true, "Not a class instance")
+  assert(cmd_lib.is_instance(self) == true, "Not a class instance")
+end
+
+--- Helper function to process a command result success.
+---
+--- @param cmd_result P4_Command_Common_Result Current command result.
+--- @param new_result P4_Command_Filelog_Result New result.
+--- @param results P4_Command_Filelog_Result[] Hold's the filtered results.
+---
+--- @package
+function P4_Command_Filelog:_cmd_result_success_handler(cmd_result, new_result, results)
+  local cmd_result_success = cmd_result.data
+
+  ---@cast cmd_result_success P4_Command_Filelog_Result_Success
+
+  local changes = {} ---@type string[]
+  local actions = {} ---@type string[]
+  local clients = {} ---@type string[]
+  local descriptions = {} ---@type string[]
+  local revisions = {} ---@type string[]
+  local times = {} ---@type string[]
+  local users = {} ---@type string[]
+
+  for k, v in pairs(cmd_result_success) do
+
+    if k:find("change", 1, true) then
+      table.insert(changes, v)
+    elseif k:find("^action") then
+      table.insert (actions, v)
+    elseif k:find("^client") then
+      table.insert (clients, v)
+    elseif k:find("^desc") then
+      table.insert (descriptions, v)
+    elseif k:find("^rev") then
+      table.insert (revisions, v)
+    elseif k:find("^time") then
+      table.insert (times, v)
+    elseif k:find("^user") then
+      table.insert (users, v)
+    end
+  end
+
+  assert(#changes == #actions and
+         #changes == #clients and
+         #changes == #descriptions and
+         #changes == #revisions and
+         #changes == #times and
+         #changes == #users,
+       "Parse error")
+
+  for index = 1, #revisions, 1 do
+
+    --- @type P4_Revision
+    local new_revision = {
+      index = #result.data.rev_list + 1,
+      number = revisions[index],
+      depotFile = cmd_result_success.depotFile,
+      action = actions[index],
+      change = changes[index],
+      user = users[index],
+      client = clients[index],
+      time = times[index],
+      description = descriptions[index],
+    }
+
+    table.insert(new_result.data.rev_list, new_revision)
+  end
+
+  -- If the first revision didn't add the file, then we need to continue to follow the branch history.
+  local last_revision = new_result.data.rev_list[#new_result.data.rev_list]
+
+  -- Determine if this is the last revision for this file. If not an we are following the branch history, then the
+  -- next JSON table is the next revision list or branched history for this file and we need to insert it into the
+  -- current list.
+  if last_revision.action == "add" then
+    table.insert(results, new_result)
+
+    -- Next JSON table will be for a new file's history if it exists.
+    new_result = {
+      success = true,
+      data = {
+        rev_list = {}
+      }
+      }
+  end
+end
+
+--- Helper function to process a command result error.
+---
+--- @param cmd_result P4_Command_Common_Result Current command result.
+--- @param results P4_Command_Filelog_Result[] Hold's the filtered results.
+---
+--- @package
+function P4_Command_Filelog:_cmd_result_error_handler(cmd_result, results)
+  -- A file that is not in the client view (generic: 17, severity: 2).
+  local function error_is_not_in_client_view(severity, generic)
+    if severity == P4_SEVERITY_WARN and generic == P4_GENERIC_EMTPY then
+      return true
+    end
+    return false
+  end
+
+  -- A file that is not in the depot (generic: 17, severity: 2).
+  local function error_is_not_in_depot(severity, generic)
+    if severity == P4_SEVERITY_FAILED and generic == P4_GENERIC_UNKNOWN then
+      return true
+    end
+    return false
+  end
+
+  ---@type P4_Command_Result_Error
+  local cmd_result_error = cmd_result.data.error
+
+  local severity = cmd_result_error:get_severity()
+  local generic = cmd_result_error:get_severity()
+
+  -- Check if we can pass the error up to the caller.
+  if error_is_not_in_client_view(severity, generic) or
+     error_is_not_in_depot(severity, generic) then
+
+    --- @type P4_Command_Filelog_Result
+    result = {
+      success = false,
+      data = {
+        depotFile = vim.split(cmd_result_error.data, " - ", {plain = true})[1],
+        reason = vim.split(cmd_result_error.data, " - ", {plain = true})[2],
+      }
+    }
+
+    table.insert(results, result)
+  else
+
+    -- We didn't handle this case or something really bad happened.
+
+    --- @type P4_API_Command_Error
+    local new_cmd_error = {
+      name = cmd:get_command_name(),
+      command = cmd:get_command(),
+      results = cmd_result,
+    }
+
+    error(error_api:new(P4_RESULT_CODE_COMMAND_FAILED, new_cmd_error))
+  end
 end
 
 --- Parses the output of the P4 command.
 ---
 --- @param sc vim.SystemCompleted Parsed command result.
---- @return boolean success Indicates if the function was succesful.
 --- @return P4_Command_Filelog_Result[] results Hold's the formatted command result.
 ---
 --- @nodiscard
 function P4_Command_Filelog:_process_response(sc)
-  log.trace("P4_Command_Filelog: process_response")
+  local cmd_results = cmd_lib._process_response(self, sc)
 
-  --- @type P4_Command_Print_Result[]
+  -- P4 errors have already been processed. Success results are command dependent and may need further processing ince
+  -- there may be some entries that need to be filtered out as information messages or treated as errors.
+
+  --- @type P4_Command_Filelog_Result[]
   local results = {}
 
   -- For success we cannot add a new result until we reach the last revision that has the action "add". This may span
   -- multple lua tables if we are following the branch history.
   ---@type P4_Command_Filelog_Result
-  local result = {
+  local new_result = {
     success = true,
     data = {
       rev_list = {}
     }
   }
 
-  --- Decode the JSON output into lua tables
-  local P4_Command_Result = require("p4.core.lib.command.result")
-
-  ---@type P4_Command_Result
-  local parsed_output = P4_Command_Result:new(sc)
-
-  -- Can't determine actual number of results until we have parsed the tables due to how P4 outputs results for this
-  -- command.
-  assert(#parsed_output.tables, "Unexpected number of results")
-
   -- If we are following a file's branch history, then there will be multiple filelogs JSON tables for a single file.
   -- Each filelog corresponds to a revision list for each time the history branched.
-  for _, t in ipairs(parsed_output.tables) do
-
-    local error = false
-
-    for key, _ in pairs(t) do
-      if key:find("generic", 1, true) or
-        key:find("severity", 1, true)then
-
-        error = true
-
-        local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
-
-        ---@type P4_Command_Filelog_Result_Error
-        local new_error_result = {
-          error = P4_Command_Result_Error:new(t)
-        }
-
-        ---@type P4_Command_Filelog_Result
-        local new_result = {
-          success = false,
-          data = new_error_result
-        }
-
-        table.insert(results, new_result)
-        break
-      end
-    end
-
-    if not error then
-
-      local changes = {} ---@type string[]
-      local actions = {} ---@type string[]
-      local clients = {} ---@type string[]
-      local descriptions = {} ---@type string[]
-      local revisions = {} ---@type string[]
-      local times = {} ---@type string[]
-      local users = {} ---@type string[]
-
-      for key, value in pairs(t) do
-
-        if key:find("change", 1, true) then
-          table.insert(changes, value)
-        elseif key:find("^action") then
-          table.insert (actions, value)
-        elseif key:find("^client") then
-          table.insert (clients, value)
-        elseif key:find("^desc") then
-          table.insert (descriptions, value)
-        elseif key:find("^rev") then
-          table.insert (revisions, value)
-        elseif key:find("^time") then
-          table.insert (times, value)
-        elseif key:find("^user") then
-          table.insert (users, value)
-        end
-      end
-
-      assert(#changes == #actions and
-             #changes == #clients and
-             #changes == #descriptions and
-             #changes == #revisions and
-             #changes == #times and
-             #changes == #users,
-           "Number of revisions should match the number of each field")
-
-      for index = 1, #revisions, 1 do
-
-        --- @type P4_Revision
-        local revision = {
-          index = #result.data.rev_list + 1,
-          number = revisions[index],
-          depot_file = t.depot_file,
-          action = actions[index],
-          change = changes[index],
-          user = users[index],
-          client = clients[index],
-          time = times[index],
-          description = descriptions[index],
-        }
-
-        table.insert(result.data.rev_list, revision)
-      end
-
-      -- If the first revision didn't add the file, then we need to continue to follow the branch history.
-      local last_revision = result.data.rev_list[#result.data.rev_list]
-
-      -- Determine if this is the last revision for this file. If not an we are following the branch history, then the
-      -- next JSON table is the next revision list or branched history for this file and we need to insert it into the
-      -- current list.
-      if last_revision.action == "add" then
-        table.insert(results, result)
-
-        -- Next JSON table will be for a new file's history if it exists.
-        result = {
-          success = true,
-          data = {
-            rev_list = {}
-          }
-          }
-      end
+  for _, cmd_result in ipairs(cmd_results) do
+    if cmd_result.success then
+      self:_cmd_result_success_handler(cmd_result, new_result, results)
+    else
+      self:_cmd_result_error_handler(cmd_result, results)
     end
   end
 
-  assert(#self.file_specs == #results, "Unexpected number of results.")
-
-  return true, results
+  return results
 end
 
 --- Creates the P4 command.
@@ -188,11 +224,6 @@ end
 --- @param file_specs File_Spec[] File specs.
 --- @return P4_Command_Filelog P4_Command_Filelog P4 command.
 function P4_Command_Filelog:new(file_specs)
-  log.trace("P4_Command_Filelog: new")
-
-  -- Save so we can verify the number of results.
-  self.file_specs = file_specs
-
   local command = {
     "filelog",
     "-i", -- Follow history across branches.
@@ -208,36 +239,63 @@ function P4_Command_Filelog:new(file_specs)
     name = command[1],
   }
 
-  --- @type P4_Command_Filelog
-  local new = P4_Command:new(info)
+  local new = cmd_lib:new(info)
+
+  --- @cast new P4_Command_Filelog
 
   setmetatable(new, P4_Command_Filelog)
 
   return new
 end
 
+--- Returns if the table is an instance of this class.
+---
+--- @return boolean is_instance True if this is a class instance.
+---
+--- @nodiscard
+function P4_Command_Filelog:is_instance()
+  local object = self
+
+  while object do
+    object = getmetatable(object)
+
+    if object.__index == P4_Command_Filelog then
+      return true
+    end
+  end
+
+  return false
+end
+
 --- Runs the P4 command.
 ---
---- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Print_Result[]? results Holds the result if the function was successful.
+--- @return P4_Command_Filelog_Result[] results Holds the result if the function was successful.
 ---
 --- @nodiscard
 --- @async
 function P4_Command_Filelog:run()
+  self:_check_instance()
 
-  local results = nil
-
-  local success, sc = pcall(P4_Command.run(self).wait)
+  local results = {}
+  local success, sc = pcall(cmd_lib.run(self).wait)
 
   if success then
     if sc then
-      success, results = P4_Command_Filelog:_process_response(sc)
+      results = self:_process_response(sc)
     else
       success = false
     end
+  else
+    local cmd_error = {
+      name = self.name,
+      command = self.command,
+      results = results,
+    }
+
+    error(error_api:new(P4_RESULT_CODE_COMMAND_FAILED, cmd_error))
   end
 
-  return success, results
+  return results
 end
 
 return P4_Command_Filelog

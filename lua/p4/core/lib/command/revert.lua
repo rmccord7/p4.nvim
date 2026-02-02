@@ -1,63 +1,154 @@
 ---@module "nio"
 
-local log = require("p4.log")
+local error_api = require("p4.api.error")
 
-local P4_Command = require("p4.core.lib.command")
+local cmd_lib = require("p4.core.lib.command")
 
---- @class P4_Command_Revert_Options : table
---- @field cl? integer Reverts only the specified files in the
----                    specified change list.
+--- @class P4_Command_Revert_Options
+--- @field cl? string Reverts only the specified files in the
+---                   specified change list.
 
---- @class P4_Command_Revert_Result_Success
---- @field action string Action (abandoned).
+--- @class P4_Command_Revert_Result_Success : P4_Command_Common_Result_Success
+--- @field action string Action (abandoned, reverted).
 --- @field clientFile Local_File_Path Local file path.
 --- @field depotFile Depot_File_Path Depot file path.
 --- @field haveRev string Workspace have revision after revert.
 --- @field oldAction string Action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
+---
+--- 1. If the file is reverted.
 
 --- @class P4_Command_Revert_Result_Error
---- @field error P4_Command_Result_Error Hold's the error information.
+--- @field depotFile Depot_File_Path Depot file path.
+--- @field reason string? Reason could not be opened for add.
+---
+--- 1. If file is not opened in the client workspace.
+---
+--- 3. If a file is not mapped to the client workspace.
+---
+--- 4. If a file does not exist in the depot.
 
---- @class P4_Command_Revert_Result
+--- @class P4_Command_Revert_Result : P4_Command_Common_Result
 --- @field success boolean Indicates if the result is success.
 --- @field data P4_Command_Revert_Result_Success | P4_Command_Revert_Result_Error Hold's information about the result.
 
 --- @class P4_Command_Revert : P4_Command
---- @field file_specs File_Spec[] File specs.
 --- @field opts P4_Command_Revert_Options Command options.
 local P4_Command_Revert = {}
 
 P4_Command_Revert.__index = P4_Command_Revert
 
-setmetatable(P4_Command_Revert, {__index = P4_Command})
+setmetatable(P4_Command_Revert, {__index = cmd_lib})
 
 --- Wrapper function to check if a table is an instance of this class.
 ---
 --- @package
 function P4_Command_Revert:_check_instance()
-  assert(P4_Command.is_instance(self) == true, "Not a class instance")
+  assert(cmd_lib.is_instance(self) == true, "Not a class instance")
+end
+
+--- Helper function to process a command result success.
+---
+--- @param cmd_result P4_Command_Common_Result Current command result.
+--- @param results P4_Command_Revert_Result[] Hold's the filtered results.
+---
+--- @package
+function P4_Command_Revert:_cmd_result_success_handler(cmd_result, results)
+  local cmd_result_success = cmd_result.data
+
+  ---@cast cmd_result_success P4_Command_Revert_Result_Success
+
+  ---@type P4_Command_Revert_Result
+  local new_result = {
+    success = true,
+    data = cmd_result_success,
+  }
+
+  table.insert(results, new_result)
+end
+
+--- Helper function to process a command result error.
+---
+--- @param cmd_result P4_Command_Common_Result Current command result.
+--- @param results P4_Command_Revert_Result[] Hold's the filtered results.
+---
+--- @package
+function P4_Command_Revert:_cmd_result_error_handler(cmd_result, results)
+  -- A file that is not in the client view (generic: 17, severity: 2).
+  local function error_is_not_in_client_view(severity, generic)
+    if severity == P4_SEVERITY_WARN and generic == P4_GENERIC_EMTPY then
+      return true
+    end
+    return false
+  end
+
+  -- A file that is not in the depot (generic: 17, severity: 2).
+  local function error_is_not_in_depot(severity, generic)
+    if severity == P4_SEVERITY_FAILED and generic == P4_GENERIC_UNKNOWN then
+      return true
+    end
+    return false
+  end
+
+  ---@type P4_Command_Result_Error
+  local cmd_result_error = cmd_result.data.error
+
+  local severity = cmd_result_error:get_severity()
+  local generic = cmd_result_error:get_severity()
+
+  -- Check if we can pass the error up to the caller.
+  if error_is_not_in_client_view(severity, generic) or
+     error_is_not_in_depot(severity, generic) then
+
+    --- @type P4_Command_Revert_Result
+    result = {
+      success = false,
+      data = {
+        depotFile = vim.split(cmd_result_error.data, " - ", {plain = true})[1],
+        reason = vim.split(cmd_result_error.data, " - ", {plain = true})[2],
+      }
+    }
+
+    table.insert(results, result)
+  else
+
+    -- We didn't handle this case or something really bad happened.
+
+    --- @type P4_API_Command_Error
+    local new_cmd_error = {
+      name = cmd:get_command_name(),
+      command = cmd:get_command(),
+      results = cmd_result,
+    }
+
+    error(error_api:new(P4_RESULT_CODE_COMMAND_FAILED, new_cmd_error))
+  end
 end
 
 --- Parses the output of the P4 command.
 ---
 --- @param sc vim.SystemCompleted Parsed command result.
---- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Files_Result[] results Hold's the formatted command result.
+--- @return P4_Command_Revert_Result[] results Hold's the formatted command result.
 ---
 --- @nodiscard
 function P4_Command_Revert:_process_response(sc)
-  log.trace("P4_Command_Revert: process_response")
+  local cmd_results = cmd_lib._process_response(self, sc)
 
-  -- Call base to process the response since we should have one JSON table per file spec.
-  local success, results = P4_Command._process_response(self, sc)
+  -- P4 errors have already been processed. Success results are command dependent and may need further processing ince
+  -- there may be some entries that need to be filtered out as information messages or treated as errors.
 
-  --- @cast results P4_Command_Revert_Result[]
+  --- @type P4_Command_Revert_Result[]
+  local results = {}
 
-  if success then
-    assert(#results == #self.file_specs, "Unexpected number of results")
+  for _, cmd_result in ipairs(cmd_results) do
+
+    if cmd_result.success then
+      self:_cmd_result_success_handler(cmd_result, results)
+    else
+      self:_cmd_result_error_handler(cmd_result, results)
+    end
   end
 
-  return success, results
+  return results
 end
 
 --- Creates the P4 command.
@@ -69,11 +160,6 @@ end
 --- @nodiscard
 function P4_Command_Revert:new(file_specs, opts)
   opts = opts or {}
-
-  -- Save so we can verify the number of results.
-  self.file_specs = file_specs
-
-  log.trace("P4_Command_Revert: new")
 
   local command = {
     "revert",
@@ -97,8 +183,9 @@ function P4_Command_Revert:new(file_specs, opts)
     name = command[1],
   }
 
-  --- @type P4_Command_Revert
-  local new = P4_Command:new(info)
+  local new = cmd_lib:new(info)
+
+  --- @cast new P4_Command_Revert
 
   setmetatable(new, P4_Command_Revert)
 
@@ -126,27 +213,33 @@ end
 
 --- Runs the P4 command.
 ---
---- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Revert_Result[]? results Holds the result if the function was successful.
+--- @return P4_Command_Revert_Result[] results Holds the result if the function was successful.
 ---
 --- @nodiscard
 --- @async
 function P4_Command_Revert:run()
   self:_check_instance()
 
-  local results = nil
-
-  local success, sc = pcall(P4_Command.run(self).wait)
+  local results = {}
+  local success, sc = pcall(cmd_lib.run(self).wait)
 
   if success then
     if sc then
-      success, results = P4_Command_Revert:_process_response(sc)
+      results = self:_process_response(sc)
     else
       success = false
     end
+  else
+    local cmd_error = {
+      name = self.name,
+      command = self.command,
+      results = results,
+    }
+
+    error(error_api:new(P4_RESULT_CODE_COMMAND_FAILED, cmd_error))
   end
 
-  return success, results
+  return results
 end
 
 return P4_Command_Revert

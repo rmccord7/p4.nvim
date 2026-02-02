@@ -1,3 +1,8 @@
+local notify = require("p4.notify")
+
+local file_api = require("p4.api.file")
+local error_handler_api = require("p4.api.error_handler")
+
 ---@class P4_Env : table
 ---@field ac_group? integer Autocommand group
 local P4_AC = {
@@ -19,30 +24,42 @@ local function prompt_file_open_for_add(file_path)
 end
 
 --- Prompts the user to open the file for edit.
-local function prompt_file_open_for_edit(file_path)
-  -- Prevent changing read only warning.
-  vim.api.nvim_set_option_value("readonly", false, { scope = "local" })
+local function prompt_file_open_for_edit()
+  local buf = vim.api.nvim_get_current_buf()
 
-  local success = false
+  if vim.api.nvim_buf_is_valid(buf) then
 
-  vim.fn.inputsave()
-  local opts = { prompt = "[P4] Open file for edit (y/n): " }
-  local _, result = pcall(vim.fn.input, opts)
-  vim.fn.inputrestore()
+    -- Make sure we don't continuously prompt the user.
+    if not vim.b[buf].p4_prompt then
 
-  if result == "y" or result == "Y" then
-    local P4_File_API = require("p4.api.file")
+      -- Prevent changing read only warning.
+      vim.api.nvim_set_option_value("readonly", false, { buf = buf })
 
-    success = P4_File_API.edit(file_path)
-  end
+      -- Flag that we prompted the user for this buffer.
+      vim.b[buf].p4_prompt = true
 
-  -- Exit insert mode
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<ESC>", true, false, true), "m", false)
+      vim.fn.inputsave()
+      local opts = { prompt = "[P4] Open file for edit (y/n): " }
+      local _, result = pcall(vim.fn.input, opts)
+      vim.fn.inputrestore()
 
-  if not success then
-    vim.schedule(function()
-      vim.cmd("e!")
-    end)
+      if result == "y" or result == "Y" then
+
+        local file = vim.api.nvim_buf_get_name(buf)
+
+        local success, _ = xpcall(file_api.edit, error_handler_api.process, file)
+
+        if success then
+          notify("File opened for edit")
+
+          vim.api.nvim_set_option_value("readonly", false, { buf = buf })
+          vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+        end
+      end
+
+      -- Exit insert mode
+      vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<ESC>", true, false, true), "m", false)
+    end
   end
 end
 
@@ -67,12 +84,13 @@ function P4_AC.enable_file_autocmds()
     group = P4_AC.ac_group,
     pattern = "*",
     callback = function()
+      --FIX: Needs re-work
       local file_path = vim.fn.expand("%:p")
       local modifiable = vim.api.nvim_get_option_value("modifiable", { scope = "local" })
 
       if not modifiable then
         if vim.fn.filereadable(file_path) then
-          prompt_file_open_for_edit(file_path)
+          prompt_file_open_for_edit()
         else
           prompt_file_open_for_add(file_path)
         end
@@ -86,7 +104,7 @@ function P4_AC.enable_file_autocmds()
     group = P4_AC.ac_group,
     pattern = "*",
     callback = function()
-      prompt_file_open_for_edit(vim.fn.expand("%:p"))
+      prompt_file_open_for_edit()
     end,
   })
 end

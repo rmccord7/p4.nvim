@@ -7,7 +7,10 @@ local task = require("p4.task")
 local p4_log = require("p4.core.log")
 local p4_env = require("p4.core.env")
 
+--- May contain other fields depending on the command.
 --- @class P4_Command_Common_Result_Success : table<string, any>
+--- @field data string? Level zero informational message.
+--- @field level string Indentation level.
 
 --- @class P4_Command_Common_Result_Error
 --- @field error P4_Command_Result_Error Hold's the error information.
@@ -16,7 +19,7 @@ local p4_env = require("p4.core.env")
 --- @field success boolean Indicates if the result is success.
 --- @field data P4_Command_Common_Result_Success | P4_Command_Common_Result_Error Hold's information about the result.
 
----@class P4_Command : table
+---@class P4_Command
 ---@field protected global_opts P4_Command_Global_Options
 ---@field protected command string[] P4 command.
 ---@field protected name string
@@ -74,19 +77,16 @@ function P4_Command:_log_command_send(start_time)
   p4_log.command(self.command)
 end
 
---- Parses the output of the P4 command.
+--- Parse the output of the P4 command.
 ---
 --- @param sc vim.SystemCompleted Command result.
---- @return boolean success Indicates if the function was succesful.
 --- @return P4_Command_Common_Result[] results Hold's the formatted command result.
 ---
 --- @nodiscard
 function P4_Command:_process_response(sc)
-  log.trace("P4_Command (_process_response): Enter")
-
   local P4_Command_Result = require("p4.core.lib.command.result")
 
-  --- Decode JSON output into lua tables
+  --- Convert JSON output into lua tables.
   --- @type P4_Command_Common_Result[]
   local results = {}
 
@@ -95,45 +95,37 @@ function P4_Command:_process_response(sc)
 
   for _, t in ipairs(parsed_output.tables) do
 
-    local error = false
+    -- Any P4 errors will be returned as an error result. Error results need to be handled by the upper layer to
+    -- determine if they can be handled gracefully.
+    if t.generic or t.severity then
 
-    for key, _ in pairs(t) do
-      if key:find("generic", 1, true) or
-        key:find("severity", 1, true)then
+      local P4_Command_Result_Error = require("p4.core.lib.command.error")
 
-        error = true
-
-        local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
-
-        ---@type P4_Command_Common_Result_Error
-        local new_error_result = {
+      ---@type P4_Command_Common_Result
+      local new_result = {
+        success = false,
+        data = {
           error = P4_Command_Result_Error:new(t)
         }
+      }
 
-        ---@type P4_Command_Common_Result
-        local new_result = {
-          success = false,
-          data = new_error_result
-        }
+      table.insert(results, new_result)
 
-        table.insert(results, new_result)
-        break
-      end
-    end
-
-    if not error then
-
-        ---@type P4_Command_Common_Result
-        local new_result = {
-          success = true,
-          data = t
-        }
+    -- Any JSON entry that is not explicity an error is returned as a success result. The upper layer may need to filter
+    -- this further since it is command dependent. For example for a command to get all the information it needs for
+    -- success it may span over multiple success results that we captured here.
+    else
+      ---@type P4_Command_Common_Result
+      local new_result = {
+        success = true,
+        data = t,
+      }
 
       table.insert(results, new_result)
     end
   end
 
-  return true, results
+  return results
 end
 
 --- Logs information for a command failure.
@@ -146,56 +138,47 @@ end
 --- @async
 function P4_Command:_handle_login_failure(sc, start_time)
 
-  log.trace("P4_Command: _handle_login_failure): Enter")
-
-  local success, results = P4_Command._process_response(self, sc)
+  local results = P4_Command._process_response(self, sc)
 
   --- @cast results P4_Command_Common_Result[]
 
-  if success then
+  assert(#results, "Unexpected number of results")
 
-    assert(#results, "Unexpected number of results")
+  if not results[1].success then
 
-    if not results[1].success then
+    if results[1].data.error:is_not_logged_in() then
 
-      if results[1].data.error:is_not_logged_in() then
+      log.debug("Not logged into P4 server.")
 
-        log.debug("Not logged into P4 server.")
+      -- Get user password
+      nio.fn.inputsave()
+      local password = nio.fn.inputsecret("Password: ")
+      nio.fn.inputrestore()
 
-        -- Get user password
-        nio.fn.inputsave()
-        local password = nio.fn.inputsecret("Password: ")
-        nio.fn.inputrestore()
+      --- @type P4_Command_Login_Options
+      local cmd_opts = {
+        password = password,
+      }
 
-        --- @type P4_Command_Login_Options
-        local cmd_opts = {
-          password = password,
-        }
+      local P4_Command_Login = require("p4.core.lib.command.login")
 
-        local P4_Command_Login = require("p4.core.lib.command.login")
+      -- Login to the P4 server.
+      _ = P4_Command_Login:new(cmd_opts):run()
 
-        -- Login to the P4 server.
-        success, _ = P4_Command_Login:new(cmd_opts):run()
+      log.debug("Re-trying previous command.")
 
-        -- Re-run the previous command.
-        if success then
+      -- Reset start time.
+      start_time = vim.uv.hrtime()
 
-          log.debug("Re-trying previous command.")
+      sc = vim.system(self.command, self.sys_opts):wait()
 
-          -- Reset start time.
-          start_time = vim.uv.hrtime()
-
-          sc = vim.system(self.command, self.sys_opts):wait()
-
-          if sc.code == 0 then
-            log_command_success(sc, self.name, start_time)
-          else
-            log_command_failed(sc, self.name, start_time)
-          end
-        end
+      if sc.code == 0 then
+        log_command_success(sc, self.name, start_time)
       else
         log_command_failed(sc, self.name, start_time)
       end
+    else
+      log_command_failed(sc, self.name, start_time)
     end
   end
 
@@ -242,7 +225,6 @@ local P4_Command_Global_Options = {
 --- @param info P4_Command_New New P4 command.
 --- @return P4_Command P4_Command A new P4 command
 function P4_Command:new(info)
-  log.trace("P4_Command: new")
 
   local new = setmetatable({}, P4_Command)
 
@@ -276,13 +258,18 @@ function P4_Command:new(info)
   return new
 end
 
---TODO: Does need to be removed
-
 --- Gets the command.
 ---
 --- @return string[] command P4 command
 function P4_Command:get_command()
   return self.command
+end
+
+--- Gets the command name
+---
+--- @return string name P4 command name
+function P4_Command:get_command_name()
+  return self.name
 end
 
 --- Runs the P4 command asynchronously.
@@ -292,8 +279,6 @@ end
 --- @async
 function P4_Command:run()
   self:_check_instance()
-
-  log.trace("P4_Command: run")
 
   local future = nio.control.future()
 

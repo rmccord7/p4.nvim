@@ -18,7 +18,7 @@ setmetatable(P4_File_Client, {__index = P4_File})
 
 --- Wrapper function to check if a table is an instance of this class.
 function P4_File_Client:_check_instance()
-  assert(P4_File_Client.is_instance(self) == true, "Not a P4 file client class instance")
+  assert(P4_File_Client.is_instance(self) == true, "Not a class instance")
 end
 
 --- Returns if the table is an instance of this class.
@@ -33,7 +33,7 @@ function P4_File_Client:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object == P4_File_Client then
+    if object.__index == P4_File_Client then
       return true
     end
   end

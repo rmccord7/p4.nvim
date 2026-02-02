@@ -40,9 +40,18 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
       --- @type P4_CL
       local p4_cl = _entry.value
 
+      -- If we already have the spec, then load it into the
+      -- buffer. Otherwise we need to query it.
+      local success, spec = p4_cl:get_spec()
+
+      local description = ""
+      if success and spec then
+        description = vim.split(spec.Description, "\n", {trimempty = true})[1]
+      end
+
       return displayer {
         p4_cl:get_change() .. ": ",
-        p4_cl:get_formatted_description(),
+        description,
       }
     end
 
@@ -76,7 +85,7 @@ function P4_Telescope_CL_Picker.load(prompt_title, p4_cl_list, opts)
         local success, spec = p4_cl:get_spec()
 
         if success and spec then
-          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(spec.output, '\n'))
+          vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, vim.split(spec.Description, '\n'))
         end
       end,
       keep_last_buf = true,

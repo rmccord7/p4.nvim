@@ -19,7 +19,9 @@ function P4_CL_API.new()
   local cmd_opts = {
     cl = nil,
     type = P4_Command_Change.opts_type.READ,
-    read = nil,
+    read = {
+      raw_output = true
+    },
   }
 
   -- Create a new CL and dump to stdout.
@@ -37,7 +39,7 @@ function P4_CL_API.new()
     -- we can't know what it is ahead of time.
     vim.api.nvim_buf_set_name(buf, "CL: New")
 
-    vim.api.nvim_buf_set_lines(buf, 0, 1, true, vim.split(result.output, "\n"))
+    vim.api.nvim_buf_set_lines(buf, 0, 1, true, vim.split(result.data.output, "\n"))
 
     vim.api.nvim_win_set_buf(0, buf)
 

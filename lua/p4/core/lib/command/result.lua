@@ -1,5 +1,3 @@
-local log = require("p4.log")
-
 ---@class P4_Command_Result
 ---@field tables table[] Decoded JSON tables
 local P4_Command_Result = {}
@@ -20,7 +18,7 @@ function P4_Command_Result:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object == P4_Command_Result then
+    if object.__index == P4_Command_Result then
       return true
     end
   end
@@ -33,9 +31,6 @@ end
 --- @param sc vim.SystemCompleted Command result.
 --- @return P4_Command_Result P4_Command_Result A new P4 command result
 function P4_Command_Result:new(sc)
-
-  log.trace("P4_Command_Result: new")
-
   local new = setmetatable({}, P4_Command_Result)
 
   new.tables = {}
@@ -46,9 +41,13 @@ function P4_Command_Result:new(sc)
   -- For each entry we need to convert the JSON entry to a lua table for processing.
   for _,  json_output in ipairs(json_output_list) do
 
-    local t = vim.json.decode(json_output)
+    local success, result_or_err = pcall(vim.json.decode, json_output)
 
-    table.insert(new.tables, t)
+    if success then
+      table.insert(new.tables, result_or_err)
+    else
+      error(result_or_err)
+    end
   end
 
   return new

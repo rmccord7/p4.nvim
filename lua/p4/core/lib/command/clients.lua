@@ -1,10 +1,10 @@
 ---@module "nio"
 
-local log = require("p4.log")
+local error_api = require("p4.api.error")
 
-local P4_Command = require("p4.core.lib.command")
+local cmd_lib = require("p4.core.lib.command")
 
---- @class P4_Command_Clients_Result_Success
+--- @class P4_Command_Clients_Result_Success : P4_Command_Common_Result_Success
 --- @field Access string Action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
 --- @field Backup Local_File_Path Local file path.
 --- @field Description Depot_File_Path Depot file path.
@@ -13,52 +13,94 @@ local P4_Command = require("p4.core.lib.command")
 --- @field Options string Revision number.
 --- @field Owner string Revision number.
 --- @field Root string Revision number.
+--- @field AltRoots string[]? Revision number.
 --- @field SubmitOptions string Revision number.
 --- @field Type string Revision number.
 --- @field Udpate string Revision number.
---- @field Client string Revision number.
+--- @field client string Revision number.
 
 --- @class P4_Command_Clients_Result_Error
---- @field error P4_Command_Result_Error Hold's the error information.
+--- @field reason string? Error reason.
 
---- @class P4_Command_Clients_Result
+--- @class P4_Command_Clients_Result : P4_Command_Common_Result
 --- @field success boolean Indicates if the result is success.
 --- @field data P4_Command_Clients_Result_Success | P4_Command_Clients_Result_Error Hold's information about the result.
-
---- @class P4_Command_Clients_Result : table
---- @field client_name string P4 client name.
---- @field root string client root.
 
 --- @class P4_Command_Clients : P4_Command
 local P4_Command_Clients = {}
 
 P4_Command_Clients.__index = P4_Command_Clients
 
-setmetatable(P4_Command_Clients, {__index = P4_Command})
+setmetatable(P4_Command_Clients, {__index = cmd_lib})
 
 --- Wrapper function to check if a table is an instance of this class.
 ---
 --- @package
 function P4_Command_Clients:_check_instance()
-  assert(P4_Command.is_instance(self) == true, "Not a class instance")
+  assert(cmd_lib.is_instance(self) == true, "Not a class instance")
+end
+
+--- Helper function to process a command result success.
+---
+--- @param cmd_result P4_Command_Common_Result Current command result.
+--- @param results P4_Command_Clients_Result[] Hold's the filtered results.
+---
+--- @package
+function P4_Command_Clients:_cmd_result_success_handler(cmd_result, results)
+  local cmd_result_success = cmd_result.data
+
+  ---@cast cmd_result_success P4_Command_Clients_Result_Success
+
+  ---@type P4_Command_Clients_Result
+  local new_result = {
+    success = true,
+    data = cmd_result_success
+  }
+
+  table.insert(results, new_result)
+end
+
+--- Helper function to process a command result error.
+---
+--- @param cmd_result P4_Command_Common_Result Current command result.
+--- @param results P4_Command_Clients_Result[] Hold's the filtered results.
+---
+--- @package
+function P4_Command_Clients:_cmd_result_error_handler(cmd_result, results)
+  results = results or {} -- Remove if used
+
+  -- We didn't handle this case or something really bad happened.
+
+  --- @type P4_API_Command_Error
+  local new_cmd_error = {
+    name = cmd:get_command_name(),
+    command = cmd:get_command(),
+    results = cmd_result,
+  }
+
+  error(error_api:new(P4_RESULT_CODE_COMMAND_FAILED, new_cmd_error))
 end
 
 --- Parses the output of the P4 command.
 ---
 --- @param sc vim.SystemCompleted Parsed command result.
---- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Files_Result[] results Hold's the formatted command result.
+--- @return P4_Command_Clients_Result[] results Hold's the formatted command result.
 ---
 --- @nodiscard
 function P4_Command_Clients:_process_response(sc)
-  log.trace("P4_Command_Clients: process_response")
+  --- @type P4_Command_Clients_Result[]
+  local results = {}
 
-  -- Call base to process the response since we should have one JSON table per file spec.
-  local success, results = P4_Command._process_response(self, sc)
+  local cmd_results = cmd_lib._process_response(self, sc)
 
-  --- @cast results P4_Command_Clients_Result[]
-
-  return success, results
+  for _, cmd_result in ipairs(cmd_results) do
+    if cmd_result.success then
+      self:_cmd_result_success_handler(cmd_result, results)
+    else
+      self:_cmd_result_error_handler(cmd_result, results)
+    end
+  end
+  return results
 end
 
 --- Creates the P4 command.
@@ -67,8 +109,6 @@ end
 ---
 --- @nodiscard
 function P4_Command_Clients:new()
-  log.trace("P4_Command_Clients: new")
-
   local command = {
     "clients",
     "--me", -- Current user
@@ -81,8 +121,9 @@ function P4_Command_Clients:new()
     name = command[1],
   }
 
-  --- @type P4_Command_Clients
-  local new = P4_Command:new(info)
+  local new = cmd_lib:new(info)
+
+  --- @cast new P4_Command_Clients
 
   setmetatable(new, P4_Command_Clients)
 
@@ -91,27 +132,33 @@ end
 
 --- Runs the P4 command.
 ---
---- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Clients_Result[]? Result Holds the result if the function was successful.
+--- @return P4_Command_Clients_Result[] results Holds the result if the function was successful.
 ---
 --- @nodiscard
 --- @async
 function P4_Command_Clients:run()
   self:_check_instance()
 
-  local result = nil
-
-  local success, sc = pcall(P4_Command.run(self).wait)
+  local results = {}
+  local success, sc = pcall(cmd_lib.run(self).wait)
 
   if success then
     if sc then
-      success, results = P4_Command_Clients:_process_response(sc)
+      results = self:_process_response(sc)
     else
       success = false
     end
+  else
+    local cmd_error = {
+      name = self.name,
+      command = self.command,
+      results = results,
+    }
+
+    error(error_api:new(P4_RESULT_CODE_COMMAND_FAILED, cmd_error))
   end
 
-  return success, result
+  return results
 end
 
 return P4_Command_Clients

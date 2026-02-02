@@ -1,4 +1,4 @@
----@module "mega.cmdparser"
+require("mega.cmdparse")
 
 local notify = require("p4.notify")
 

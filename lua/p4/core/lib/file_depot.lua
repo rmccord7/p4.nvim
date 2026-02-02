@@ -1,9 +1,13 @@
 local log = require("p4.log")
 
+local P4_File = require("p4.core.lib.file")
+
 --- @class P4_File_Depot : P4_File
 local P4_File_Depot = {}
 
 P4_File_Depot.__index = P4_File_Depot
+
+setmetatable(P4_File_Depot, {__index = P4_File})
 
 --- @class P4_File_Depot_New
 --- @field protected path Depot_File_Path P4 depot file path.
@@ -13,14 +17,13 @@ P4_File_Depot.__index = P4_File_Depot
 
 --- Wrapper function to check if a table is an instance of this class.
 function P4_File_Depot:_check_instance()
-  assert(P4_File_Depot.is_instance(self) == true, "Not a P4 file depot class instance")
+  assert(P4_File_Depot.is_instance(self) == true, "Not a class instance")
 end
 
 --- Returns if the table is an instance of this class.
 ---
 --- @return boolean is_instance True if this is a P4 file list instance.
 ---
---- @async
 --- @nodiscard
 function P4_File_Depot:is_instance()
   local object = self
@@ -28,7 +31,7 @@ function P4_File_Depot:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object == P4_File_Depot then
+    if object.__index == P4_File_Depot then
       return true
     end
   end
@@ -47,9 +50,6 @@ end
 function P4_File_Depot:new(new_depot_file)
   log.trace("P4_File_Depot (new): Enter")
 
-  local P4_File = require("p4.core.lib.file")
-
-  setmetatable(P4_File_Depot, {__index = P4_File})
 
   ---@type P4_File_New
   local new_file = {

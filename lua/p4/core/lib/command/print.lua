@@ -1,127 +1,163 @@
 ---@module "nio"
 
-local log = require("p4.log")
+local cmd_lib = require("p4.core.lib.command")
 
-local P4_Command = require("p4.core.lib.command")
+local error_api = require("p4.api.error")
 
---- @class P4_Command_Print_Result_Success
+--- @class P4_Command_Print_Result_Success : P4_Command_Common_Result_Success
 --- @field action string Action
 --- @field change string Identifies the CL
---- @field depot_file Depot_File_Path Name of the file in the depot for this file
---- @field file_size string Size of the file
+--- @field depotFile Depot_File_Path Name of the file in the depot for this file
+--- @field fileSize string Size of the file
 --- @field rev string Revision number
 --- @field time string Time/date revision was integrated
 --- @field output string File output
 
 --- @class P4_Command_Print_Result_Error
---- @field error P4_Command_Result_Error Hold's the error information.
+--- @field depotFile Depot_File_Path Depot file path.
+--- @field reason string? Reason could not be opened for add.
+---
+--- 1. If a file is not mapped to the client workspace (generic: 17, severity: 2).
+---
+--- 2. If a file does not exist in the depot (generic: 17, severity: 2).
 
---- @class P4_Command_Print_Result
+--- @class P4_Command_Print_Result : P4_Command_Common_Result
 --- @field success boolean Indicates if the result is success.
 --- @field data P4_Command_Print_Result_Success | P4_Command_Print_Result_Error Hold's information about the result.
 
 --- @class P4_Command_Print : P4_Command
---- @field file_specs File_Spec[] File specs
 local P4_Command_Print = {}
 
 P4_Command_Print.__index = P4_Command_Print
 
-setmetatable(P4_Command_Print, {__index = P4_Command})
+setmetatable(P4_Command_Print, {__index = cmd_lib})
 
 --- Wrapper function to check if a table is an instance of this class.
 ---
 --- @package
 function P4_Command_Print:_check_instance()
-  assert(P4_Command_Print.is_instance(self) == true, "Not a class instance")
+  assert(cmd_lib.is_instance(self) == true, "Not a class instance")
+end
+
+--- Helper function to process a command result success.
+---
+--- @param cmd_result P4_Command_Common_Result Current command result.
+--- @param results P4_Command_Print_Result[] Hold's the filtered results.
+---
+--- @package
+function P4_Command_Print:_cmd_result_success_handler(cmd_result, results)
+  local cmd_result_success = cmd_result.data
+
+  ---@cast cmd_result_success P4_Command_Print_Result_Success
+
+  -- Start of a file spec result
+  if cmd_result_success.action then
+
+    -- Start a new entry with information about the current file spec.
+    ---@type P4_Command_Print_Result
+    local new_result = {
+      success = true,
+      data = cmd_result_success
+    }
+
+    table.insert(results, new_result)
+  elseif cmd_result_success.data then
+    -- Sometimes multiple success tables are present with data that needs to be concatenated.
+    if cmd_result.data.data ~= "" then
+      local current = results[#results].data
+
+      if current.output then
+        current.output = current.output .. cmd_result.data.data
+      else
+        current.output = cmd_result.data.data
+      end
+    end
+  end
+end
+
+--- Helper function to process a command result error.
+---
+--- @param cmd_result P4_Command_Common_Result Current command result.
+--- @param results P4_Command_Print_Result[] Hold's the filtered results.
+---
+--- @package
+function P4_Command_Print:_cmd_result_error_handler(cmd_result, results)
+  -- A file that is not in the client view (generic: 17, severity: 2).
+  local function error_is_not_in_client_view(severity, generic)
+    if severity == P4_SEVERITY_WARN and generic == P4_GENERIC_EMTPY then
+      return true
+    end
+    return false
+  end
+
+  -- A file that is not in the depot (generic: 17, severity: 2).
+  local function error_is_not_in_depot(severity, generic)
+    if severity == P4_SEVERITY_FAILED and generic == P4_GENERIC_UNKNOWN then
+      return true
+    end
+    return false
+  end
+
+  ---@type P4_Command_Result_Error
+  local cmd_result_error = cmd_result.data.error
+
+  local severity = cmd_result_error:get_severity()
+  local generic = cmd_result_error:get_severity()
+
+  -- Check if we can pass the error up to the caller.
+  if error_is_not_in_client_view(severity, generic) or
+     error_is_not_in_depot(severity, generic) then
+
+    --- @type P4_Command_Print_Result
+    result = {
+      success = false,
+      data = {
+        depotFile = vim.split(cmd_result_error.data, " - ", {plain = true})[1],
+        reason = vim.split(cmd_result_error.data, " - ", {plain = true})[2],
+      }
+    }
+
+    table.insert(results, result)
+  else
+
+    -- We didn't handle this case or something really bad happened.
+
+    --- @type P4_API_Command_Error
+    local new_cmd_error = {
+      name = cmd:get_command_name(),
+      command = cmd:get_command(),
+      results = cmd_result,
+    }
+
+    error(error_api:new(P4_RESULT_CODE_COMMAND_FAILED, new_cmd_error))
+  end
 end
 
 --- Parses the output of the P4 command.
 ---
 --- @param sc vim.SystemCompleted Parsed command result.
---- @return boolean success Indicates if the function was succesful.
 --- @return P4_Command_Print_Result[] results Hold's the formatted command result.
 ---
 --- @nodiscard
 function P4_Command_Print:_process_response(sc)
-  log.trace("P4_Command_Print: process_response")
+  local cmd_results = cmd_lib._process_response(self, sc)
+
+  -- P4 errors have already been processed. Success results are command dependent and may need further processing ince
+  -- there may be some entries that need to be filtered out as information messages or treated as errors.
 
   --- @type P4_Command_Print_Result[]
   local results = {}
 
-  --- Decode the JSON output into lua tables
-  local P4_Command_Result = require("p4.core.lib.command.result")
+  for _, cmd_result in ipairs(cmd_results) do
 
-  ---@type P4_Command_Result
-  local parsed_output = P4_Command_Result:new(sc)
-
-  -- Can't determine actual number of results until we have parsed the tables due to how P4 outputs results for this
-  -- command.
-  assert(#parsed_output.tables, "Unexpected number of results")
-
-  -- For each successful file spec this command outputs
-  -- "Table with action key (file information)n
-  -- "Table with data key (file output)"
-  -- "Table with data key (empty string)"
-  for _, t in ipairs(parsed_output.tables) do
-
-    local error = false
-
-    for key, _ in pairs(t) do
-      if key:find("generic", 1, true) or
-        key:find("severity", 1, true)then
-
-        error = true
-
-        local P4_Command_Result_Error = require("p4.core.lib.command.result_error")
-
-        ---@type P4_Command_Print_Result_Error
-        local new_error_result = {
-          error = P4_Command_Result_Error:new(t)
-        }
-
-        ---@type P4_Command_Print_Result
-        local new_result = {
-          success = false,
-          data = new_error_result
-        }
-
-        table.insert(results, new_result)
-        break
-      end
-    end
-
-    if not error then
-
-      -- Start of a file spec result
-      if t["action"] then
-
-        -- Start a new entry with information about the current file spec.
-        ---@type P4_Command_Print_Result
-        local new_result = {
-          success = true,
-          data = t
-        }
-
-        table.insert(results, new_result)
-      elseif t["data"] then
-        -- Sometimes multiple success tables are present with data that needs to be concatenated.
-        if t["data"] ~= "" then
-          current = results[#results].data
-
-          if current.output then
-            current.output = current .. t["data"]
-          else
-            current.output = t["data"]
-          end
-        end
-      end
+    if cmd_result.success then
+      self:_cmd_result_success_handler(cmd_result, results)
+    else
+      self:_cmd_result_error_handler(cmd_result, results)
     end
   end
 
-  -- Now we can make sure the exact number of results are correct.
-  assert(#self.file_specs == #results, "Unexpected number of results.")
-
-  return true, results
+  return results
 end
 
 --- Creates the P4 command.
@@ -132,12 +168,6 @@ end
 --- @nodiscard
 function P4_Command_Print:new(file_specs)
   opts = opts or {}
-
-  log.trace("P4_Command_Print: new")
-
-  -- Save so we can verify the number of results.
-  self.file_specs = file_specs
-
 
   local command = {
     "print",
@@ -152,8 +182,9 @@ function P4_Command_Print:new(file_specs)
     name = command[1],
   }
 
-  --- @type P4_Command_Print
-  local new = P4_Command:new(info)
+  local new = cmd_lib:new(info)
+
+  --- @cast new P4_Command_Print
 
   setmetatable(new, P4_Command_Print)
 
@@ -181,27 +212,33 @@ end
 
 --- Runs the P4 command.
 ---
---- @return boolean success Indicates if the function was succesful.
---- @return P4_Command_Print_Result[]? results Holds the result if the function was successful.
+--- @return P4_Command_Print_Result[] results Holds the result if the function was successful.
 ---
 --- @nodiscard
 --- @async
 function P4_Command_Print:run()
   self:_check_instance()
 
-  local results = nil
-
-  local success, sc = pcall(P4_Command.run(self).wait)
+  local results = {}
+  local success, sc = pcall(cmd_lib.run(self).wait)
 
   if success then
     if sc then
-      success, results = P4_Command_Print:_process_response(sc)
+      results = self:_process_response(sc)
     else
       success = false
     end
+  else
+    local cmd_error = {
+      name = self.name,
+      command = self.command,
+      results = results,
+    }
+
+    error(error_api:new(P4_RESULT_CODE_COMMAND_FAILED, cmd_error))
   end
 
-  return success, results
+  return results
 end
 
 
