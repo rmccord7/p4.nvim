@@ -24,7 +24,7 @@ function P4_Path_Local:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_Path_Local then
+    if object and object.__index == P4_Path_Local then
       return true
     end
   end

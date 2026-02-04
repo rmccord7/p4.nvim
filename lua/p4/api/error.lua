@@ -54,7 +54,7 @@ function P4_API_Error:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_API_Error then
+    if object and object.__index == P4_API_Error then
       return true
     end
   end

@@ -24,7 +24,7 @@ function P4_Path_Depot:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_Path_Depot then
+    if object and object.__index == P4_Path_Depot then
       return true
     end
   end

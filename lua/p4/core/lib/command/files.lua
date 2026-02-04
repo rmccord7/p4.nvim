@@ -177,7 +177,7 @@ function P4_Command_Files:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_Command_Files then
+    if object and object.__index == P4_Command_Files then
       return true
     end
   end

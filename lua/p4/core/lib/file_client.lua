@@ -33,7 +33,7 @@ function P4_File_Client:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_File_Client then
+    if object and object.__index == P4_File_Client then
       return true
     end
   end

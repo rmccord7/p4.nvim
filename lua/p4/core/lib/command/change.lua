@@ -259,7 +259,7 @@ function P4_Command_Change:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_Command_Change then
+    if object and object.__index == P4_Command_Change then
       return true
     end
   end

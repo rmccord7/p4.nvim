@@ -27,7 +27,7 @@ function P4_File_Error:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_File_Error then
+    if object and object.__index == P4_File_Error then
       return true
     end
   end

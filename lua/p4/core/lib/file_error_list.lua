@@ -23,7 +23,7 @@ function P4_File_Error_List:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_File_Error_List then
+    if object and object.__index == P4_File_Error_List then
       return true
     end
   end

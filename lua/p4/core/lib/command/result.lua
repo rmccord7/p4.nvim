@@ -18,7 +18,7 @@ function P4_Command_Result:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_Command_Result then
+    if object and object.__index == P4_Command_Result then
       return true
     end
   end

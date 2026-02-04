@@ -187,7 +187,7 @@ function P4_Command_Reopen:is_instance()
   while object do
     object = getmetatable(object)
 
-    if object.__index == P4_Command_Reopen then
+    if object and object.__index == P4_Command_Reopen then
       return true
     end
   end
