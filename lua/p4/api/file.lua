@@ -1,5 +1,4 @@
 local log = require("p4.log")
-local notify = require("p4.notify")
 
 local error_api = require("p4.api.error")
 
@@ -252,7 +251,6 @@ function P4_File_API.shelve(file)
       success = P4_Command_Shelve:new({file}):run()
 
       if success then
-        notify("File shelved: " .. file)
 
         log.fmt_debug("File shelved: %s", file)
       end

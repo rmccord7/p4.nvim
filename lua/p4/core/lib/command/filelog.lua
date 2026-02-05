@@ -5,7 +5,6 @@ local cmd_lib = require("p4.core.lib.command")
 local error_api = require("p4.api.error")
 
 --- @class P4_Revision
---- @field index integer Identifies the revision across branch history (Head revision is 1).
 --- @field number string Identifies the revision for this branch (Tail revision is 1). P4 branch history will re-use revision numbers for each branch.
 --- @field depotFile Depot_File_Path Name of the file in the depot for this revision.
 --- @field action string Action.
@@ -86,11 +85,13 @@ function P4_Command_Filelog:_cmd_result_success_handler(cmd_result, new_result, 
          #changes == #users,
        "Parse error")
 
+  ---@type P4_Revision[]
+  local rev_list = {}
+
   for index = 1, #revisions, 1 do
 
-    --- @type P4_Revision
+    ---@type P4_Revision
     local new_revision = {
-      index = #result.data.rev_list + 1,
       number = revisions[index],
       depotFile = cmd_result_success.depotFile,
       action = actions[index],
@@ -101,8 +102,16 @@ function P4_Command_Filelog:_cmd_result_success_handler(cmd_result, new_result, 
       description = descriptions[index],
     }
 
-    table.insert(new_result.data.rev_list, new_revision)
+    table.insert(rev_list, new_revision)
   end
+
+  table.sort(rev_list, function(a,b)
+    return tonumber(a.time) < tonumber(b.time)
+  end)
+
+  vim.print(rev_list)
+
+  vim.list_extend(new_result.data.rev_list, rev_list)
 
   -- If the first revision didn't add the file, then we need to continue to follow the branch history.
   local last_revision = new_result.data.rev_list[#new_result.data.rev_list]
@@ -119,7 +128,7 @@ function P4_Command_Filelog:_cmd_result_success_handler(cmd_result, new_result, 
       data = {
         rev_list = {}
       }
-      }
+    }
   end
 end
 
