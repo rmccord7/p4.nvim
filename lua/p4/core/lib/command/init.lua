@@ -62,7 +62,7 @@ end
 ---
 --- @package
 function P4_Command:_check_instance()
-  assert(P4_Command.is_instance(self) == true, "Not a class instance")
+  assert(self:is_instance() == true, "Not a class instance")
 end
 
 --- Logs information for a formatted command.

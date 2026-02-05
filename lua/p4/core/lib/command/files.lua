@@ -31,7 +31,7 @@ setmetatable(P4_Command_Files, { __index = cmd_lib })
 
 --- Wrapper function to check if a table is an instance of this class.
 function P4_Command_Files:_check_instance()
-  assert(P4_Command_Files.is_instance(self) == true, "Not a class instance")
+  assert(self:is_instance() == true, "Not a class instance")
 end
 
 --- Helper function to process a command result success.

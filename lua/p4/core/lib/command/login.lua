@@ -39,7 +39,7 @@ setmetatable(P4_Command_Login, {__index = cmd_lib})
 ---
 --- @package
 function P4_Command_Login:_check_instance()
-  assert(P4_Command_Login.is_instance(self) == true, "Not a class instance")
+  assert(self:is_instance() == true, "Not a class instance")
 end
 
 --- Parses the output of the P4 command.

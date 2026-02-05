@@ -38,7 +38,7 @@ setmetatable(P4_Command_Edit, {__index = cmd_lib})
 ---
 --- @package
 function P4_Command_Edit:_check_instance()
-  assert(cmd_lib.is_instance(self) == true, "Not a class instance")
+  assert(self:is_instance() == true, "Not a class instance")
 end
 
 --- Helper function to process a command result success.

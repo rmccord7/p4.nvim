@@ -6,7 +6,7 @@ P4_Command_Result.__index = P4_Command_Result
 
 --- Wrapper function to check if a table is an instance of this class.
 function P4_Command_Result:_check_instance()
-  assert(P4_Command_Result.is_instance(self) == true, "Not a P4 command result class instance")
+  assert(self:is_instance() == true, "Not a class instance")
 end
 
 --- Returns if the table is an instance of this class.
