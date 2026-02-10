@@ -6,13 +6,8 @@ local P4_CL_API = {}
 
 --- Creates a new CL.
 ---
---- @return boolean success True if this function is successful.
----
 --- @async
---- @nodiscard
 function P4_CL_API.new()
-  log.trace("P4_CL_API (new): Enter")
-
   local P4_Command_Change = require("p4.core.lib.command.change")
 
   --- @type P4_Command_Change_Options
@@ -25,7 +20,7 @@ function P4_CL_API.new()
   }
 
   -- Create a new CL and dump to stdout.
-  local success, result = P4_Command_Change:new(cmd_opts):run()
+  local result = P4_Command_Change:new(cmd_opts):run()
 
   --- @cast result P4_Command_Change_Result
 
@@ -67,8 +62,6 @@ function P4_CL_API.new()
       end,
     })
   end
-
-  log.trace("P4_CL_API (new): Exit")
 
   return success
 end

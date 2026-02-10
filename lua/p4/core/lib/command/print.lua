@@ -98,6 +98,8 @@ function P4_Command_Print:_cmd_result_error_handler(cmd_result, results)
     return false
   end
 
+  --TODO: Invalid revision number, generic 1, severity 3
+
   ---@type P4_Command_Result_Error
   local cmd_result_error = cmd_result.data.error
 

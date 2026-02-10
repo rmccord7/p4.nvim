@@ -54,7 +54,7 @@ function P4_Telescope_Revision_Picker.load(prompt_title, revision_list, opts)
 
     return {
       value = entry,
-      ordinal = entry.index,
+      ordinal = entry.description,
       display = make_display,
     }
   end
@@ -90,15 +90,21 @@ function P4_Telescope_Revision_Picker.load(prompt_title, revision_list, opts)
   --- @param map function Maps keys to functions.
   ---
   local function attach_mappings(prompt_bufnr, map)
-
     actions.select_default:replace(function()
-
       actions.close(prompt_bufnr)
 
       local entry = actions_state.get_selected_entry()
 
       if entry then
-        notify("Not supported", vim.log.level.ERROR);
+        -- Use the last preview buffer since it displayed the P4 change
+        -- list spec.
+        local state = require("telescope.state")
+
+        local bufnr = state.get_global_key("last_preview_bufnr")
+
+        if bufnr then
+          --TODO: Open buffer
+        end
       else
         notify("Please make a valid selection before performing the action.", vim.log.levels.WARN)
       end

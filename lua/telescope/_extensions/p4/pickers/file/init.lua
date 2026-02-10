@@ -6,31 +6,35 @@ local utils = require("telescope.utils")
 
 local entry_display = require("telescope.pickers.entry_display")
 
-local notify = require("p4.notify")
-
 --- @class P4_Telescope_File_Picker
 local P4_Telescope_File_Picker = {}
 
+--- @class P4_Telescope_File_Picker_File_Entry
+--- @field path File_Path File path.
+--- @field change string File's changelist.
+
+--- @class P4_Telescope_File_Picker_Options
+--- @field prompt_title string Prompt tile.
+--- @field entry_list P4_Telescope_File_Picker_File_Entry[] List of entries.
+--- @field opts table? Telescope picker options.
+
 --- Telescope picker to display the list of P4 files.
 ---
---- @param prompt_title string Telescope prompt title.
---- @param file_list P4_File_List File list.
---- @param opts table? Telescope picker options.
-function P4_Telescope_File_Picker.load(prompt_title, file_list, opts)
-  opts = opts or {}
+--- @param picker P4_Telescope_File_Picker_Options Telescope prompt title.
+function P4_Telescope_File_Picker.load(picker)
 
-  assert(not vim.tbl_isempty(file_list:get_files()), "No files to display in picker")
+  assert(not vim.tbl_isempty(picker.entry_list), "No files to display in picker")
+
+  local opts = picker.opts or {}
 
   --- Processes results from the finder.
   ---
-  --- @param entry P4_File P4 File
+  --- @param entry P4_Telescope_File_Picker_File_Entry
   local function entry_maker(entry)
 
-    local file_info = entry:get_info()
-
     local hl_group, icon
-    local display, _ = utils.transform_path(opts, file_info.path)
-    _, hl_group, icon = utils.transform_devicons(file_info.path, display, opts.disable_devicons)
+    local display, _ = utils.transform_path(opts, entry.path)
+    _, hl_group, icon = utils.transform_devicons(entry.path, display, opts.disable_devicons)
 
     local displayer = entry_display.create {
       separator = "",
@@ -48,22 +52,21 @@ function P4_Telescope_File_Picker.load(prompt_title, file_list, opts)
         return displayer {
           {icon, hl_group},
           display,
-          " (" .. file_info.change .. ")",
+          " (" .. entry.change .. ")",
         }
       else
         return displayer {
           icon,
           display,
-          " (" .. file_info.change .. ")",
+          " (" .. entry.change .. ")",
         }
       end
     end
 
     return {
       value = entry,
-      ordinal = file_info.path,
-      filename = file_info.path,
-      -- display = utils.transform_path(opts, (file_stats.clientFile)) .. " (" .. file_stats.change .. ")",
+      ordinal = entry.path,
+      filename = entry.path,
       display = make_display,
     }
   end
@@ -118,10 +121,10 @@ function P4_Telescope_File_Picker.load(prompt_title, file_list, opts)
 
   pickers
     .new(opts, {
-      prompt_title = "P4 " .. prompt_title .. " Files",
+      prompt_title = "P4 " .. picker.prompt_title .. " Files",
       results_title = "Files",
       finder = finders.new_table({
-        results = file_list:get_files(),
+        results = picker.entry_list,
         entry_maker = entry_maker,
       }),
       sorter = config.generic_sorter(opts),

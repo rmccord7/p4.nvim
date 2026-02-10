@@ -16,8 +16,19 @@
 --- @field depot_path Depot_File_Path Depot path to the file.
 --- @field local_path Local_File_Path? Optional local path to the file.
 
----@class P4_Date_Time
----@field date string Date
----@field time string Time
+--- @alias P4_Action
+--- | '"add"'
+--- | '"edit"'
+--- | '"delete"'
+--- | '"branch"'
+--- | '"move/add"'
+--- | '"move/delete"'
+--- | '"integrate"'
+--- | '"import"'
+--- | '"purge"'
+--- | '"archive"'
+--- | '"abandoned"'
+--- | '"reverted"'
+
 
 

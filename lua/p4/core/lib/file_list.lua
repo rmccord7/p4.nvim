@@ -2,7 +2,7 @@ local log = require("p4.log")
 
 local error_handler_api = require("p4.api.error_handler")
 
---- @class P4_File_List : table
+--- @class P4_File_List
 --- @field protected file_paths File_Path[] P4 files for efficient command usage.
 --- @field protected files P4_File[] P4 files.
 --- @field protected client P4_Client? P4 Client for all files.
@@ -61,7 +61,6 @@ function P4_File_List:new(files)
         table.insert(new.files, file)
         table.insert(new.file_paths, file:get_info().path)
       else
-
         --- @cast file File_Path
         table.insert(new.files, file_lib:new(file))
         table.insert(new.file_paths, file)

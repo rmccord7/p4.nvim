@@ -1,25 +1,32 @@
-local log = require("p4.log")
-
 local error_api = require("p4.api.error")
 
 local file_list_lib = require("p4.core.lib.file_list")
 local file_lib = require("p4.core.lib.file")
-local file_error_list_lib = require("p4.core.lib.file_error_list")
-local file_error_lib = require("p4.core.lib.file_error")
 
 --- @class P4_File_API
 local P4_File_API = {}
 
+--- @class P4_File_API_Add_Result_Success
+--- @field depot_path Depot_File_Path
+--- @field local_path Local_File_Path
+--- @field action P4_Action Always "add"
+--- @field revision string Working revision number.
+
+--- @class P4_File_API_Add_Result_Error
+--- @field depot_path Depot_File_Path
+--- @field reason string Reason could not be opened for add.
+
 --- Opens one or more files for add.
 ---
---- Files that are not mapped to the client worksapce or do not exist in the depot will be excluded from the list of
---- depot paths that are returned from this function.
+--- This function should be called with xpcall() with the p4 api error handler to catch/log/notify any errors that have
+--- occured.
 ---
---- A file that is already open for edit will be included in the list of depot paths that are returned by this function.
+--- The P4 add command will open a file for add even if it does not yet exist on the file system.
 ---
 --- @param file_specs File_Spec | File_Spec[] One or more file specs.
---- @return P4_File_List result List of P4 files that are opened for add.
---- @return P4_File_Error_List error_result List of P4 files that could not be opened for add.
+---
+--- @return P4_File_API_Add_Result_Success[] results List of P4 files that were successfully opened for add.
+--- @return P4_File_API_Add_Result_Error[] error_results List of P4 files that could not be opened for add.
 ---
 --- @async
 --- @nodiscard
@@ -34,10 +41,10 @@ function P4_File_API.add(file_specs)
     end
   end
 
-  local add_cmd = require("p4.core.lib.command.add")
+  local results = {} ---@type P4_File_API_Add_Result_Success[]
+  local error_results = {} ---@type P4_File_API_Add_Result_Error[]
 
-  local new_file_list = file_list_lib:new()
-  local new_error_file_list = file_error_list_lib:new()
+  local add_cmd = require("p4.core.lib.command.add")
 
   local cmd = add_cmd:new(file_specs)
   local cmd_results = cmd:run()
@@ -46,54 +53,57 @@ function P4_File_API.add(file_specs)
 
     if cmd_result.success then
 
-      local file_info = cmd_result.data
+      local success_data = cmd_result.data
 
-      ---@cast file_info P4_Command_Add_Result_Success
+      ---@cast success_data P4_Command_Add_Result_Success
 
-      --- @type P4_File_Info
-      local new_file_params = {
-        path = {
-          host = file_info.clientFile, -- clientFile returned in local syntax for some reason.
-          depot = file_info.depotFile,
-        },
-        action = file_info.action,
-        work_rev = file_info.workRev,
+      --- @type P4_File_API_Add_Result_Success
+      local new_result = {
+        depot_path = success_data.depotFile,
+        local_path = success_data.clientFile, -- clientFile returned in local syntax for some reason.
+        action = success_data.action,
+        revision = success_data.workRev,
       }
 
-      local new_file = file_lib:new(new_file_params)
-
-      new_file_list:add_file(new_file)
+      table.insert(results, new_result)
     else
 
-      local file_info = cmd_result.data
+      local error_data = cmd_result.data
 
-      ---@cast file_info P4_Command_Add_Result_Error
+      ---@cast error_data P4_Command_Add_Result_Error
 
-      --- @type P4_File_Error_Info
-      local new_file_error_params = {
-        path = file_info.depotFile,
-        reason = file_info.reason,
+      --- @type P4_File_API_Add_Result_Error
+      local new_error_result = {
+        depot_path = error_data.depotFile,
+        reason = error_data.reason,
       }
 
-      local new_file_error = file_error_lib:new(new_file_error_params)
-
-      new_error_file_list:add_file(new_file_error)
+      table.insert(error_results, new_error_result)
     end
   end
 
-  return new_file_list, new_error_file_list
+  return results, error_results
 end
+
+--- @class P4_File_API_Edit_Result_Success
+--- @field depot_path Depot_File_Path
+--- @field local_path Local_File_Path
+--- @field action P4_Action Always "edit"
+--- @field revision string Working revision number.
+
+--- @class P4_File_API_Edit_Result_Error
+--- @field depot_path Depot_File_Path
+--- @field reason string Reason could not be opened for edit.
 
 --- Opens one or more files for edit.
 ---
---- Files that are not mapped to the client worksapce or do not exist in the depot will be excluded from the list of
---- depot paths that are returned from this function.
----
---- A file that is already open for edit will be included in the list of depot paths that are returned by this function.
+--- This function should be called with xpcall() with the p4 api error handler to catch/log/notify any errors that have
+--- occured.
 ---
 --- @param file_specs File_Spec | File_Spec[] One or more file specs.
---- @return P4_File_List result List of P4 files that are opened for edit.
---- @return P4_File_Error_List error_result List of P4 files that could not be opened for add.
+---
+--- @return P4_File_API_Edit_Result_Success[] results List of P4 files that were successfully opened for edit.
+--- @return P4_File_API_Edit_Result_Error[] error_results List of P4 files that could not be opened for edit.
 ---
 --- @async
 --- @nodiscard
@@ -108,10 +118,10 @@ function P4_File_API.edit(file_specs)
     end
   end
 
-  local edit_cmd = require("p4.core.lib.command.edit")
+  local results = {} ---@type P4_File_API_Edit_Result_Success[]
+  local error_results = {} ---@type P4_File_API_Edit_Result_Error[]
 
-  local new_file_list = file_list_lib:new()
-  local new_error_file_list = file_error_list_lib:new()
+  local edit_cmd = require("p4.core.lib.command.edit")
 
   local cmd = edit_cmd:new(file_specs)
   local cmd_results = cmd:run()
@@ -120,49 +130,57 @@ function P4_File_API.edit(file_specs)
 
     if cmd_result.success then
 
-      local file_info = cmd_result.data
+      local success_data = cmd_result.data
 
-      ---@cast file_info P4_Command_Edit_Result_Success
+      ---@cast success_data P4_Command_Edit_Result_Success
 
-      --- @type P4_File_Info
-      local new_file_params = {
-        path = {
-          host = file_info.clientFile, -- clientFile returned in local syntax for some reason.
-          depot = file_info.depotFile,
-        },
-        action = file_info.action,
-        work_rev = file_info.workRev,
+      --- @type P4_File_API_Edit_Result_Success
+      local new_result = {
+        depot_path = success_data.depotFile,
+        local_path = success_data.clientFile, -- clientFile returned in local syntax for some reason.
+        action = success_data.action,
+        revision = success_data.workRev,
       }
 
-      local new_file = file_lib:new(new_file_params)
-
-      new_file_list:add_file(new_file)
+      table.insert(results, new_result)
     else
 
-      local file_info = cmd_result.data
+      local error_data = cmd_result.data
 
-      ---@cast file_info P4_Command_Edit_Result_Error
+      ---@cast error_data P4_Command_Edit_Result_Error
 
-      --- @type P4_File_Error_Info
-      local new_file_error_params = {
-        path = file_info.depotFile,
-        reason = file_info.reason,
+      --- @type P4_File_API_Edit_Result_Error
+      local new_error_result = {
+        depot_path = error_data.depotFile,
+        reason = error_data.reason,
       }
 
-      local new_file_error = file_error_lib:new(new_file_error_params)
-
-      new_error_file_list:add_file(new_file_error)
+      table.insert(error_results, new_error_result)
     end
   end
 
-  return new_file_list, new_error_file_list
+  return results, error_results
 end
+
+--- @class P4_File_API_Revert_Result_Success
+--- @field depot_path Depot_File_Path
+--- @field local_path Local_File_Path
+--- @field action P4_Action Always "abandoned" or "reverted".
+--- @field revision string Have revision number.
+
+--- @class P4_File_API_Revert_Result_Error
+--- @field depot_path Depot_File_Path
+--- @field reason string Reason could not be opened for edit.
 
 --- Reverts one or more files.
 ---
+--- This function should be called with xpcall() with the p4 api error handler to catch/log/notify any errors that have
+--- occured.
+---
 --- @param file_specs File_Spec | File_Spec[] One or more file specs.
---- @return P4_File_List result List of P4 files that were reverted.
---- @return P4_File_Error_List error_result List of P4 files that could not be reverted.
+---
+--- @return P4_File_API_Revert_Result_Success[] results List of P4 files that were successfully reverted.
+--- @return P4_File_API_Revert_Result_Error[] error_results List of P4 files that could not be reverted.
 ---
 --- @async
 --- @nodiscard
@@ -177,8 +195,8 @@ function P4_File_API.revert(file_specs)
     end
   end
 
-  local new_file_list = file_list_lib:new()
-  local new_error_file_list = file_error_list_lib:new()
+  local results = {} ---@type P4_File_API_Revert_Result_Success[]
+  local error_results = {} ---@type P4_File_API_Revert_Result_Error[]
 
   local revert_cmd = require("p4.core.lib.command.revert")
 
@@ -189,157 +207,161 @@ function P4_File_API.revert(file_specs)
 
     if cmd_result.success then
 
-      local file_info = cmd_result.data
+      local success_data = cmd_result.data
 
-      ---@cast file_info P4_Command_Revert_Result_Success
+      ---@cast success_data P4_Command_Revert_Result_Success
 
-      --- @type P4_File_Info
-      local new_file_params = {
-        path = {
-          host = file_info.clientFile, -- clientFile returned in local syntax for some reason.
-          depot = file_info.depotFile,
-        },
-        action = file_info.action,
-        have_rev = file_info.haveRev,
-        -- old_action = file_info.oldAction -- Not currently used
+      --- @type P4_File_API_Revert_Result_Success
+      local new_result = {
+        depot_path = success_data.depotFile,
+        local_path = success_data.clientFile, -- clientFile returned in local syntax for some reason.
+        action = success_data.action,
+        revision = success_data.haveRev,
       }
 
-      local new_file = file_lib:new(new_file_params)
-
-      new_file_list:add_file(new_file)
+      table.insert(results, new_result)
     else
 
-      local file_info = cmd_result.data
+      local error_data = cmd_result.data
 
-      ---@cast file_info P4_Command_Revert_Result_Error
+      ---@cast error_data P4_Command_Revert_Result_Error
 
-      --- @type P4_File_Error_Info
-      local new_file_error_params = {
-        path = file_info.depotFile,
-        reason = file_info.reason,
+      --- @type P4_File_API_Revert_Result_Error
+      local new_error_result = {
+        depot_path = error_data.depotFile,
+        reason = error_data.reason,
       }
 
-      local new_file_error = file_error_lib:new(new_file_error_params)
-
-      new_error_file_list:add_file(new_file_error)
+      table.insert(error_results, new_error_result)
     end
   end
 
-  return new_file_list, new_error_file_list
+  return results, error_results
 end
 
 --- Shelves the specified files in the current client workspace.
 ---
---- @param file string File.
---- @return boolean success True if this function is successful.
+--- @param file_specs File_Spec | File_Spec[] One or more file specs.
+--- @return P4_File_API_Revert_Result_Success[] results List of P4 files that were successfully reverted.
+--- @return P4_File_API_Revert_Result_Error[] error_results List of P4 files that could not be reverted.
 ---
 --- @async
 --- @nodiscard
 function P4_File_API.shelve(file)
-  log.trace("P4_File_API (shelve): Enter")
-
-  local success = false
-
-  if type(file) == "string" then
-    local p4_file
-    sucess, p4_file = create_p4_file(file)
-
-    if success and p4_file then
-
-      local P4_Command_Shelve = require("p4.core.lib.command.shelve")
-
-      success = P4_Command_Shelve:new({file}):run()
-
-      if success then
-
-        log.fmt_debug("File shelved: %s", file)
-      end
-    end
-  else
-    log.fmt_error("P4_File_API (shelve): Invalid parameter")
-  end
-
-  log.trace("P4_File_API (shelve): Exit")
-
-  return success
+  --TODO:
 end
 
---TODO: Diff something other than head.
+--- @class P4_File_API_Print_Result_Success
+--- @field depot_path Depot_File_Path
+--- @field action P4_Action Current file state for the specified revision.
+--- @field change string Current file changelist for the specified revision.
+--- @field file_size string Current file size for the specified revision.
+--- @field revision string Current revision.
+--- @field time string Time of the last revision.
+--- @field output string File output for the specified revision.
 
---- Enters diffmode with the specified file diff-ed against the head revision.
+--- @class P4_File_API_Print_Result_Error
+--- @field depot_path Depot_File_Path
+--- @field reason string Reason could not be opened for edit.
+
+--- Gets the output for one or more file revisions.
 ---
---- @param path Local_File_Path File path.
+--- This function should be called with xpcall() with the p4 api error handler to catch/log/notify any errors that have
+--- occured.
 ---
---- @return P4_File_List result List of P4 files that were reverted.
---- @return P4_File_Error_List error_result List of P4 files that could not be reverted.
+--- @param file_specs File_Spec | File_Spec[] One or more file specs.
+---
+--- @return P4_File_API_Print_Result_Success[] results List of P4 files that were successfully diffed.
+--- @return P4_File_API_Print_Result_Error[] error_results List of P4 files that could not be diffed.
 ---
 --- @async
 --- @nodiscard
-function P4_File_API.diff(path)
-  vim.validate("path", path, "string")
+function P4_File_API.print(file_specs)
+  vim.validate("file_specs", file_specs, {"string", "table"})
+
+  --TODO: Check for revision marker?
+
+  if type(file_specs) == "string" then
+    file_specs = {file_specs}
+  elseif type(file_specs) == "table" then
+    for _, v in ipairs(file_specs) do
+      vim.validate(v, "v", "string")
+    end
+  end
 
   local print_cmd = require("p4.core.lib.command.print")
 
-  local new_file_list = file_list_lib:new()
-  local new_error_file_list = file_error_list_lib:new()
+  local results = {} ---@type P4_File_API_Print_Result_Success[]
+  local error_results = {} ---@type P4_File_API_Print_Result_Error[]
 
-  local cmd = print_cmd:new({path})
+  local cmd = print_cmd:new(file_specs)
   local cmd_results = cmd:run()
 
   for _, cmd_result in ipairs(cmd_results) do
 
     if cmd_result.success then
 
-      local file_info = cmd_result.data
+      local success_data = cmd_result.data
 
-      ---@cast file_info P4_Command_Print_Result_Success
+      ---@cast success_data P4_Command_Print_Result_Success
 
-      --- @type P4_File_Info
-      local new_file_params = {
-        path = {
-          depot = file_info.depotFile,
-        },
-        action = file_info.action,
-        change = file_info.change,
-        file_size = file_info.fileSize,
-        rev = file_info.rev,
-        time = file_info.time,
-        output = file_info.output
+      --- @type P4_File_API_Print_Result_Success
+      local new_result = {
+        depot_path = success_data.depotFile,
+        action = success_data.action,
+        change = success_data.change,
+        file_size = success_data.fileSize,
+        revision = success_data.rev,
+        time = success_data.time,
+        output = success_data.output
       }
 
-      local new_file = file_lib:new(new_file_params)
-
-      new_file_list:add_file(new_file)
+      table.insert(results, new_result)
     else
 
-      local file_info = cmd_result.data
+      local error_data = cmd_result.data
 
-      ---@cast file_info P4_Command_Print_Result_Error
+      ---@cast error_data P4_Command_Print_Result_Error
 
-      --- @type P4_File_Error_Info
-      local new_file_error_params = {
-        path = file_info.depotFile,
-        reason = file_info.reason,
+      --- @type P4_File_API_Print_Result_Error
+      local new_error_result = {
+        depot_path = error_data.depotFile,
+        reason = error_data.reason,
       }
 
-      local new_file_error = file_error_lib:new(new_file_error_params)
-
-      new_error_file_list:add_file(new_file_error)
+      table.insert(error_results, new_error_result)
     end
   end
 
-  return new_file_list, new_error_file_list
+  return results, error_results
 end
 
---- Returns a list of open files.
+--- @class P4_File_API_Opened_Result_Success
+--- @field depot_path Depot_File_Path
+--- @field local_path Local_File_Path
+--- @field action P4_Action
+--- @field have_revision string Current workspace revision.
+--- @field revision string
+--- @field user string
+--- @field change string
+
+--- @class P4_File_API_Opened_Result_Error
+--- @field reason string Reason could not be opened for edit.
+
+--- Returns a list of files that are open in the client workspace.
+---
+--- This function should be called with xpcall() with the p4 api error handler to catch/log/notify any errors that have
+--- occured.
 ---
 --- @param file_specs (File_Spec | File_Spec[])? One or more file specs.
 --- @param change string? Restrict results to files open in the specified CL.
---- @return P4_File_List result Returns a list of open files. If no files are open, then the file list will be empty.
+---
+--- @return P4_File_API_Opened_Result_Success[] results List of P4 files that were successfully reverted.
+--- @return P4_File_API_Opened_Result_Error[] error_results List of P4 files that could not be reverted.
 ---
 --- @async
 --- @nodiscard
-function P4_File_API.get_open_files(file_specs, change)
+function P4_File_API.opened(file_specs, change)
   vim.validate("file_specs", file_specs, {"string", "table"}, true)
   vim.validate("change", change, "string", true)
 
@@ -352,9 +374,11 @@ function P4_File_API.get_open_files(file_specs, change)
       end
     end
   end
-  local opened_cmd = require("p4.core.lib.command.opened")
 
-  local new_file_list = file_list_lib:new()
+  local results = {} ---@type P4_File_API_Opened_Result_Success[]
+  local error_results = {} ---@type P4_File_API_Opened_Result_Error[]
+
+  local opened_cmd = require("p4.core.lib.command.opened")
 
   local cmd = opened_cmd:new()
   local cmd_results = cmd:run()
@@ -364,36 +388,39 @@ function P4_File_API.get_open_files(file_specs, change)
 
       if cmd_result.success then
 
-        local file_info = cmd_result.data
+        local success_data = cmd_result.data
 
-        ---@cast file_info P4_Command_Opened_Result_Success
+        ---@cast success_data P4_Command_Opened_Result_Success
 
-        --- @type P4_File_Info
-        local new_file_params = {
-          path = {
-            host = file_info.clientFile:gsub("//" .. file_info.client .. "/", "", 1), -- We have the client so we can just convert.
-            client = file_info.clientFile,
-            depot = file_info.depotFile,
-          },
-          action = file_info.action,
-          have_rev = file_info.haveRev,
-          rev = file_info.rev,
-          user = file_info.user,
-          change = file_info.change,
+        --- @type P4_File_API_Opened_Result_Success
+        local new_result = {
+          depot_path = success_data.depotFile,
+          local_path = success_data.clientFile:gsub("//" .. success_data.client .. "/", "", 1), -- We have the client so we can just convert.
+          action = success_data.action,
+          have_revision = success_data.haveRev,
+          revision = success_data.rev,
+          user = success_data.user,
+          change = success_data.change,
         }
 
-        local new_file = file_lib:new(new_file_params)
-
-        new_file_list:add_file(new_file)
+        table.insert(results, new_result)
       else
 
-        -- This command doesn't support error results.
-        error(error_api:new(P4_RESULT_CODE_UNLIKELY))
+        local error_data = cmd_result.data
+
+        ---@cast error_data P4_Command_Opened_Result_Error
+
+        --- @type P4_File_API_Opened_Result_Error
+        local new_error_result = {
+          reason = error_data.reason,
+        }
+
+        table.insert(error_results, new_error_result)
       end
     end
   end
 
-  return new_file_list
+  return results, error_results
 end
 
 

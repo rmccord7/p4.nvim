@@ -45,15 +45,25 @@ local function prompt_file_open_for_edit()
 
       if result == "y" or result == "Y" then
 
-        local file = vim.api.nvim_buf_get_name(buf)
+        --TODO: Make releative to WS root
+        local file_name = vim.fs.relpath(tostring(vim.uv.cwd()), vim.api.nvim_buf_get_name(buf))
 
-        local success, _ = xpcall(file_api.edit, error_handler_api.process, file)
+        local success, results, error_results = xpcall(file_api.edit, error_handler_api.process, file_name)
 
         if success then
-          notify("File opened for edit")
 
-          vim.api.nvim_set_option_value("readonly", false, { buf = buf })
-          vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+          assert(#results + #error_results == 1, "Unexpedted number of files")
+
+          if #results > 0 then
+            notify(string.format("%s opened for edit", file_name))
+
+            vim.api.nvim_set_option_value("readonly", false, { buf = buf })
+            vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
+          else
+            local error_result = error_results[1]
+
+            notify(string.format("%s: %s", file_name, error_result.reason), vim.log.levels.WARN)
+          end
         end
       end
 

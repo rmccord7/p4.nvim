@@ -5,6 +5,7 @@ local cmd_lib = require("p4.core.lib.command")
 local error_api = require("p4.api.error")
 
 --- @class P4_Revision
+--- @field index string Identifies the revision for all branches (Head revision is 1).
 --- @field number string Identifies the revision for this branch (Tail revision is 1). P4 branch history will re-use revision numbers for each branch.
 --- @field depotFile Depot_File_Path Name of the file in the depot for this revision.
 --- @field action string Action.
@@ -50,30 +51,35 @@ function P4_Command_Filelog:_cmd_result_success_handler(cmd_result, new_result, 
 
   ---@cast cmd_result_success P4_Command_Filelog_Result_Success
 
-  local changes = {} ---@type string[]
-  local actions = {} ---@type string[]
-  local clients = {} ---@type string[]
-  local descriptions = {} ---@type string[]
-  local revisions = {} ---@type string[]
-  local times = {} ---@type string[]
-  local users = {} ---@type string[]
+  local changes = {} ---@type table<integer, string>[]
+  local actions = {} ---@type table<integer, string>[]
+  local clients = {} ---@type table<integer, string>[]
+  local descriptions = {} ---@type table<integer, string>[]
+  local revisions = {} ---@type table<integer, string>[]
+  local times = {} ---@type table<integer, string>[]
+  local users = {} ---@type table<integer, string>[]
+
+  local function sort(t)
+    table.sort(t, function(a,b)
+      return a[1] < b[1]
+    end)
+  end
 
   for k, v in pairs(cmd_result_success) do
-
     if k:find("change", 1, true) then
-      table.insert(changes, v)
+      table.insert(changes, {tonumber(k:match("%d+")), v})
     elseif k:find("^action") then
-      table.insert (actions, v)
+      table.insert (actions, {tonumber(k:match("%d+")), v})
     elseif k:find("^client") then
-      table.insert (clients, v)
+      table.insert (clients, {tonumber(k:match("%d+")), v})
     elseif k:find("^desc") then
-      table.insert (descriptions, v)
+      table.insert (descriptions, {tonumber(k:match("%d+")), v})
     elseif k:find("^rev") then
-      table.insert (revisions, v)
+      table.insert (revisions, {tonumber(k:match("%d+")), v})
     elseif k:find("^time") then
-      table.insert (times, v)
+      table.insert (times, {tonumber(k:match("%d+")), v})
     elseif k:find("^user") then
-      table.insert (users, v)
+      table.insert (users, {tonumber(k:match("%d+")), v})
     end
   end
 
@@ -85,33 +91,35 @@ function P4_Command_Filelog:_cmd_result_success_handler(cmd_result, new_result, 
          #changes == #users,
        "Parse error")
 
-  ---@type P4_Revision[]
-  local rev_list = {}
+  sort(changes)
+  sort(actions)
+  sort(clients)
+  sort(descriptions)
+  sort(revisions)
+  sort(times)
+  sort(users)
+
+  local count = #new_result.data.rev_list
 
   for index = 1, #revisions, 1 do
 
+    count = count + 1
+
     ---@type P4_Revision
     local new_revision = {
-      number = revisions[index],
+      index = count,
+      number = revisions[index][2],
       depotFile = cmd_result_success.depotFile,
-      action = actions[index],
-      change = changes[index],
-      user = users[index],
-      client = clients[index],
-      time = times[index],
-      description = descriptions[index],
+      action = actions[index][2],
+      change = changes[index][2],
+      user = users[index][2],
+      client = clients[index][2],
+      time = times[index][2],
+      description = descriptions[index][2],
     }
 
-    table.insert(rev_list, new_revision)
+    table.insert(new_result.data.rev_list, new_revision)
   end
-
-  table.sort(rev_list, function(a,b)
-    return tonumber(a.time) < tonumber(b.time)
-  end)
-
-  vim.print(rev_list)
-
-  vim.list_extend(new_result.data.rev_list, rev_list)
 
   -- If the first revision didn't add the file, then we need to continue to follow the branch history.
   local last_revision = new_result.data.rev_list[#new_result.data.rev_list]
