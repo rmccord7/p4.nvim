@@ -72,8 +72,8 @@ function P4_Command_Changes:_cmd_result_error_handler(cmd_result, results)
 
   --- @type P4_API_Command_Error
   local new_cmd_error = {
-    name = cmd:get_command_name(),
-    command = cmd:get_command(),
+    name = self:get_command_name(),
+    command = self:get_command(),
     results = cmd_result,
   }
 

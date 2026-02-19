@@ -98,13 +98,14 @@ function P4_Command_Print:_cmd_result_error_handler(cmd_result, results)
     return false
   end
 
-  --TODO: Invalid revision number, generic 1, severity 3
+  --TODO: Invalid revision number, generic 1, severity 3. Do we handle this or just let exception occur since it means
+  --invalid input we should have checked was input to the command.
 
   ---@type P4_Command_Result_Error
   local cmd_result_error = cmd_result.data.error
 
   local severity = cmd_result_error:get_severity()
-  local generic = cmd_result_error:get_severity()
+  local generic = cmd_result_error:get_generic()
 
   -- Check if we can pass the error up to the caller.
   if error_is_not_in_client_view(severity, generic) or
@@ -126,8 +127,8 @@ function P4_Command_Print:_cmd_result_error_handler(cmd_result, results)
 
     --- @type P4_API_Command_Error
     local new_cmd_error = {
-      name = cmd:get_command_name(),
-      command = cmd:get_command(),
+      name = self:get_command_name(),
+      command = self:get_command(),
       results = cmd_result,
     }
 

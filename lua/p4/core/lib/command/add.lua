@@ -5,6 +5,7 @@ local cmd_lib = require("p4.core.lib.command")
 local error_api = require("p4.api.error")
 
 --- @class P4_Command_Add_Result_Success : P4_Command_Common_Result_Success
+--- @field messages string[]? List of informational messages.
 --- @field depotFile Depot_File_Path Depot file path.
 --- @field action string? Action if opened in workspace (one of add, edit, delete, branch, move/add, move/delete, integrate, import, purge, or archive).
 --- @field clientFile Local_File_Path? Local file path.
@@ -53,36 +54,59 @@ function P4_Command_Add:_cmd_result_success_handler(cmd_result, results)
   ---@cast cmd_result_success P4_Command_Add_Result_Success
 
   -- This result was returned that indicates a file could not be opened for add for some reason,
-  if cmd_result_success.level and cmd_result_success.level == 0 then
+  if cmd_result_success.level then
 
-    local chunks = {}
-    for substring in cmd_result_success.data:gmatch("%S+") do
-      table.insert(chunks, substring)
-      -- Small optimization we only care about the first match.
-      break
-    end
+    -- Must have a data field with the reason.
+    if cmd_result_success.data then
 
-    -- We only get the depot file path for this message.
-    --- @type string
-    local depot_path = chunks[1]
+      -- This message indicates a file could not be opened for add for some reason,
+      if cmd_result_success.level == 0  then
 
-    -- Remove revision if present
-    if depot_path:find("#", 1, true) then
-      cmd_result_success.depotFile = vim.split(depot_path, '#')[1]
+        local chunks = {}
+        for substring in cmd_result_success.data:gmatch("%S+") do
+          table.insert(chunks, substring)
+          -- Small optimization we only care about the first match.
+          break
+        end
+
+        -- We only get the depot file path for this message.
+        --- @type string
+        local depot_path = chunks[1]
+
+        -- Remove revision if present
+        if depot_path:find("#", 1, true) then
+          cmd_result_success.depotFile = vim.split(depot_path, '#')[1]
+        else
+          cmd_result_success.depotFile = depot_path
+        end
+
+        --- @type P4_Command_Add_Result
+        local new_result = {
+          success = false,
+          data = {
+            depotFile = depot_path,
+            reason = vim.split(cmd_result_success.data, " - ", {plain = true})[2],
+          }
+        }
+
+        table.insert(results, new_result)
+
+      -- Information messages (ex. opened for edit by another user).
+      else
+        -- Informational messages shoud always have a success result before it and a level other than zero.
+        if not vim.tbl_isempty(results) then
+          local prev_success_result = results[#results].data
+
+          ---@cast prev_success_result P4_Command_Add_Result_Success
+
+          table.insert(prev_success_result.messages, cmd_result_success.data)
+        else
+          error(error_api:new(P4_RESULT_CODE_COMMAND_RESULT_PARSING_FAILED))
+        end
+      end
     else
-      cmd_result_success.depotFile = depot_path
+      error(error_api:new(P4_RESULT_CODE_COMMAND_RESULT_PARSING_FAILED))
     end
-
-    --- @type P4_Command_Add_Result
-    local new_result = {
-      success = false,
-      data = {
-        depotFile = depot_path,
-        reason = vim.split(cmd_result_success.data, " - ", {plain = true})[2],
-      }
-    }
-
-    table.insert(results, new_result)
   else
     -- Start a new entry with information about the current file spec.
     ---@type P4_Command_Add_Result
@@ -90,6 +114,8 @@ function P4_Command_Add:_cmd_result_success_handler(cmd_result, results)
       success = true,
       data = cmd_result_success
     }
+
+    new_result.data.messages = {}
 
     table.insert(results, new_result)
   end
@@ -114,7 +140,7 @@ function P4_Command_Add:_cmd_result_error_handler(cmd_result, results)
   local cmd_result_error = cmd_result.data.error
 
   local severity = cmd_result_error:get_severity()
-  local generic = cmd_result_error:get_severity()
+  local generic = cmd_result_error:get_generic()
 
   -- Check if we can pass the error up to the caller.
   if error_is_not_in_client_view(severity, generic) then
@@ -135,8 +161,8 @@ function P4_Command_Add:_cmd_result_error_handler(cmd_result, results)
 
     --- @type P4_API_Command_Error
     local new_cmd_error = {
-      name = cmd:get_command_name(),
-      command = cmd:get_command(),
+      name = self:get_command_name(),
+      command = self:get_command(),
       results = cmd_result,
     }
 
