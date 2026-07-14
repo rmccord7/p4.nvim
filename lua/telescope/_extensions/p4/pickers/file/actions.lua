@@ -1,8 +1,10 @@
 local actions = require("telescope.actions")
 local actions_state = require("telescope.actions.state")
 
-local log = require("p4.log")
 local notify = require("p4.notify")
+
+local file_api = require("p4.api.file")
+local error_handler_api = require("p4.api.error_handler")
 
 --- @class P4_Telescope_File_Actions
 local P4_Telescope_File_Actions = {}
@@ -10,16 +12,10 @@ local P4_Telescope_File_Actions = {}
 --- Gets the selected files for a file related action.
 ---
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
---- @return boolean success True if this function is successful.
---- @return P4_File_List? file_list P4 file list.
+--- @return File_Path[] files P4 file list.
 ---
---- @async
 --- @nodiscard
 local function get_selected_files(prompt_bufnr)
-  log.trace("Telescope_File_Actions: get_selected_files")
-
-  local success = false
-
   ---@type Picker
   local picker = actions_state.get_current_picker(prompt_bufnr)
 
@@ -38,31 +34,7 @@ local function get_selected_files(prompt_bufnr)
   -- Close the previous prompt buffer.
   actions.close(prompt_bufnr)
 
-  local p4_file_list = nil
-
-  if #entry_list then
-
-    -- Convert entry list to file list.
-    local p4_files = {}
-
-    for _, entry in ipairs(entry_list) do
-      table.insert(p4_files, entry.value)
-    end
-
-    local P4_File_List = require("p4.core.lib.file_list")
-
-    ---@type P4_File_List_New
-    local new_file_list = {
-      paths = p4_files,
-      convert_depot_paths = false,
-      check_in_depot = true,
-      get_info = true,
-    }
-
-    success, p4_file_list = P4_File_List:new(new_file_list)
-  end
-
-  return success, p4_file_list
+  return entry_list
 end
 
 --- Opens the picker's selected file in a buffer.
@@ -72,14 +44,12 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.open(prompt_bufnr)
-  log.trace("Telescope_File_Actions: open")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
-
-  if success and p4_file_list then
+  if #files > 0 then
 
     -- Only allow one selection for this action.
-    if #p4_file_list:get_file_paths() == 1 then
+    if #files == 1 then
       actions.file_edit(prompt_bufnr)
     else
       notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
@@ -94,14 +64,12 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.diff(prompt_bufnr)
-  log.trace("Telescope_File_Actions: diff")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
-
-  if success and p4_file_list then
+  if #files > 0 then
 
     -- Only allow one selection for this action.
-    if #p4_file_list:get_file_paths() == 1 then
+    if #files == 1 then
       notify("Action not supported yet.")
     else
       notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
@@ -114,14 +82,12 @@ end
 --- @param prompt_bufnr integer Identifies the telescope prompt buffer.
 --- @async
 function P4_Telescope_File_Actions.history(prompt_bufnr)
-  log.trace("Telescope_File_Actions: history")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
-
-  if success and p4_file_list then
+  if #files > 0 then
 
     -- Only allow one selection for this action.
-    if #p4_file_list:get_file_paths() == 1 then
+    if #files == 1 then
       notify("Action not supported yet.")
     else
       notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
@@ -136,14 +102,12 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.move(prompt_bufnr)
-  log.trace("Telescope_File_Actions: move")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
-
-  if success and p4_file_list then
+  if #files > 0 then
 
     -- Only allow one selection for this action.
-    if #p4_file_list:get_file_paths() == 1 then
+    if #files == 1 then
       notify("Action not supported yet.")
     else
       notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
@@ -158,16 +122,19 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.add(prompt_bufnr)
-  log.trace("Telescope_File_Actions: add")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
+  if #files > 0 then
+    local success, results, error_results = xpcall(file_api.add, error_handler_api.process, files)
 
-  if success and p4_file_list then
-
-    success = p4_file_list:add()
-
-    if not success then
-      log.error("Telescope file action failed.")
+    if success then
+      if #results > 0 then
+        notify(string.format("file(s) opened for add:", files))
+      end
+    else
+      for _, error_result in ipairs(error_results) do
+        notify(string.format("%s: %s", error_result.depot_path, error_result.reason), vim.log.levels.WARN)
+      end
     end
   end
 end
@@ -179,16 +146,15 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.edit(prompt_bufnr)
-  log.trace("Telescope_File_Actions: edit")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
+  if #files > 0 then
 
-  if success and p4_file_list then
-
-    success = p4_file_list:edit()
-
-    if not success then
-      log.error("Telescope file action failed.")
+    -- Only allow one selection for this action.
+    if #files == 1 then
+      notify("Action not supported yet.")
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
     end
   end
 end
@@ -201,16 +167,15 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.revert(prompt_bufnr)
-  log.trace("Telescope_File_Actions: revert")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
+  if #files > 0 then
 
-  if success and p4_file_list then
-
-    success = p4_file_list:revert()
-
-    if not success then
-      log.error("Telescope file action failed.")
+    -- Only allow one selection for this action.
+    if #files == 1 then
+      notify("Action not supported yet.")
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
     end
   end
 end
@@ -222,16 +187,15 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.delete(prompt_bufnr)
-  log.trace("Telescope_File_Actions: delete")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
+  if #files > 0 then
 
-  if success and p4_file_list then
-
-    success = p4_file_list:delete()
-
-    if not success then
-      log.error("Telescope file action failed.")
+    -- Only allow one selection for this action.
+    if #files == 1 then
+      notify("Action not supported yet.")
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
     end
   end
 end
@@ -243,16 +207,15 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.fstat(prompt_bufnr)
-  log.trace("Telescope_File_Actions: fstat")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
+  if #files > 0 then
 
-  if success and p4_file_list then
-
-    success = p4_file_list:update_info()
-
-    if not success then
-      log.error("Telescope file action failed.")
+    -- Only allow one selection for this action.
+    if #files == 1 then
+      notify("Action not supported yet.")
+    else
+      notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
     end
   end
 end
@@ -264,14 +227,12 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.shelve(prompt_bufnr)
-  log.trace("Telescope_File_Actions: shelve")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
-
-  if success and p4_file_list then
+  if #files > 0 then
 
     -- Only allow one selection for this action.
-    if #p4_file_list:get_file_paths() == 1 then
+    if #files == 1 then
       notify("Action not supported yet.")
     else
       notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
@@ -286,14 +247,12 @@ end
 --- @async
 --- @nodiscard
 function P4_Telescope_File_Actions.unshelve(prompt_bufnr)
-  log.trace("Telescope_File_Actions: unshelve")
+  local files = get_selected_files(prompt_bufnr)
 
-  local success, p4_file_list = get_selected_files(prompt_bufnr)
-
-  if success and p4_file_list then
+  if #files > 0 then
 
     -- Only allow one selection for this action.
-    if #p4_file_list:get_file_paths() == 1 then
+    if #files == 1 then
       notify("Action not supported yet.")
     else
       notify("Only 1 file may be selected for this action.", vim.log.levels.WARN)
